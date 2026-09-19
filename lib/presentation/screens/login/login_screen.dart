@@ -16,6 +16,7 @@ import '../../../providers/qso_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/station_provider.dart';
 import '../../../providers/statistics_provider.dart';
+import '../celebration/api_v2_celebration_screen.dart';
 
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
@@ -419,6 +420,10 @@ class _AddProfileSheetState extends ConsumerState<_AddProfileSheet> {
     // to them. Only pre-existing installs going through the migration screen
     // should ever see that notice.
     await ApiTokenNotice.markDismissed();
+    // Same for the one-time "server patch no longer needed" screen: a brand
+    // new install never had a patch to begin with, so it must not appear on
+    // the second launch. Existing users still see it via the splash screen.
+    await ApiV2CelebrationScreen.markShown();
 
     if (mounted) {
       ref.invalidate(stationProvider);

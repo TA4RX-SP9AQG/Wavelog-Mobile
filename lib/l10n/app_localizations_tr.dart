@@ -2188,4 +2188,67 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get communitySignOut => 'Çıkış yap & hesap değiştir';
+
+  @override
+  String get syncTitle => 'Çevrimdışı senkron';
+
+  @override
+  String get syncStatusOnline => 'Çevrimiçi';
+
+  @override
+  String get syncStatusOffline => 'Bağlantı yok';
+
+  @override
+  String get syncOfflineModeNote =>
+      'Çevrimdışı mod açık — otomatik senkron duraklatıldı. Yine de elle senkronlayabilirsiniz.';
+
+  @override
+  String get syncAllDone => 'Her şey senkronize';
+
+  @override
+  String syncRunning(int done, int total) {
+    return 'Senkronize ediliyor… $done / $total';
+  }
+
+  @override
+  String get syncWaiting => 'Senkron bekleyen';
+
+  @override
+  String get syncWaitingDeletes => 'Bekleyen silme';
+
+  @override
+  String get syncLastRun => 'Son deneme';
+
+  @override
+  String get syncLastSuccess => 'Son tam senkron';
+
+  @override
+  String get syncNever => 'Hiç';
+
+  @override
+  String get syncSyncedLast => 'Son turda gönderilen';
+
+  @override
+  String get syncFailedLast => 'Son turda başarısız';
+
+  @override
+  String get syncLastError => 'Son hata';
+
+  @override
+  String get syncQueueTitle => 'Bekleyen QSO\'lar';
+
+  @override
+  String get syncQueueEmpty => 'Bekleyen QSO yok';
+
+  @override
+  String get syncNoConnection =>
+      'Bağlantı yok — internet gelince senkron otomatik başlayacak';
+
+  @override
+  String syncDone(int count) {
+    return '$count QSO senkronize edildi';
+  }
+
+  @override
+  String get syncNothing => 'Senkronize edilecek bir şey yok';
 }

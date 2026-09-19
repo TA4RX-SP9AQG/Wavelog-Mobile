@@ -38,6 +38,7 @@ import 'presentation/screens/station/station_logbook_detail_screen.dart';
 import 'presentation/screens/statistics/statistics_screen.dart';
 import 'presentation/screens/spot/spot_screen.dart';
 import 'presentation/screens/map/map_screen.dart';
+import 'presentation/screens/sync/sync_screen.dart';
 import 'presentation/screens/community/community_screen.dart';
 import 'presentation/screens/community/plan_activation_screen.dart';
 import 'presentation/screens/community/chat_screen.dart';
@@ -210,6 +211,11 @@ final appRouter = GoRouter(
       path: '/map',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (c, s) => const MapScreen(),
+    ),
+    GoRoute(
+      path: '/sync',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (c, s) => const SyncScreen(),
     ),
     GoRoute(
       path: '/antenna',
@@ -491,28 +497,32 @@ class _AppDrawer extends ConsumerWidget {
                     ),
                     const Spacer(),
                     if (pendingCount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: cs.error.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                              color: cs.error.withValues(alpha: 0.4)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.cloud_off, size: 12, color: cs.error),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$pendingCount',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: cs.error,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ],
+                      InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => go('/sync'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: cs.error.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: cs.error.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.cloud_off, size: 12, color: cs.error),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$pendingCount',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: cs.error,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                   ],
@@ -557,6 +567,12 @@ class _AppDrawer extends ConsumerWidget {
                   icon: Icons.map_outlined,
                   label: l10n.drawerMap,
                   onTap: () => go('/map'),
+                ),
+                _DrawerItem(
+                  icon: Icons.sync,
+                  label: l10n.syncTitle,
+                  onTap: () => go('/sync'),
+                  badgeCount: pendingCount,
                 ),
                 _DrawerItem(
                   icon: Icons.explore_outlined,

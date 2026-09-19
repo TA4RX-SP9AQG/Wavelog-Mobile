@@ -74,6 +74,18 @@ class QsoCacheDatasource {
     }
   }
 
+  /// Marks many QSOs synced with a single Hive write (one disk flush instead
+  /// of one per QSO), which matters when a large offline backlog is synced.
+  Future<void> markManySynced(Iterable<String> localIds) async {
+    final now = DateTime.now();
+    final updates = <String, QsoModel>{};
+    for (final id in localIds) {
+      final qso = _box.get(id);
+      if (qso != null) updates[id] = qso.copyWith(synced: true, syncedAt: now);
+    }
+    if (updates.isNotEmpty) await _box.putAll(updates);
+  }
+
   Future<void> deleteQso(String localId) async {
     await _box.delete(localId);
   }

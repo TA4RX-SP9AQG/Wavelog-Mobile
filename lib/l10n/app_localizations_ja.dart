@@ -2166,4 +2166,65 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get communitySignOut => 'サインアウトしてアカウントを切り替える';
+
+  @override
+  String get syncTitle => 'オフライン同期';
+
+  @override
+  String get syncStatusOnline => 'オンライン';
+
+  @override
+  String get syncStatusOffline => '接続なし';
+
+  @override
+  String get syncOfflineModeNote => 'オフラインモードがオンです — 自動同期は一時停止中です。手動での同期は可能です。';
+
+  @override
+  String get syncAllDone => 'すべて同期済み';
+
+  @override
+  String syncRunning(int done, int total) {
+    return '同期中… $done / $total';
+  }
+
+  @override
+  String get syncWaiting => '同期待ち';
+
+  @override
+  String get syncWaitingDeletes => '削除待ち';
+
+  @override
+  String get syncLastRun => '最後の試行';
+
+  @override
+  String get syncLastSuccess => '最後の完全同期';
+
+  @override
+  String get syncNever => 'なし';
+
+  @override
+  String get syncSyncedLast => '前回送信した件数';
+
+  @override
+  String get syncFailedLast => '前回失敗した件数';
+
+  @override
+  String get syncLastError => '最後のエラー';
+
+  @override
+  String get syncQueueTitle => '同期待ちの QSO';
+
+  @override
+  String get syncQueueEmpty => '同期待ちの QSO はありません';
+
+  @override
+  String get syncNoConnection => '接続なし — オンラインに戻ると自動で同期を開始します';
+
+  @override
+  String syncDone(int count) {
+    return '$count 件の QSO を同期しました';
+  }
+
+  @override
+  String get syncNothing => '同期するものはありません';
 }

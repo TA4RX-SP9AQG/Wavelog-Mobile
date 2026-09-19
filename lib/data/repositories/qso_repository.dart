@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 
 import '../../core/errors/app_exception.dart';
@@ -21,7 +23,30 @@ class ImportResult {
   });
 }
 
+/// Outcome of one [QsoRepository.syncPending] run.
+class SyncReport {
+  final int total;
+  final int synced;
+  final int failed;
+  final int deletesDone;
+  final int deletesLeft;
+  final bool offline;
+  final String? error;
+
+  const SyncReport({
+    required this.total,
+    required this.synced,
+    required this.failed,
+    required this.deletesDone,
+    required this.deletesLeft,
+    required this.offline,
+    this.error,
+  });
+}
+
 class QsoRepository {
+  static const _syncChunkSize = 50;
+
   final WavelogRemoteDatasource _remote;
   final QsoCacheDatasource _local;
 
@@ -313,51 +338,96 @@ class QsoRepository {
       '${dt.minute.toString().padLeft(2, '0')}'
       '${dt.second.toString().padLeft(2, '0')}';
 
-  Future<void> syncPendingQsos() async {
-    await _processPendingDeletes();
+  /// Pushes offline QSOs and queued deletions to the server.
+  ///
+  /// QSOs go out in [_syncChunkSize]-sized ADIF batches per station so that a
+  /// single bad batch (or a dropped connection) no longer loses the whole
+  /// station's backlog, [onProgress] can report a real percentage, and every
+  /// accepted batch is marked synced with one Hive write.
+  Future<SyncReport> syncPending({
+    void Function(int done, int failed, int total)? onProgress,
+  }) async {
+    final deletes = await _processPendingDeletes();
 
     final pending = await _local.getUnsyncedQsos();
-    if (pending.isEmpty) return;
+    final total = pending.length;
+    var synced = 0;
+    var failed = 0;
+    var offline = deletes.offline;
+    String? error;
+    onProgress?.call(0, 0, total);
 
-    // Group by stationProfileId and batch
     final groups = <int, List<QsoModel>>{};
     for (final qso in pending) {
       groups.putIfAbsent(qso.stationProfileId, () => []).add(qso);
     }
 
+    outer:
     for (final entry in groups.entries) {
-      final adif = AdifGenerator.generate(entry.value);
-      try {
-        final success = await _remote.importQso(adif, entry.key);
-        if (success) {
-          for (final qso in entry.value) {
-            if (qso.localId != null) {
-              await _local.markSynced(qso.localId!);
-            }
+      final list = entry.value;
+      for (var i = 0; i < list.length; i += _syncChunkSize) {
+        final chunk = list.sublist(i, min(i + _syncChunkSize, list.length));
+        try {
+          final ok =
+              await _remote.importQso(AdifGenerator.generate(chunk), entry.key);
+          if (ok) {
+            await _local.markManySynced(
+                chunk.map((q) => q.localId).whereType<String>());
+            synced += chunk.length;
+          } else {
+            failed += chunk.length;
           }
+        } on NetworkException catch (e) {
+          // Still offline — stop, the rest stays queued for the next attempt.
+          offline = true;
+          error = e.message;
+          break outer;
+        } on TimeoutException catch (e) {
+          offline = true;
+          error = e.message;
+          break outer;
+        } catch (e) {
+          debugPrint('Sync batch failed, will retry later: $e');
+          failed += chunk.length;
+          error = e.toString();
         }
-      } catch (e) {
-        debugPrint('Batch sync failed for group, will retry later: $e');
+        onProgress?.call(synced, failed, total);
       }
     }
+
+    return SyncReport(
+      total: total,
+      synced: synced,
+      failed: failed + (total - synced - failed),
+      deletesDone: deletes.done,
+      deletesLeft: deletes.left,
+      offline: offline,
+      error: error,
+    );
   }
 
   // Çevrimdışıyken silinen QSO'ların sunucu silmelerini işler
-  Future<void> _processPendingDeletes() async {
+  Future<({int done, int left, bool offline})> _processPendingDeletes() async {
     final deletes = await _local.getPendingDeletes();
-    for (final d in deletes) {
+    var done = 0;
+    for (var i = 0; i < deletes.length; i++) {
+      final d = deletes[i];
       try {
         await _remote.deleteQso(d.serverId, d.stationProfileId);
         await _local.removePendingDelete(d.serverId, d.stationProfileId);
+        done++;
       } on NetworkException {
-        return; // hâlâ çevrimdışı — sonraki senkronda tekrar dene
+        // hâlâ çevrimdışı — sonraki senkronda tekrar dene
+        return (done: done, left: deletes.length - done, offline: true);
       } on TimeoutException {
-        return;
+        return (done: done, left: deletes.length - done, offline: true);
       } catch (_) {
         // Sunucu kaydı zaten silmiş olabilir — kuyruktan düş
         await _local.removePendingDelete(d.serverId, d.stationProfileId);
+        done++;
       }
     }
+    return (done: done, left: 0, offline: false);
   }
 
   int get unsyncedCount => _local.unsyncedCount;

@@ -4251,6 +4251,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign out & switch account'**
   String get communitySignOut;
+
+  /// No description provided for @syncTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline sync'**
+  String get syncTitle;
+
+  /// No description provided for @syncStatusOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get syncStatusOnline;
+
+  /// No description provided for @syncStatusOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection'**
+  String get syncStatusOffline;
+
+  /// No description provided for @syncOfflineModeNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline mode is on — automatic sync is paused. You can still sync manually.'**
+  String get syncOfflineModeNote;
+
+  /// No description provided for @syncAllDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything is synced'**
+  String get syncAllDone;
+
+  /// No description provided for @syncRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing… {done} / {total}'**
+  String syncRunning(int done, int total);
+
+  /// No description provided for @syncWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to sync'**
+  String get syncWaiting;
+
+  /// No description provided for @syncWaitingDeletes.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletions waiting'**
+  String get syncWaitingDeletes;
+
+  /// No description provided for @syncLastRun.
+  ///
+  /// In en, this message translates to:
+  /// **'Last attempt'**
+  String get syncLastRun;
+
+  /// No description provided for @syncLastSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Last full sync'**
+  String get syncLastSuccess;
+
+  /// No description provided for @syncNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get syncNever;
+
+  /// No description provided for @syncSyncedLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent in last run'**
+  String get syncSyncedLast;
+
+  /// No description provided for @syncFailedLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed in last run'**
+  String get syncFailedLast;
+
+  /// No description provided for @syncLastError.
+  ///
+  /// In en, this message translates to:
+  /// **'Last error'**
+  String get syncLastError;
+
+  /// No description provided for @syncQueueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting QSOs'**
+  String get syncQueueTitle;
+
+  /// No description provided for @syncQueueEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No QSOs are waiting'**
+  String get syncQueueEmpty;
+
+  /// No description provided for @syncNoConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection — sync will start automatically when you\'re back online'**
+  String get syncNoConnection;
+
+  /// No description provided for @syncDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} QSO(s) synced'**
+  String syncDone(int count);
+
+  /// No description provided for @syncNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to sync'**
+  String get syncNothing;
 }
 
 class _AppLocalizationsDelegate

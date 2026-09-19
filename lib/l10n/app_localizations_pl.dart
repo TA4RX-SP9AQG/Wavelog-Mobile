@@ -2193,4 +2193,67 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get communitySignOut => 'Wyloguj & zmień konto';
+
+  @override
+  String get syncTitle => 'Synchronizacja offline';
+
+  @override
+  String get syncStatusOnline => 'Online';
+
+  @override
+  String get syncStatusOffline => 'Brak połączenia';
+
+  @override
+  String get syncOfflineModeNote =>
+      'Tryb offline jest włączony — automatyczna synchronizacja wstrzymana. Nadal możesz synchronizować ręcznie.';
+
+  @override
+  String get syncAllDone => 'Wszystko zsynchronizowane';
+
+  @override
+  String syncRunning(int done, int total) {
+    return 'Synchronizacja… $done / $total';
+  }
+
+  @override
+  String get syncWaiting => 'Oczekuje na synchronizację';
+
+  @override
+  String get syncWaitingDeletes => 'Oczekujące usunięcia';
+
+  @override
+  String get syncLastRun => 'Ostatnia próba';
+
+  @override
+  String get syncLastSuccess => 'Ostatnia pełna synchronizacja';
+
+  @override
+  String get syncNever => 'Nigdy';
+
+  @override
+  String get syncSyncedLast => 'Wysłano w ostatnim przebiegu';
+
+  @override
+  String get syncFailedLast => 'Niepowodzenia w ostatnim przebiegu';
+
+  @override
+  String get syncLastError => 'Ostatni błąd';
+
+  @override
+  String get syncQueueTitle => 'Oczekujące QSO';
+
+  @override
+  String get syncQueueEmpty => 'Brak oczekujących QSO';
+
+  @override
+  String get syncNoConnection =>
+      'Brak połączenia — synchronizacja ruszy automatycznie po powrocie internetu';
+
+  @override
+  String syncDone(int count) {
+    return 'Zsynchronizowano QSO: $count';
+  }
+
+  @override
+  String get syncNothing => 'Nie ma nic do synchronizacji';
 }

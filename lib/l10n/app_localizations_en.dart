@@ -2186,4 +2186,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communitySignOut => 'Sign out & switch account';
+
+  @override
+  String get syncTitle => 'Offline sync';
+
+  @override
+  String get syncStatusOnline => 'Online';
+
+  @override
+  String get syncStatusOffline => 'No connection';
+
+  @override
+  String get syncOfflineModeNote =>
+      'Offline mode is on — automatic sync is paused. You can still sync manually.';
+
+  @override
+  String get syncAllDone => 'Everything is synced';
+
+  @override
+  String syncRunning(int done, int total) {
+    return 'Syncing… $done / $total';
+  }
+
+  @override
+  String get syncWaiting => 'Waiting to sync';
+
+  @override
+  String get syncWaitingDeletes => 'Deletions waiting';
+
+  @override
+  String get syncLastRun => 'Last attempt';
+
+  @override
+  String get syncLastSuccess => 'Last full sync';
+
+  @override
+  String get syncNever => 'Never';
+
+  @override
+  String get syncSyncedLast => 'Sent in last run';
+
+  @override
+  String get syncFailedLast => 'Failed in last run';
+
+  @override
+  String get syncLastError => 'Last error';
+
+  @override
+  String get syncQueueTitle => 'Waiting QSOs';
+
+  @override
+  String get syncQueueEmpty => 'No QSOs are waiting';
+
+  @override
+  String get syncNoConnection =>
+      'No connection — sync will start automatically when you\'re back online';
+
+  @override
+  String syncDone(int count) {
+    return '$count QSO(s) synced';
+  }
+
+  @override
+  String get syncNothing => 'Nothing to sync';
 }

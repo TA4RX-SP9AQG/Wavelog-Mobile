@@ -2193,4 +2193,67 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get communitySignOut => 'Disconnetti & cambia account';
+
+  @override
+  String get syncTitle => 'Sincronizzazione offline';
+
+  @override
+  String get syncStatusOnline => 'Online';
+
+  @override
+  String get syncStatusOffline => 'Nessuna connessione';
+
+  @override
+  String get syncOfflineModeNote =>
+      'La modalità offline è attiva — la sincronizzazione automatica è in pausa. Puoi comunque sincronizzare manualmente.';
+
+  @override
+  String get syncAllDone => 'Tutto sincronizzato';
+
+  @override
+  String syncRunning(int done, int total) {
+    return 'Sincronizzazione… $done / $total';
+  }
+
+  @override
+  String get syncWaiting => 'In attesa di sincronizzazione';
+
+  @override
+  String get syncWaitingDeletes => 'Eliminazioni in attesa';
+
+  @override
+  String get syncLastRun => 'Ultimo tentativo';
+
+  @override
+  String get syncLastSuccess => 'Ultima sincronizzazione completa';
+
+  @override
+  String get syncNever => 'Mai';
+
+  @override
+  String get syncSyncedLast => 'Inviati nell\'ultimo ciclo';
+
+  @override
+  String get syncFailedLast => 'Falliti nell\'ultimo ciclo';
+
+  @override
+  String get syncLastError => 'Ultimo errore';
+
+  @override
+  String get syncQueueTitle => 'QSO in attesa';
+
+  @override
+  String get syncQueueEmpty => 'Nessun QSO in attesa';
+
+  @override
+  String get syncNoConnection =>
+      'Nessuna connessione — la sincronizzazione partirà automaticamente al ritorno online';
+
+  @override
+  String syncDone(int count) {
+    return '$count QSO sincronizzati';
+  }
+
+  @override
+  String get syncNothing => 'Niente da sincronizzare';
 }

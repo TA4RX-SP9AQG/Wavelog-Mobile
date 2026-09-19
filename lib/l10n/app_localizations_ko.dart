@@ -2166,4 +2166,66 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get communitySignOut => '로그아웃 및 계정 전환';
+
+  @override
+  String get syncTitle => '오프라인 동기화';
+
+  @override
+  String get syncStatusOnline => '온라인';
+
+  @override
+  String get syncStatusOffline => '연결 없음';
+
+  @override
+  String get syncOfflineModeNote =>
+      '오프라인 모드가 켜져 있어 자동 동기화가 일시 중지되었습니다. 수동 동기화는 가능합니다.';
+
+  @override
+  String get syncAllDone => '모두 동기화됨';
+
+  @override
+  String syncRunning(int done, int total) {
+    return '동기화 중… $done / $total';
+  }
+
+  @override
+  String get syncWaiting => '동기화 대기';
+
+  @override
+  String get syncWaitingDeletes => '삭제 대기';
+
+  @override
+  String get syncLastRun => '마지막 시도';
+
+  @override
+  String get syncLastSuccess => '마지막 전체 동기화';
+
+  @override
+  String get syncNever => '없음';
+
+  @override
+  String get syncSyncedLast => '지난 실행에서 전송됨';
+
+  @override
+  String get syncFailedLast => '지난 실행에서 실패';
+
+  @override
+  String get syncLastError => '마지막 오류';
+
+  @override
+  String get syncQueueTitle => '대기 중인 QSO';
+
+  @override
+  String get syncQueueEmpty => '대기 중인 QSO가 없습니다';
+
+  @override
+  String get syncNoConnection => '연결 없음 — 온라인이 되면 동기화가 자동으로 시작됩니다';
+
+  @override
+  String syncDone(int count) {
+    return 'QSO $count건 동기화됨';
+  }
+
+  @override
+  String get syncNothing => '동기화할 항목이 없습니다';
 }

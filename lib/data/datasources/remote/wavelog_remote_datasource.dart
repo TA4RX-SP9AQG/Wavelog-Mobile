@@ -52,9 +52,12 @@ class WavelogRemoteDatasource {
 
     while (true) {
       try {
+        // The server default is 50 per page (max 5000); a bigger page means
+        // far fewer sequential round trips when the whole log is refreshed.
         final params = <String, dynamic>{
           'station_id': stationId,
           'page': page,
+          'per_page': 1000,
         };
         if (band != null && band.isNotEmpty) params['band'] = band;
 

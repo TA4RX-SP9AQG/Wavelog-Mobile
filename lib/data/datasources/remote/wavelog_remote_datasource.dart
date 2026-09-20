@@ -674,6 +674,20 @@ class WavelogRemoteDatasource {
   // ── Confirmations — v2 ──────────────────────────────────────────────────────
 
   /// Fetches all confirmation pages and returns a map of qsoId → list of types.
+  ///
+  /// Reported by a user: Statistics/DXCC "worked vs confirmed" counts were
+  /// undercounting, disproportionately for older QSOs. Root cause: this loop
+  /// used the server's small default per_page (unlike [getContacts]/
+  /// [getAdifExportRecords], which explicitly request 1000) and silently
+  /// swallowed any mid-pagination DioException by breaking out of the loop —
+  /// a single transient failure on any later page (confirmation records are
+  /// newest-first, like everything else in this API) truncated the whole
+  /// result with no error surfaced anywhere, so callers just saw an
+  /// incomplete map and never knew it was incomplete. Now requests 1000/page
+  /// (far fewer round trips, so far less exposure to a mid-fetch failure)
+  /// and rethrows instead of swallowing, matching [getContacts]/
+  /// [getAdifExportRecords] — an incomplete fetch should surface as an error
+  /// callers can retry, not silently render wrong numbers.
   Future<Map<int, List<String>>> getConfirmations() async {
     final all = <ConfirmationRecord>[];
     int page = 1;
@@ -681,7 +695,7 @@ class WavelogRemoteDatasource {
       try {
         final response = await _dio.get(
           ApiEndpoints.confirmation,
-          queryParameters: {'page': page},
+          queryParameters: {'page': page, 'per_page': 1000},
         );
         final data = response.data;
         if (data is! Map) break;
@@ -694,8 +708,8 @@ class WavelogRemoteDatasource {
         final meta = data['meta'];
         if (meta is! Map || meta['has_more'] != true) break;
         page++;
-      } on DioException catch (_) {
-        break;
+      } on DioException catch (e) {
+        throw _mapDioException(e);
       }
     }
     final map = <int, List<String>>{};

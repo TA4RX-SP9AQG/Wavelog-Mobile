@@ -11,6 +11,7 @@
 
   "save": "Speichern",
   "cancel": "Abbrechen",
+  "clear": "Löschen",
   "delete": "Löschen",
   "refresh": "Aktualisieren",
   "continueBtn": "Weiter",
@@ -108,6 +109,10 @@
   "qslRcvd": "Empf.",
   "qslReceived": "Empfangen",
   "qslMethod": "Methode",
+  "qslMarkSent": "Als gesendet markieren",
+  "qslMarkReceived": "Als empfangen markieren",
+  "qslPickDate": "Datum wählen",
+  "paperQslFull": "Papier-QSL",
   "awards": "Award-Referenzen",
   "iota": "IOTA",
   "sota": "SOTA",
@@ -487,6 +492,7 @@
   "statisticsTitle": "Statistiken",
   "uniqueCallsigns": "Eindeutige Rufzeichen",
   "currentStreak": "Aktuelle Serie",
+  "statsPaperQslPending": "Ausstehende Papier-QSL",
   "streakDays": "{count} Tag(e)",
   "@streakDays": {
     "placeholders": { "count": { "type": "int" } }

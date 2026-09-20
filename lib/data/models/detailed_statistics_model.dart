@@ -22,6 +22,8 @@ class DetailedStatisticsModel {
   final List<MapEntry<String, int>> qsosByBand;
   final List<MapEntry<String, int>> qsosByMode;
   final List<StationQsoCount> qsosByStation;
+  // Cards sent but not yet confirmed received back.
+  final int paperQslPending;
 
   const DetailedStatisticsModel({
     required this.totalQsos,
@@ -33,5 +35,6 @@ class DetailedStatisticsModel {
     required this.qsosByBand,
     required this.qsosByMode,
     required this.qsosByStation,
+    required this.paperQslPending,
   });
 }

@@ -33,6 +33,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get cancel => 'キャンセル';
 
   @override
+  String get clear => 'クリア';
+
+  @override
   String get delete => '削除';
 
   @override
@@ -294,6 +297,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get qslMethod => '方法';
+
+  @override
+  String get qslMarkSent => '送信済みにする';
+
+  @override
+  String get qslMarkReceived => '受信済みにする';
+
+  @override
+  String get qslPickDate => '日付を選択';
+
+  @override
+  String get paperQslFull => '紙QSL';
 
   @override
   String get awards => 'アワード参照';
@@ -1236,6 +1251,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get currentStreak => '連続記録';
+
+  @override
+  String get statsPaperQslPending => '紙QSL待ち';
 
   @override
   String streakDays(int count) {

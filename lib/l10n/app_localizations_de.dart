@@ -33,6 +33,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get cancel => 'Abbrechen';
 
   @override
+  String get clear => 'Löschen';
+
+  @override
   String get delete => 'Löschen';
 
   @override
@@ -297,6 +300,18 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get qslMethod => 'Methode';
+
+  @override
+  String get qslMarkSent => 'Als gesendet markieren';
+
+  @override
+  String get qslMarkReceived => 'Als empfangen markieren';
+
+  @override
+  String get qslPickDate => 'Datum wählen';
+
+  @override
+  String get paperQslFull => 'Papier-QSL';
 
   @override
   String get awards => 'Award-Referenzen';
@@ -1255,6 +1270,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get currentStreak => 'Aktuelle Serie';
+
+  @override
+  String get statsPaperQslPending => 'Ausstehende Papier-QSL';
 
   @override
   String streakDays(int count) {

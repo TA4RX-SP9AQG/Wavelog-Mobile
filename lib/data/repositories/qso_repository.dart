@@ -323,7 +323,38 @@ class QsoRepository {
       if (oVal != uVal) f[entry.value] = uVal;
     }
 
+    // Paper QSL (physical card) fields — separate from LoTW/eQSL, which
+    // sync automatically from the server and are never PATCHed here.
+    if (oRaw['QSL_SENT'] != uRaw['QSL_SENT']) {
+      f['qsl_sent'] = uRaw['QSL_SENT'] ?? '';
+    }
+    if (oRaw['QSL_RCVD'] != uRaw['QSL_RCVD']) {
+      f['qsl_rcvd'] = uRaw['QSL_RCVD'] ?? '';
+    }
+    if (oRaw['QSL_SENT_VIA'] != uRaw['QSL_SENT_VIA']) {
+      f['qsl_sent_via'] = uRaw['QSL_SENT_VIA'] ?? '';
+    }
+    if (oRaw['QSL_RCVD_VIA'] != uRaw['QSL_RCVD_VIA']) {
+      f['qsl_rcvd_via'] = uRaw['QSL_RCVD_VIA'] ?? '';
+    }
+    // ADIF stores YYYYMMDD; v2 PATCH dates use YYYY-MM-DD (same convention
+    // as qso_date above).
+    if (oRaw['QSLSDATE'] != uRaw['QSLSDATE']) {
+      f['qslsdate'] = _adifDateToPatch(uRaw['QSLSDATE']) ?? '';
+    }
+    if (oRaw['QSLRDATE'] != uRaw['QSLRDATE']) {
+      f['qslrdate'] = _adifDateToPatch(uRaw['QSLRDATE']) ?? '';
+    }
+
     return f;
+  }
+
+  // YYYYMMDD (ADIF) -> YYYY-MM-DD (v2 PATCH), or null if unparseable/empty.
+  static String? _adifDateToPatch(String? adifDate) {
+    if (adifDate == null || adifDate.length < 8) return null;
+    return '${adifDate.substring(0, 4)}-'
+        '${adifDate.substring(4, 6)}-'
+        '${adifDate.substring(6, 8)}';
   }
 
   // YYYY-MM-DD — v2 PATCH date format (strtotime-safe)

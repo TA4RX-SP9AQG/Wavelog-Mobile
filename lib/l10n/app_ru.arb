@@ -8,6 +8,7 @@
   "navStation": "Профиль QTH",
   "save": "Сохранить",
   "cancel": "Отмена",
+  "clear": "Очистить",
   "delete": "Удалить",
   "refresh": "Обновить",
   "continueBtn": "Продолжить",
@@ -108,6 +109,10 @@
   "qslRcvd": "RX",
   "qslReceived": "Получено",
   "qslMethod": "Способ",
+  "qslMarkSent": "Отметить как отправленную",
+  "qslMarkReceived": "Отметить как полученную",
+  "qslPickDate": "Выбрать дату",
+  "paperQslFull": "Бумажная QSL",
   "awards": "Референции",
   "iota": "IOTA",
   "sota": "SOTA",
@@ -526,6 +531,7 @@
   "statisticsTitle": "Статистика",
   "uniqueCallsigns": "Уникальные позывные",
   "currentStreak": "Текущая серия",
+  "statsPaperQslPending": "Ожидающие бумажные QSL",
   "streakDays": "{count} дн.",
   "@streakDays": {
     "placeholders": {

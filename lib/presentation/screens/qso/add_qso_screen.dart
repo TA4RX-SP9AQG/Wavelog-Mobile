@@ -24,6 +24,7 @@ import '../../../providers/qso_provider.dart';
 import '../../../providers/remote_datasource_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/station_provider.dart';
+import '../../widgets/qso/paper_qsl_edit_fields.dart';
 
 class AddQsoScreen extends ConsumerStatefulWidget {
   final String? prefillCallsign;
@@ -77,6 +78,10 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
   final Map<String, String?> _potaNameCache = {};
   List<String> _potaRefs = [];
   late FocusNode _callsignFocus;
+
+  // Paper QSL (physical card) fields — edit mode only, seeded in initState
+  // below and merged into rawAdif at submit time.
+  Map<String, String> _paperQslFields = {};
 
   DateTime _dateTimeOn = DateTime.now().toUtc();
   String _band = '20m';
@@ -137,6 +142,10 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
       _wwffRefCtrl = TextEditingController(text: edit.rawAdif?['WWFF_REF'] ?? '');
       _dxccCountry = edit.country ?? edit.rawAdif?['COUNTRY'] ?? edit.dxcc;
       _dxccFlag = edit.rawAdif?['APP_WAVELOG_FLAG'];
+      _paperQslFields = {
+        for (final k in PaperQslEditFields.keys)
+          if (edit.rawAdif?[k] != null) k: edit.rawAdif![k]!,
+      };
     } else {
       // Spot-tap prefill: apply mode first (only if recognised) and derive
       // the band from the spot's frequency, so both are in place before the
@@ -559,7 +568,9 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
             .map((e) => e.trim().toUpperCase())
             .where((e) => e.isNotEmpty)
             .join(','),
-    };
+    }
+      ..removeWhere((k, _) => PaperQslEditFields.keys.contains(k))
+      ..addAll(_paperQslFields);
 
     final qso = QsoModel(
       callsign: _callsignCtrl.text.trim().toUpperCase(),
@@ -1284,6 +1295,15 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
         );
       }),
       const SizedBox(height: 12),
+
+      // ── Paper QSL (physical card) ───────────────────────────────────
+      if (widget.editQso != null) ...[
+        PaperQslEditFields(
+          initial: _paperQslFields,
+          onChanged: (m) => _paperQslFields = m,
+        ),
+        const SizedBox(height: 12),
+      ],
 
       // ── Station profile ─────────────────────────────────────────────
       stations.when(

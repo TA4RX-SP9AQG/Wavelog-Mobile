@@ -670,6 +670,13 @@ class _StatisticsBody extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          _HighlightCard(
+            icon: Icons.mark_email_unread_outlined,
+            value: data.paperQslPending.toString(),
+            label: l10n.statsPaperQslPending,
+            color: Theme.of(context).colorScheme.secondary,
+          ),
           const SizedBox(height: 20),
 
           // ── Per station ───────────────────────────────────────────

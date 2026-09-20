@@ -42,6 +42,13 @@ final detailedStatisticsProvider =
   final qsosByMode = cacheStats.byMode.entries.toList()
     ..sort((a, b) => b.value.compareTo(a.value));
 
+  // Card sent but not yet confirmed received back — the standard "awaiting
+  // QSL" metric.
+  final paperQslPending = scoped
+      .where((q) =>
+          q.qslSent?.toUpperCase() == 'Y' && q.qslRcvd?.toUpperCase() != 'Y')
+      .length;
+
   return DetailedStatisticsModel(
     totalQsos: counts.totalQsos,
     yearQsos: counts.yearQsos,
@@ -52,5 +59,6 @@ final detailedStatisticsProvider =
     qsosByBand: qsosByBand,
     qsosByMode: qsosByMode,
     qsosByStation: qsosByStation,
+    paperQslPending: paperQslPending,
   );
 });

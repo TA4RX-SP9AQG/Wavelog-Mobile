@@ -33,6 +33,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get cancel => 'İptal';
 
   @override
+  String get clear => 'Temizle';
+
+  @override
   String get delete => 'Sil';
 
   @override
@@ -296,6 +299,18 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get qslMethod => 'Yöntem';
+
+  @override
+  String get qslMarkSent => 'Gönderildi Olarak İşaretle';
+
+  @override
+  String get qslMarkReceived => 'Alındı Olarak İşaretle';
+
+  @override
+  String get qslPickDate => 'Tarih Seç';
+
+  @override
+  String get paperQslFull => 'Kağıt QSL';
 
   @override
   String get awards => 'Ödül Referansları';
@@ -1251,6 +1266,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get currentStreak => 'Güncel Seri';
+
+  @override
+  String get statsPaperQslPending => 'Kağıt QSL Bekleyen';
 
   @override
   String streakDays(int count) {

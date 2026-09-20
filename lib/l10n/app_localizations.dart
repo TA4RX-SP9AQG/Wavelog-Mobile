@@ -160,6 +160,12 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get cancel;
 
+  /// No description provided for @clear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clear;
+
   /// No description provided for @delete.
   ///
   /// In en, this message translates to:
@@ -675,6 +681,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Method'**
   String get qslMethod;
+
+  /// No description provided for @qslMarkSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as Sent'**
+  String get qslMarkSent;
+
+  /// No description provided for @qslMarkReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as Received'**
+  String get qslMarkReceived;
+
+  /// No description provided for @qslPickDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick Date'**
+  String get qslPickDate;
+
+  /// No description provided for @paperQslFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Paper QSL'**
+  String get paperQslFull;
 
   /// No description provided for @awards.
   ///
@@ -2481,6 +2511,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Current Streak'**
   String get currentStreak;
+
+  /// No description provided for @statsPaperQslPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Paper QSL Pending'**
+  String get statsPaperQslPending;
 
   /// No description provided for @streakDays.
   ///

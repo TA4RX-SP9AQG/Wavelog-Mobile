@@ -33,9 +33,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cancel => '취소';
 
   @override
-  String get clear => '지우기';
-
-  @override
   String get delete => '삭제';
 
   @override
@@ -297,18 +294,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get qslMethod => '방법';
-
-  @override
-  String get qslMarkSent => '발송함으로 표시';
-
-  @override
-  String get qslMarkReceived => '수신함으로 표시';
-
-  @override
-  String get qslPickDate => '날짜 선택';
-
-  @override
-  String get paperQslFull => '종이 QSL';
 
   @override
   String get awards => '어워드 참조';
@@ -1251,9 +1236,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get currentStreak => '현재 연속';
-
-  @override
-  String get statsPaperQslPending => '종이 QSL 대기';
 
   @override
   String streakDays(int count) {

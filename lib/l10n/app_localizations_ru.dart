@@ -33,9 +33,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get cancel => 'Отмена';
 
   @override
-  String get clear => 'Очистить';
-
-  @override
   String get delete => 'Удалить';
 
   @override
@@ -299,18 +296,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get qslMethod => 'Способ';
-
-  @override
-  String get qslMarkSent => 'Отметить как отправленную';
-
-  @override
-  String get qslMarkReceived => 'Отметить как полученную';
-
-  @override
-  String get qslPickDate => 'Выбрать дату';
-
-  @override
-  String get paperQslFull => 'Бумажная QSL';
 
   @override
   String get awards => 'Референции';
@@ -1272,9 +1257,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get currentStreak => 'Текущая серия';
-
-  @override
-  String get statsPaperQslPending => 'Ожидающие бумажные QSL';
 
   @override
   String streakDays(int count) {

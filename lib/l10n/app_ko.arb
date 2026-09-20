@@ -11,7 +11,6 @@
 
   "save": "저장",
   "cancel": "취소",
-  "clear": "지우기",
   "delete": "삭제",
   "refresh": "새로고침",
   "continueBtn": "계속",
@@ -109,10 +108,6 @@
   "qslRcvd": "수신",
   "qslReceived": "수신됨",
   "qslMethod": "방법",
-  "qslMarkSent": "발송함으로 표시",
-  "qslMarkReceived": "수신함으로 표시",
-  "qslPickDate": "날짜 선택",
-  "paperQslFull": "종이 QSL",
   "awards": "어워드 참조",
   "iota": "IOTA",
   "sota": "SOTA",
@@ -490,7 +485,6 @@
   "statisticsTitle": "통계",
   "uniqueCallsigns": "고유 콜사인",
   "currentStreak": "현재 연속",
-  "statsPaperQslPending": "종이 QSL 대기",
   "streakDays": "{count}일",
   "@streakDays": {
     "placeholders": { "count": { "type": "int" } }

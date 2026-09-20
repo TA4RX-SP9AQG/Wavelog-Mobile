@@ -16,7 +16,6 @@ import '../../../data/models/qso_model.dart';
 import '../../../providers/confirmation_provider.dart';
 import '../../../providers/lookup_provider.dart';
 import '../../../providers/qso_provider.dart';
-import '../../widgets/qso/paper_qsl_mark_dialog.dart';
 import 'add_qso_screen.dart';
 
 class QsoDetailScreen extends ConsumerWidget {
@@ -830,8 +829,6 @@ class _QslSection extends ConsumerWidget {
           rcvdVia: qso.qslRcvdVia,
           sentDate: qso.qslSdate,
           rcvdDate: qso.qslRdate,
-          onTapSent: () => _handlePaperQslTap(context, ref, qso, isSent: true),
-          onTapRcvd: () => _handlePaperQslTap(context, ref, qso, isSent: false),
         ),
         _QslRow(
           label: l10n.lotwQsl,
@@ -858,50 +855,6 @@ class _QslSection extends ConsumerWidget {
       ],
     );
   }
-}
-
-// Quick mark/clear action for the paper-QSL row only (LoTW/eQSL/QRZ stay
-// read-only — they sync automatically from the server).
-Future<void> _handlePaperQslTap(
-  BuildContext context,
-  WidgetRef ref,
-  QsoModel qso, {
-  required bool isSent,
-}) async {
-  final currentStatus = isSent ? qso.qslSent : qso.qslRcvd;
-  final result = await showPaperQslMarkDialog(
-    context,
-    isSent: isSent,
-    initialVia: isSent ? qso.qslSentVia : qso.qslRcvdVia,
-    initialAdifDate: isSent ? qso.qslSdate : qso.qslRdate,
-    alreadyMarked: currentStatus?.toUpperCase() == 'Y',
-  );
-  if (result == null || !context.mounted) return;
-
-  final statusKey = isSent ? 'QSL_SENT' : 'QSL_RCVD';
-  final viaKey = isSent ? 'QSL_SENT_VIA' : 'QSL_RCVD_VIA';
-  final dateKey = isSent ? 'QSLSDATE' : 'QSLRDATE';
-  final merged = {...?qso.rawAdif};
-
-  if (result.cleared) {
-    merged.remove(statusKey);
-    merged.remove(viaKey);
-    merged.remove(dateKey);
-  } else {
-    merged[statusKey] = 'Y';
-    if (result.via != null) merged[viaKey] = result.via!;
-    if (result.date != null) {
-      final d = result.date!;
-      merged[dateKey] =
-          '${d.year.toString().padLeft(4, '0')}'
-          '${d.month.toString().padLeft(2, '0')}'
-          '${d.day.toString().padLeft(2, '0')}';
-    }
-  }
-
-  await ref
-      .read(qsoProvider.notifier)
-      .updateQso(qso, qso.copyWith(rawAdif: merged));
 }
 
 class _ConfirmedChip extends StatelessWidget {
@@ -955,9 +908,6 @@ class _QslRow extends StatelessWidget {
   final String? rcvdVia;
   final String? sentDate;
   final String? rcvdDate;
-  // Only set for the paper-QSL row — enables a quick mark/edit action.
-  final VoidCallback? onTapSent;
-  final VoidCallback? onTapRcvd;
 
   const _QslRow({
     required this.label,
@@ -967,16 +917,11 @@ class _QslRow extends StatelessWidget {
     this.rcvdVia,
     this.sentDate,
     this.rcvdDate,
-    this.onTapSent,
-    this.onTapRcvd,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (sent == null && rcvd == null && onTapSent == null && onTapRcvd == null) {
-      return const SizedBox.shrink();
-    }
-    final l10n = context.l10n;
+    if (sent == null && rcvd == null) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -999,57 +944,17 @@ class _QslRow extends StatelessWidget {
                       isSent: true,
                       status: sent!,
                       via: sentVia,
-                      date: sentDate,
-                      onTap: onTapSent)
-                else if (onTapSent != null)
-                  _QslAddChip(label: l10n.qslMarkSent, onTap: onTapSent!),
+                      date: sentDate),
                 if (rcvd != null)
                   _QslStatusChip(
                       isSent: false,
                       status: rcvd!,
                       via: rcvdVia,
-                      date: rcvdDate,
-                      onTap: onTapRcvd)
-                else if (onTapRcvd != null)
-                  _QslAddChip(label: l10n.qslMarkReceived, onTap: onTapRcvd!),
+                      date: rcvdDate),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _QslAddChip extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-  const _QslAddChip({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: cs.outlineVariant),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.add, size: 12, color: cs.primary),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                  color: cs.primary, fontSize: 11, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1060,14 +965,12 @@ class _QslStatusChip extends StatelessWidget {
   final String status;
   final String? via;
   final String? date;
-  final VoidCallback? onTap;
 
   const _QslStatusChip(
       {required this.isSent,
       required this.status,
       this.via,
-      this.date,
-      this.onTap});
+      this.date});
 
   @override
   Widget build(BuildContext context) {
@@ -1112,36 +1015,29 @@ class _QslStatusChip extends StatelessWidget {
       tooltip += ' — $d.$m.$y';
     }
 
-    final chip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 4),
-          Text(
-            '$prefix: $label',
-            style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-
-    if (onTap == null) return Tooltip(message: tooltip, child: chip);
     return Tooltip(
       message: tooltip,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: chip,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 4),
+            Text(
+              '$prefix: $label',
+              style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
       ),
     );
   }

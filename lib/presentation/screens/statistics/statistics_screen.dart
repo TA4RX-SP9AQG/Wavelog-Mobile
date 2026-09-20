@@ -109,6 +109,20 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
   final dxccIds = ref.watch(dxccStationIdsProvider);
   final scoped = dxccIds != null;
 
+  // Backfill paper-QSL/LoTW/eQSL/ClubLog fields (ADIF-export-only, see
+  // confirmationSyncProvider) for every station in scope before reading the
+  // local cache below. Without this, qso.qslRcvd stays null for any QSO
+  // whose detail screen was never opened, so paper-QSL confirmations were
+  // silently undercounted here even though /api/v2/confirmation doesn't
+  // carry them either (it only tracks electronic confirmations). Skipped
+  // when unscoped (dxccIds == null): that means no active station/logbook,
+  // so there's no bounded station list to sync against.
+  if (dxccIds != null) {
+    await Future.wait(
+      dxccIds.map((id) => ref.watch(confirmationSyncProvider(id).future)),
+    );
+  }
+
   // v2 QSO list does not return QSL fields — use /api/v2/confirmation as source of truth.
   final confirmationMap = ref.watch(confirmationProvider).valueOrNull ?? {};
 
@@ -303,6 +317,11 @@ class StatisticsScreen extends ConsumerWidget {
                 ref.invalidate(detailedStatisticsProvider);
                 ref.invalidate(solarDataProvider);
                 ref.invalidate(potaStatsProvider);
+                // Force a fresh electronic-confirmation fetch and a fresh
+                // paper-QSL/LoTW/eQSL ADIF backfill for every station,
+                // instead of reusing this session's cached sync result.
+                ref.invalidate(confirmationProvider);
+                ref.invalidate(confirmationSyncProvider);
                 ref.invalidate(_dxccStatsProvider);
               },
             ),

@@ -2200,4 +2200,67 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get communitySignOut => 'Выйти и сменить аккаунт';
+
+  @override
+  String get syncTitle => 'Офлайн-синхронизация';
+
+  @override
+  String get syncStatusOnline => 'Онлайн';
+
+  @override
+  String get syncStatusOffline => 'Нет соединения';
+
+  @override
+  String get syncOfflineModeNote =>
+      'Включён офлайн-режим — автоматическая синхронизация приостановлена. Синхронизировать вручную по-прежнему можно.';
+
+  @override
+  String get syncAllDone => 'Всё синхронизировано';
+
+  @override
+  String syncRunning(int done, int total) {
+    return 'Синхронизация… $done / $total';
+  }
+
+  @override
+  String get syncWaiting => 'Ожидает синхронизации';
+
+  @override
+  String get syncWaitingDeletes => 'Ожидающие удаления';
+
+  @override
+  String get syncLastRun => 'Последняя попытка';
+
+  @override
+  String get syncLastSuccess => 'Последняя полная синхронизация';
+
+  @override
+  String get syncNever => 'Никогда';
+
+  @override
+  String get syncSyncedLast => 'Отправлено в последнем запуске';
+
+  @override
+  String get syncFailedLast => 'Не удалось в последнем запуске';
+
+  @override
+  String get syncLastError => 'Последняя ошибка';
+
+  @override
+  String get syncQueueTitle => 'QSO в очереди';
+
+  @override
+  String get syncQueueEmpty => 'Нет QSO в очереди';
+
+  @override
+  String get syncNoConnection =>
+      'Нет соединения — синхронизация начнётся автоматически, когда сеть появится';
+
+  @override
+  String syncDone(int count) {
+    return 'Синхронизировано QSO: $count';
+  }
+
+  @override
+  String get syncNothing => 'Синхронизировать нечего';
 }

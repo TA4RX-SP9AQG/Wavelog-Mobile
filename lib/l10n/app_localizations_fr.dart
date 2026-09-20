@@ -2198,4 +2198,67 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get communitySignOut => 'Se déconnecter & changer de compte';
+
+  @override
+  String get syncTitle => 'Synchronisation hors ligne';
+
+  @override
+  String get syncStatusOnline => 'En ligne';
+
+  @override
+  String get syncStatusOffline => 'Pas de connexion';
+
+  @override
+  String get syncOfflineModeNote =>
+      'Le mode hors ligne est activé — la synchronisation automatique est en pause. Vous pouvez toujours synchroniser manuellement.';
+
+  @override
+  String get syncAllDone => 'Tout est synchronisé';
+
+  @override
+  String syncRunning(int done, int total) {
+    return 'Synchronisation… $done / $total';
+  }
+
+  @override
+  String get syncWaiting => 'En attente de synchronisation';
+
+  @override
+  String get syncWaitingDeletes => 'Suppressions en attente';
+
+  @override
+  String get syncLastRun => 'Dernière tentative';
+
+  @override
+  String get syncLastSuccess => 'Dernière synchronisation complète';
+
+  @override
+  String get syncNever => 'Jamais';
+
+  @override
+  String get syncSyncedLast => 'Envoyés lors de la dernière passe';
+
+  @override
+  String get syncFailedLast => 'Échecs lors de la dernière passe';
+
+  @override
+  String get syncLastError => 'Dernière erreur';
+
+  @override
+  String get syncQueueTitle => 'QSO en attente';
+
+  @override
+  String get syncQueueEmpty => 'Aucun QSO en attente';
+
+  @override
+  String get syncNoConnection =>
+      'Pas de connexion — la synchronisation démarrera automatiquement au retour du réseau';
+
+  @override
+  String syncDone(int count) {
+    return '$count QSO synchronisé(s)';
+  }
+
+  @override
+  String get syncNothing => 'Rien à synchroniser';
 }

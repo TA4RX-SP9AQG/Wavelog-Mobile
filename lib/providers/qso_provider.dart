@@ -8,6 +8,7 @@ import 'settings_provider.dart';
 import 'station_logbook_provider.dart';
 import 'station_provider.dart';
 import 'statistics_provider.dart';
+import 'sync_controller.dart';
 import 'sync_count_provider.dart';
 
 class QsoFilter {
@@ -122,6 +123,7 @@ class QsoNotifier extends AsyncNotifier<List<QsoModel>> {
     Future.microtask(() {
       ref.invalidate(recentQsoProvider);
       ref.invalidate(logbookSummaryProvider);
+      ref.invalidate(pendingSyncCountProvider);
     });
     return result;
   }
@@ -139,7 +141,7 @@ class QsoNotifier extends AsyncNotifier<List<QsoModel>> {
     // Başarısız olursa liste yine de yüklenmeli.
     if (!settings.offlineModeEnabled) {
       try {
-        await repo.syncPendingQsos();
+        await ref.read(syncControllerProvider.notifier).sync();
       } catch (_) {}
     }
 
@@ -176,6 +178,7 @@ class QsoNotifier extends AsyncNotifier<List<QsoModel>> {
     state = await AsyncValue.guard(_fetch);
     ref.invalidate(recentQsoProvider);
     ref.invalidate(logbookSummaryProvider);
+    ref.invalidate(pendingSyncCountProvider);
   }
 
   // Returns true if saved to server, false if saved locally only (network failure)

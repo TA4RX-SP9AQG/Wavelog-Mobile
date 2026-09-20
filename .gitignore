@@ -66,6 +66,8 @@ app.*.map.json
 
 # Tool output
 graphify-out/
+brag-output/
+brag-output-*/
 
 # Local notes and prompt files — never commit
 *Update Prompt*

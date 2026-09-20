@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/utils/adif_parser.dart';
 import '../../models/callsign_lookup_model.dart';
 import '../../models/confirmation_model.dart';
 import '../../models/contest_model.dart';
@@ -97,6 +98,52 @@ class WavelogRemoteDatasource {
     }
 
     return allQsos;
+  }
+
+  // ADIF export (GET /api/v2/qso?format=adif). Confirmed live against a real
+  // server: neither the JSON list endpoint nor the single-QSO detail
+  // endpoint (GET /api/v2/qso/{id}) ever return QSL/LoTW/eQSL/ClubLog/HRDLog
+  // confirmation fields — both return the exact same limited field set, even
+  // for a QSO independently confirmed via /api/v2/confirmation. ADIF export
+  // is the only mode that carries them. There's no per-QSO or per-callsign
+  // filter for this endpoint (a call= query param is silently ignored), so
+  // this always pulls the whole station log — callers should sync once per
+  // station per session, not per QSO. Pages via the same page/per_page/
+  // meta.has_more pattern as getContacts; each page is parsed independently
+  // (not concatenated as raw text) since every page carries its own ADIF
+  // header, which would otherwise corrupt record parsing at page boundaries.
+  Future<List<Map<String, String>>> getAdifExportRecords(
+      {required int stationId}) async {
+    final all = <Map<String, String>>[];
+    int page = 1;
+
+    while (true) {
+      try {
+        final response = await _dio.get(ApiEndpoints.qso, queryParameters: {
+          'format': 'adif',
+          'station_id': stationId,
+          'page': page,
+          'per_page': 1000,
+        });
+        final data = response.data;
+        if (data is! Map) break;
+
+        final inner = data['data'];
+        final adif = inner is Map ? inner['adif']?.toString() : null;
+        if (adif != null && adif.isNotEmpty) {
+          all.addAll(AdifParser.parse(adif));
+        }
+
+        final meta = data['meta'];
+        final hasMore = meta is Map && meta['has_more'] == true;
+        if (!hasMore) break;
+        page++;
+      } on DioException catch (e) {
+        throw _mapDioException(e);
+      }
+    }
+
+    return all;
   }
 
   Future<void> deleteQso(int serverId, int stationProfileId) async {

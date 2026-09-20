@@ -107,6 +107,50 @@ class QsoRepository {
     }
   }
 
+  /// Fetches the full ADIF export for [stationId] and merges QSL/LoTW/eQSL/
+  /// ClubLog/HRDLog confirmation fields into locally cached QSOs for that
+  /// station, persisting each merge. Confirmed live against a real server:
+  /// the JSON list endpoint used by [fetchQsos] AND the single-QSO detail
+  /// endpoint both omit these fields entirely — ADIF export
+  /// (GET /api/v2/qso?format=adif) is the only mode that carries them. Read
+  /// only: a paper-QSL write path was tried and confirmed live against a
+  /// real server that the v2 PATCH endpoint silently drops qsl_sent/
+  /// qsl_rcvd/qsl_*_via/qsl*date, so no such write path exists in this app.
+  /// There's no per-QSO server-side filter, so this pulls the whole log —
+  /// callers should run it once per station per session, not per QSO.
+  ///
+  /// ADIF carries no unique per-record ID, so records are matched to cached
+  /// QSOs via the same composite key [_qsoId] uses for optimistic-add
+  /// reconciliation (call + second-precision timestamp + band + mode).
+  /// Returns the updated QsoModels (empty if nothing changed).
+  Future<List<QsoModel>> syncConfirmationFields(int stationId) async {
+    final records = await _remote.getAdifExportRecords(stationId: stationId);
+    if (records.isEmpty) return const [];
+
+    final byKey = <String, Map<String, String>>{};
+    for (final fields in records) {
+      final qso = AdifParser.mapToQso(fields, stationId);
+      byKey[_qsoId(qso)] = fields;
+    }
+
+    final local = await _local.getCachedQsos(stationId: stationId);
+    final updated = <QsoModel>[];
+    for (final q in local) {
+      final fields = byKey[_qsoId(q)];
+      if (fields == null) continue;
+
+      final mergedRaw = {...?q.rawAdif, ...fields};
+      if (mapEquals(q.rawAdif, mergedRaw)) continue;
+
+      final merged = q.copyWith(rawAdif: mergedRaw);
+      if (q.localId != null) {
+        await _local.updateQso(q.localId!, merged);
+      }
+      updated.add(merged);
+    }
+    return updated;
+  }
+
   Future<void> addQso(QsoModel qso, {bool forceLocal = false}) async {
     if (forceLocal) {
       await _local.saveLocalQso(qso);

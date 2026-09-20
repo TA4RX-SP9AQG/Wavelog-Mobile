@@ -294,6 +294,29 @@ class QsoNotifier extends AsyncNotifier<List<QsoModel>> {
     return savedOnline;
   }
 
+  /// Best-effort: pulls the full ADIF export for [stationId] and merges
+  /// QSL/LoTW/eQSL/ClubLog/HRDLog confirmation fields into in-memory state
+  /// for every cached QSO of that station. See
+  /// QsoRepository.syncConfirmationFields for why ADIF export (not the list
+  /// or single-QSO endpoints) is the only working source. No-op if nothing
+  /// changed or the server call fails.
+  Future<void> syncConfirmationFields(int stationId) async {
+    try {
+      final repo = ref.read(qsoRepositoryProvider);
+      final updated = await repo.syncConfirmationFields(stationId);
+      if (updated.isEmpty) return;
+
+      final byId = {for (final q in updated) q.localId: q};
+      final latest = state.valueOrNull;
+      if (latest == null) return;
+      state = AsyncValue.data([
+        for (final q in latest) byId[q.localId] ?? q,
+      ]);
+    } catch (_) {
+      // Best-effort enrichment — leave state untouched on failure.
+    }
+  }
+
   void applyFilter(QsoFilter filter) {
     ref.read(qsoFilterProvider.notifier).state = filter;
   }
@@ -302,6 +325,18 @@ class QsoNotifier extends AsyncNotifier<List<QsoModel>> {
     ref.read(qsoFilterProvider.notifier).state = const QsoFilter();
   }
 }
+
+// Fires QsoNotifier.syncConfirmationFields once per stationId (autoDispose
+// caches per argument, so re-watching the same station on rebuild doesn't
+// re-fetch). Used by the QSO detail screen to backfill QSL/LoTW/eQSL/
+// ClubLog fields the list sync never carries. Station-scoped rather than
+// per-QSO: the ADIF export endpoint has no per-QSO filter, so one sync
+// covers every QSO for that station. The return value is unused — the
+// notifier's own state update is what the UI reacts to.
+final confirmationSyncProvider =
+    FutureProvider.autoDispose.family<void, int>((ref, stationId) {
+  return ref.read(qsoProvider.notifier).syncConfirmationFields(stationId);
+});
 
 // Previous QSOs with a specific callsign — used by the tablet add-QSO side panel.
 final previousQsosByCallsignProvider =

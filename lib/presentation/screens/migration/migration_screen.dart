@@ -50,10 +50,12 @@ class _MigrationScreenState extends ConsumerState<MigrationScreen> {
       _tokenError = null;
     });
 
-    final serverUrl = ref.read(settingsProvider).serverUrl;
+    final settings = ref.read(settingsProvider);
     try {
       final remote = WavelogRemoteDatasource(
-        dio: buildWavelogDio(serverUrl, bearerToken: token),
+        dio: buildWavelogDio(settings.serverUrl,
+            bearerToken: token,
+            allowInsecureSsl: settings.allowInsecureSsl),
       );
       await remote.getStations();
       // Success — patch installed and token valid

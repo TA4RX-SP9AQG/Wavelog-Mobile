@@ -70,9 +70,6 @@ class _DxccData {
   final int totalEntities;
   final int worked;
   final int confirmed;
-  final int lotwConfirmed;
-  final int eqslConfirmed;
-  final int qslConfirmed;
   final int remaining;
   final List<_DxccEntry> entries;
 
@@ -80,9 +77,6 @@ class _DxccData {
     required this.totalEntities,
     required this.worked,
     required this.confirmed,
-    required this.lotwConfirmed,
-    required this.eqslConfirmed,
-    required this.qslConfirmed,
     required this.remaining,
     required this.entries,
   });
@@ -204,7 +198,11 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
         .where((e) => !e.deleted && e.adif != 0 && !e.name.startsWith('-'))
         .map((entity) {
       final w = workedByAdif[entity.adif];
-      final confirmed = w != null && (w.lotw || w.eqsl || w.qsl);
+      // ARRL DXCC only credits LoTW and physical paper QSL cards (mailed to
+      // ARRL HQ or verified by a Card Checker) — eQSL is not DXCC-valid, so
+      // it must not flip an entity to "confirmed" here. See dxccConfirmed
+      // summary row below for the single unified count this feeds.
+      final confirmed = w != null && (w.lotw || w.qsl);
       final status = w == null
           ? _DxccStatus.notWorked
           : confirmed
@@ -226,7 +224,8 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
     // Fallback: only worked countries (no patch / server unreachable)
     allEntries = workedByName.entries.map((e) {
       final w = e.value;
-      final confirmed = w.lotw || w.eqsl || w.qsl;
+      // Same ARRL rule as above: eQSL alone does not count as DXCC-confirmed.
+      final confirmed = w.lotw || w.qsl;
       return _DxccEntry(
         adif:      0,
         country:   e.key,
@@ -241,21 +240,6 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
   final localConfirmed = allEntries.where((e) => e.status == _DxccStatus.confirmed).length;
   final total          = entities.isNotEmpty ? entities.length : _totalDxccEntities;
 
-  // Confirmation breakdown for summary card (still useful per-method)
-  int lotwC = 0, eqslC = 0, qslC = 0;
-  for (final w in workedByAdif.values) {
-    if (w.lotw) lotwC++;
-    if (w.eqsl) eqslC++;
-    if (w.qsl)  qslC++;
-  }
-  if (entities.isEmpty) {
-    for (final w in workedByName.values) {
-      if (w.lotw) lotwC++;
-      if (w.eqsl) eqslC++;
-      if (w.qsl)  qslC++;
-    }
-  }
-
   // Summary card always shows server-authoritative counts.
   // Prefix-matched local counts power the per-entity breakdown but may differ slightly.
   final workedCount    = !scoped && serverStats.dxccWorked > 0    ? serverStats.dxccWorked    : localWorked;
@@ -266,9 +250,6 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
     totalEntities: entityTotal,
     worked:        workedCount,
     confirmed:     confirmedCount,
-    lotwConfirmed: lotwC,
-    eqslConfirmed: eqslC,
-    qslConfirmed:  qslC,
     remaining:     (entityTotal - workedCount).clamp(0, entityTotal),
     entries:       allEntries,
   );
@@ -419,9 +400,8 @@ class _DxccTab extends ConsumerWidget {
                     ),
                     const Divider(height: 20),
                     _DxccSummaryRow(
-                      label: l10n.dxccConfirmed,
-                      value:
-                          '${data.lotwConfirmed} / ${data.eqslConfirmed} / ${data.qslConfirmed}',
+                      label: l10n.dxccLegendConfirmed,
+                      value: '${data.confirmed} / ${data.totalEntities}',
                       color: Colors.green,
                     ),
                     const Divider(height: 20),

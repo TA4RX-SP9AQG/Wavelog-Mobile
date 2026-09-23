@@ -76,3 +76,7 @@ brag-output-*/
 *.prompt
 notes/
 NOTES*
+
+# Promo website — deployed separately (wavelogmobile.app), not part of the
+# Flutter app's GitHub repo
+/website/

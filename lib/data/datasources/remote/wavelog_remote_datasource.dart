@@ -14,9 +14,8 @@ import '../../models/station_logbook_model.dart';
 import '../../models/station_model.dart';
 import '../../models/statistics_model.dart';
 
-/// Hybrid datasource: API v2 (Bearer token) for native endpoints,
-/// api_mobile patch (also Bearer token via Authorization header) for the rest.
-/// Patch endpoints are removed one by one as v2 gains native equivalents.
+/// Talks to the official Wavelog API v2 (Bearer token) exclusively — no
+/// server-side patch/plugin required as of Wavelog v3.2.0.
 class WavelogRemoteDatasource {
   final Dio _dio;
 

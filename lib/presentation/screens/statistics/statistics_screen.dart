@@ -151,7 +151,10 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
     }
   }
 
-  // Try to fetch the full entity list from the Wavelog server (requires patch)
+  // Try to fetch the full DXCC entity catalog (pure v2, no patch needed —
+  // /api/v2/catalog?topic=dxcc). Wrapped in try/catch purely for network
+  // robustness (unreachable server, or a pre-3.2.0 Wavelog without this
+  // endpoint), not because of any patch requirement.
   List<DxccEntity> entities = [];
   try {
     entities = (await ref.read(wavelogRemoteDatasourceProvider).getDxccList())
@@ -221,7 +224,9 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
       );
     }).toList();
   } else {
-    // Fallback: only worked countries (no patch / server unreachable)
+    // Fallback: catalog fetch above failed (server unreachable, or a
+    // pre-3.2.0 Wavelog without this endpoint) — show only worked
+    // countries, derived from local QSOs instead of the full catalog.
     allEntries = workedByName.entries.map((e) {
       final w = e.value;
       // Same ARRL rule as above: eQSL alone does not count as DXCC-confirmed.

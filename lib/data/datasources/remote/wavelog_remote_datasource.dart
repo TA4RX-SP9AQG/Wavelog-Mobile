@@ -758,6 +758,17 @@ class WavelogRemoteDatasource {
     switch (e.type) {
       case DioExceptionType.connectionError:
         final inner = e.error;
+        // A TLS handshake failure (self-signed / private-PKI certificate)
+        // can surface here instead of under DioExceptionType.unknown or
+        // .badCertificate, depending on Dio/platform version — when it
+        // does, it must still be classified as SslException, or the
+        // server-setup screen's SSL-bypass dialog never gets offered and
+        // this falls through to a generic, misleading "server
+        // unreachable" message instead.
+        if (inner is HandshakeException) {
+          return const SslException(
+              'SSL certificate error — the server certificate chain could not be verified.');
+        }
         if (inner is SocketException) {
           final msg = inner.message.toLowerCase();
           if (msg.contains('connection refused')) {

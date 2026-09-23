@@ -720,6 +720,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get licenseSection => 'License';
 
   @override
+  String get dxccDataSection => 'DXCC Data';
+
+  @override
+  String get dxccDataDescription =>
+      'DXCC entity and callsign prefix data © 1994– Jim Reisert, AD1C (country-files.com), used under the MIT License.';
+
+  @override
   String get errorNoConnection => 'No connection';
 
   @override

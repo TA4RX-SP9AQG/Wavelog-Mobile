@@ -1486,6 +1486,18 @@ abstract class AppLocalizations {
   /// **'License'**
   String get licenseSection;
 
+  /// No description provided for @dxccDataSection.
+  ///
+  /// In en, this message translates to:
+  /// **'DXCC Data'**
+  String get dxccDataSection;
+
+  /// No description provided for @dxccDataDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'DXCC entity and callsign prefix data © 1994– Jim Reisert, AD1C (country-files.com), used under the MIT License.'**
+  String get dxccDataDescription;
+
   /// No description provided for @errorNoConnection.
   ///
   /// In en, this message translates to:

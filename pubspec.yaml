@@ -95,6 +95,7 @@ flutter:
     - assets/images/
     - assets/icon/
     - assets/animations/achievements/
+    - assets/dxcc/dxcc_prefix_table.json
   fonts:
     - family: Manrope
       fonts:

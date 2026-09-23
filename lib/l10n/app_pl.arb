@@ -243,6 +243,8 @@
   "mitLicense": "Licencja MIT",
   "mitDescription": "Ta aplikacja i projekt Wavelog są dystrybuowane na licencji MIT. Open source, bez żadnych gwarancji.",
   "licenseSection": "Licencja",
+  "dxccDataSection": "Dane DXCC",
+  "dxccDataDescription": "Dane jednostek DXCC i prefiksów znaków wywoławczych © 1994– Jim Reisert, AD1C (country-files.com), używane na licencji MIT.",
 
   "errorNoConnection": "Brak połączenia",
   "errorUnauthorized": "Brak autoryzacji — sprawdź klucz API",

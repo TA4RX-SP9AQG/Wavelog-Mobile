@@ -724,6 +724,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get licenseSection => 'Lisans';
 
   @override
+  String get dxccDataSection => 'DXCC Verisi';
+
+  @override
+  String get dxccDataDescription =>
+      'DXCC varlık ve çağrı işareti öneki verileri © 1994– Jim Reisert, AD1C (country-files.com), MIT Lisansı kapsamında kullanılmaktadır.';
+
+  @override
   String get errorNoConnection => 'Bağlantı yok';
 
   @override

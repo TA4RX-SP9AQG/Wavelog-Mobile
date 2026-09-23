@@ -120,6 +120,38 @@ class _AboutScreenState extends State<AboutScreen> {
             ),
           ),
 
+          const SizedBox(height: 20),
+
+          _SectionTitle(l10n.dxccDataSection),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.mitLicense,
+                      style: tt.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.dxccDataDescription,
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    onTap: () => _open('https://www.country-files.com'),
+                    child: Text(
+                      'country-files.com',
+                      style: tt.bodySmall?.copyWith(
+                          color: cs.primary,
+                          decoration: TextDecoration.underline),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           const SizedBox(height: 32),
 
           Center(

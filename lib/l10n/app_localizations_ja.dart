@@ -717,6 +717,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get licenseSection => 'ライセンス';
 
   @override
+  String get dxccDataSection => 'DXCCデータ';
+
+  @override
+  String get dxccDataDescription =>
+      'DXCCエンティティおよびコールサインプレフィックスデータ © 1994– Jim Reisert, AD1C (country-files.com)、MITライセンスの下で使用。';
+
+  @override
   String get errorNoConnection => '接続なし';
 
   @override

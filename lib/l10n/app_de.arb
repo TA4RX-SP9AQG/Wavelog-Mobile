@@ -272,6 +272,8 @@
   "mitLicense": "MIT-Lizenz",
   "mitDescription": "Diese App und das Wavelog-Projekt werden unter der MIT-Lizenz vertrieben. Open Source, ohne Garantie.",
   "licenseSection": "Lizenz",
+  "dxccDataSection": "DXCC-Daten",
+  "dxccDataDescription": "DXCC-Entitäts- und Rufzeichen-Präfixdaten © 1994– Jim Reisert, AD1C (country-files.com), verwendet unter der MIT-Lizenz.",
 
   "errorNoConnection": "Keine Verbindung",
   "errorUnauthorized": "Nicht autorisiert — API-Schlüssel prüfen",

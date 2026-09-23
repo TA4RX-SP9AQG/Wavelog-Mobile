@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../core/dxcc/dxcc_prefix_matcher.dart';
 import '../../../core/utils/error_l10n.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/qso_scope.dart';
@@ -31,15 +32,6 @@ String _titleCase(String s) => s
 String _normalizeQsoCall(String raw) {
   if (raw.isEmpty) return '';
   return raw.toUpperCase().split('/').first.trim();
-}
-
-/// Finds the DXCC entity whose prefix is the longest match for [call].
-/// [sorted] must be sorted by prefix.length descending.
-DxccEntity? _matchDxccByCall(String call, List<DxccEntity> sorted) {
-  for (final e in sorted) {
-    if (call.startsWith(e.prefix.toUpperCase())) return e;
-  }
-  return null;
 }
 
 // Fallback continent derivation from CQ zone when the server omits the field.
@@ -174,17 +166,17 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
   } catch (_) {}
 
   // v2 API QSOs lack a `dxcc` field, so workedByAdif is empty after the first pass.
-  // Derive DXCC entity from callsign prefix (longest-match against entity prefix list).
+  // Derive DXCC entity from callsign prefix using the bundled cty.dat-derived
+  // prefix table (longest-match against every known prefix variant per
+  // entity, not just the single primary prefix the catalog returns — see
+  // DxccPrefixMatcher for why this matters).
   if (entities.isNotEmpty && workedByAdif.isEmpty) {
-    final sortedByPrefix = entities
-        .where((e) => e.prefix.isNotEmpty && e.adif > 0)
-        .toList()
-        ..sort((a, b) => b.prefix.length.compareTo(a.prefix.length));
+    final matcher = await DxccPrefixMatcher.build(entities);
 
     for (final qso in qsos) {
       final call = _normalizeQsoCall(qso.callsign);
       if (call.isEmpty) continue;
-      final entity = _matchDxccByCall(call, sortedByPrefix);
+      final entity = matcher.match(call);
       if (entity == null) continue;
 
       final types = confirmationMap[qso.serverId] ?? [];

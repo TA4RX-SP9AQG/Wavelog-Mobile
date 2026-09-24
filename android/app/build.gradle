@@ -61,4 +61,9 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+    // WindowCompat.setDecorFitsSystemWindows (Android 15 / SDK 35
+    // edge-to-edge requirement) — explicit rather than relying on
+    // whatever version Flutter's own embedding happens to pull in
+    // transitively.
+    implementation 'androidx.core:core-ktx:1.13.1'
 }

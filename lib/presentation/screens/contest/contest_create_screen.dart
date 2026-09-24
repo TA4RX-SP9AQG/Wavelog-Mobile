@@ -92,7 +92,7 @@ class _ContestCreateScreenState extends ConsumerState<ContestCreateScreen> {
   Future<void> _pickContest() async {
     final serverList = ref.read(_serverContestListProvider).valueOrNull ?? [];
     final allContests = _buildContestList(serverList);
-    final other = ContestTemplate(id: 0, name: 'Other / Custom', adifName: 'Other');
+    const other = ContestTemplate(id: 0, name: 'Other / Custom', adifName: 'Other');
     final l10n = context.l10n;
     String query = '';
 

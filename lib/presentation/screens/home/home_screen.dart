@@ -215,10 +215,10 @@ class _HomeBody extends ConsumerWidget {
               color: kAccentElectric,
               backgroundColor: Theme.of(context).colorScheme.surface,
               onRefresh: onRefresh,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(12),
-                child: const _ContestCard(),
+              child: const SingleChildScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.all(12),
+                child: _ContestCard(),
               ),
             ),
           ),

@@ -31,14 +31,19 @@ String normalizeServerUrl(String url) {
   // (e.g. ".../api/v2/qso?station_id=1") doesn't leave stray characters.
   u = u.split('?').first.split('#').first;
   u = u.replaceAll(RegExp(r'/+$'), '');
-  // Strip an /api/vN path onward (with or without a leading /index.php),
-  // regardless of what follows it.
-  u = u.replaceFirst(
-      RegExp(r'(/index\.php)?/api/v\d+(/.*)?$', caseSensitive: false), '');
-  // Legacy: bare /index.php with no /api/vN suffix
-  if (u.toLowerCase().endsWith('/index.php')) {
-    u = u.substring(0, u.length - '/index.php'.length);
-  }
+  // Wavelog's front controller is always "/index.php" (CodeIgniter
+  // routing), and everything after it is a route — an API path, a
+  // dashboard page, or whatever the user happened to copy from their
+  // browser's address bar. The install root is always everything BEFORE
+  // the first "/index.php", so truncate there instead of only recognizing
+  // the specific "/api/vN" suffix: a user pasting e.g.
+  // ".../index.php/dashboard" previously fell through unchanged (neither
+  // rule matched a non-API route), producing a broken doubled path once
+  // ApiEndpoints appended its own "/index.php/api/v2/...".
+  u = u.replaceFirst(RegExp(r'/index\.php(/.*)?$', caseSensitive: false), '');
+  // URL-rewritten installs (index.php hidden by server config): still
+  // catch a bare "/api/vN..." suffix with no "/index.php" in front of it.
+  u = u.replaceFirst(RegExp(r'/api/v\d+(/.*)?$', caseSensitive: false), '');
   return u.replaceAll(RegExp(r'/+$'), '');
 }
 

@@ -725,6 +725,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get licenseSection => 'Licencja';
 
   @override
+  String get dxccDataSection => 'Dane DXCC';
+
+  @override
+  String get dxccDataDescription =>
+      'Dane jednostek DXCC i prefiksów znaków wywoławczych © 1994– Jim Reisert, AD1C (country-files.com), używane na licencji MIT.';
+
+  @override
   String get errorNoConnection => 'Brak połączenia';
 
   @override

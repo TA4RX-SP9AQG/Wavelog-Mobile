@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../core/dxcc/dxcc_prefix_matcher.dart';
 import '../../../core/utils/error_l10n.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/qso_scope.dart';
@@ -31,15 +32,6 @@ String _titleCase(String s) => s
 String _normalizeQsoCall(String raw) {
   if (raw.isEmpty) return '';
   return raw.toUpperCase().split('/').first.trim();
-}
-
-/// Finds the DXCC entity whose prefix is the longest match for [call].
-/// [sorted] must be sorted by prefix.length descending.
-DxccEntity? _matchDxccByCall(String call, List<DxccEntity> sorted) {
-  for (final e in sorted) {
-    if (call.startsWith(e.prefix.toUpperCase())) return e;
-  }
-  return null;
 }
 
 // Fallback continent derivation from CQ zone when the server omits the field.
@@ -78,9 +70,6 @@ class _DxccData {
   final int totalEntities;
   final int worked;
   final int confirmed;
-  final int lotwConfirmed;
-  final int eqslConfirmed;
-  final int qslConfirmed;
   final int remaining;
   final List<_DxccEntry> entries;
 
@@ -88,9 +77,6 @@ class _DxccData {
     required this.totalEntities,
     required this.worked,
     required this.confirmed,
-    required this.lotwConfirmed,
-    required this.eqslConfirmed,
-    required this.qslConfirmed,
     required this.remaining,
     required this.entries,
   });
@@ -108,6 +94,20 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
   // only trusted when nothing is scoped.
   final dxccIds = ref.watch(dxccStationIdsProvider);
   final scoped = dxccIds != null;
+
+  // Backfill paper-QSL/LoTW/eQSL/ClubLog fields (ADIF-export-only, see
+  // confirmationSyncProvider) for every station in scope before reading the
+  // local cache below. Without this, qso.qslRcvd stays null for any QSO
+  // whose detail screen was never opened, so paper-QSL confirmations were
+  // silently undercounted here even though /api/v2/confirmation doesn't
+  // carry them either (it only tracks electronic confirmations). Skipped
+  // when unscoped (dxccIds == null): that means no active station/logbook,
+  // so there's no bounded station list to sync against.
+  if (dxccIds != null) {
+    await Future.wait(
+      dxccIds.map((id) => ref.watch(confirmationSyncProvider(id).future)),
+    );
+  }
 
   // v2 QSO list does not return QSL fields — use /api/v2/confirmation as source of truth.
   final confirmationMap = ref.watch(confirmationProvider).valueOrNull ?? {};
@@ -151,7 +151,10 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
     }
   }
 
-  // Try to fetch the full entity list from the Wavelog server (requires patch)
+  // Try to fetch the full DXCC entity catalog (pure v2, no patch needed —
+  // /api/v2/catalog?topic=dxcc). Wrapped in try/catch purely for network
+  // robustness (unreachable server, or a pre-3.2.0 Wavelog without this
+  // endpoint), not because of any patch requirement.
   List<DxccEntity> entities = [];
   try {
     entities = (await ref.read(wavelogRemoteDatasourceProvider).getDxccList())
@@ -160,17 +163,17 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
   } catch (_) {}
 
   // v2 API QSOs lack a `dxcc` field, so workedByAdif is empty after the first pass.
-  // Derive DXCC entity from callsign prefix (longest-match against entity prefix list).
+  // Derive DXCC entity from callsign prefix using the bundled cty.dat-derived
+  // prefix table (longest-match against every known prefix variant per
+  // entity, not just the single primary prefix the catalog returns — see
+  // DxccPrefixMatcher for why this matters).
   if (entities.isNotEmpty && workedByAdif.isEmpty) {
-    final sortedByPrefix = entities
-        .where((e) => e.prefix.isNotEmpty && e.adif > 0)
-        .toList()
-        ..sort((a, b) => b.prefix.length.compareTo(a.prefix.length));
+    final matcher = await DxccPrefixMatcher.build(entities);
 
     for (final qso in qsos) {
       final call = _normalizeQsoCall(qso.callsign);
       if (call.isEmpty) continue;
-      final entity = _matchDxccByCall(call, sortedByPrefix);
+      final entity = matcher.match(call);
       if (entity == null) continue;
 
       final types = confirmationMap[qso.serverId] ?? [];
@@ -198,7 +201,11 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
         .where((e) => !e.deleted && e.adif != 0 && !e.name.startsWith('-'))
         .map((entity) {
       final w = workedByAdif[entity.adif];
-      final confirmed = w != null && (w.lotw || w.eqsl || w.qsl);
+      // ARRL DXCC only credits LoTW and physical paper QSL cards (mailed to
+      // ARRL HQ or verified by a Card Checker) — eQSL is not DXCC-valid, so
+      // it must not flip an entity to "confirmed" here. See dxccConfirmed
+      // summary row below for the single unified count this feeds.
+      final confirmed = w != null && (w.lotw || w.qsl);
       final status = w == null
           ? _DxccStatus.notWorked
           : confirmed
@@ -217,10 +224,13 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
       );
     }).toList();
   } else {
-    // Fallback: only worked countries (no patch / server unreachable)
+    // Fallback: catalog fetch above failed (server unreachable, or a
+    // pre-3.2.0 Wavelog without this endpoint) — show only worked
+    // countries, derived from local QSOs instead of the full catalog.
     allEntries = workedByName.entries.map((e) {
       final w = e.value;
-      final confirmed = w.lotw || w.eqsl || w.qsl;
+      // Same ARRL rule as above: eQSL alone does not count as DXCC-confirmed.
+      final confirmed = w.lotw || w.qsl;
       return _DxccEntry(
         adif:      0,
         country:   e.key,
@@ -235,21 +245,6 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
   final localConfirmed = allEntries.where((e) => e.status == _DxccStatus.confirmed).length;
   final total          = entities.isNotEmpty ? entities.length : _totalDxccEntities;
 
-  // Confirmation breakdown for summary card (still useful per-method)
-  int lotwC = 0, eqslC = 0, qslC = 0;
-  for (final w in workedByAdif.values) {
-    if (w.lotw) lotwC++;
-    if (w.eqsl) eqslC++;
-    if (w.qsl)  qslC++;
-  }
-  if (entities.isEmpty) {
-    for (final w in workedByName.values) {
-      if (w.lotw) lotwC++;
-      if (w.eqsl) eqslC++;
-      if (w.qsl)  qslC++;
-    }
-  }
-
   // Summary card always shows server-authoritative counts.
   // Prefix-matched local counts power the per-entity breakdown but may differ slightly.
   final workedCount    = !scoped && serverStats.dxccWorked > 0    ? serverStats.dxccWorked    : localWorked;
@@ -260,9 +255,6 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
     totalEntities: entityTotal,
     worked:        workedCount,
     confirmed:     confirmedCount,
-    lotwConfirmed: lotwC,
-    eqslConfirmed: eqslC,
-    qslConfirmed:  qslC,
     remaining:     (entityTotal - workedCount).clamp(0, entityTotal),
     entries:       allEntries,
   );
@@ -303,6 +295,11 @@ class StatisticsScreen extends ConsumerWidget {
                 ref.invalidate(detailedStatisticsProvider);
                 ref.invalidate(solarDataProvider);
                 ref.invalidate(potaStatsProvider);
+                // Force a fresh electronic-confirmation fetch and a fresh
+                // paper-QSL/LoTW/eQSL ADIF backfill for every station,
+                // instead of reusing this session's cached sync result.
+                ref.invalidate(confirmationProvider);
+                ref.invalidate(confirmationSyncProvider);
                 ref.invalidate(_dxccStatsProvider);
               },
             ),
@@ -408,9 +405,8 @@ class _DxccTab extends ConsumerWidget {
                     ),
                     const Divider(height: 20),
                     _DxccSummaryRow(
-                      label: l10n.dxccConfirmed,
-                      value:
-                          '${data.lotwConfirmed} / ${data.eqslConfirmed} / ${data.qslConfirmed}',
+                      label: l10n.dxccLegendConfirmed,
+                      value: '${data.confirmed} / ${data.totalEntities}',
                       color: Colors.green,
                     ),
                     const Divider(height: 20),

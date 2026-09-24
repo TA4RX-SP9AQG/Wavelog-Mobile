@@ -725,6 +725,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get licenseSection => 'Лицензия';
 
   @override
+  String get dxccDataSection => 'Данные DXCC';
+
+  @override
+  String get dxccDataDescription =>
+      'Данные о территориях DXCC и префиксах позывных © 1994– Jim Reisert, AD1C (country-files.com), используются по лицензии MIT.';
+
+  @override
   String get errorNoConnection => 'Нет соединения';
 
   @override

@@ -156,6 +156,7 @@ class SettingsNotifier extends StateNotifier<SettingsModel> {
       offlineModeEnabled: state.offlineModeEnabled,
       locale: state.locale,
       spotRefreshSeconds: state.spotRefreshSeconds,
+      allowInsecureSsl: state.allowInsecureSsl,
     );
     await _repo.saveSettings(s);
     state = s;

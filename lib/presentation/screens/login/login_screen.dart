@@ -149,7 +149,10 @@ class _ProfileCard extends ConsumerWidget {
     StationModel? autoStation;
     try {
       final remote = WavelogRemoteDatasource(
-          dio: buildWavelogDio(serverUrl, bearerToken: profile.apiKey));
+          dio: buildWavelogDio(serverUrl,
+              bearerToken: profile.apiKey,
+              allowInsecureSsl:
+                  ref.read(settingsProvider).allowInsecureSsl));
       final stations = await remote.getStations();
 
       autoStation = stations.where((s) =>
@@ -373,7 +376,9 @@ class _AddProfileSheetState extends ConsumerState<_AddProfileSheet> {
 
     final callsign = _callsignCtrl.text.trim().toUpperCase();
     final apiKey = _apiKeyCtrl.text.trim();
-    final dio = buildWavelogDio(widget.serverUrl, bearerToken: apiKey);
+    final dio = buildWavelogDio(widget.serverUrl,
+        bearerToken: apiKey,
+        allowInsecureSsl: ref.read(settingsProvider).allowInsecureSsl);
 
     // Scope diagnostics always run and stay visible, whether or not the
     // overall sign-in below succeeds — the user needs this info either way.

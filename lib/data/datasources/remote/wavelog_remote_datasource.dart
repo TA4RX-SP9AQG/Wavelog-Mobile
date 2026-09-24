@@ -14,9 +14,8 @@ import '../../models/station_logbook_model.dart';
 import '../../models/station_model.dart';
 import '../../models/statistics_model.dart';
 
-/// Hybrid datasource: API v2 (Bearer token) for native endpoints,
-/// api_mobile patch (also Bearer token via Authorization header) for the rest.
-/// Patch endpoints are removed one by one as v2 gains native equivalents.
+/// Talks to the official Wavelog API v2 (Bearer token) exclusively — no
+/// server-side patch/plugin required as of Wavelog v3.2.0.
 class WavelogRemoteDatasource {
   final Dio _dio;
 
@@ -758,6 +757,17 @@ class WavelogRemoteDatasource {
     switch (e.type) {
       case DioExceptionType.connectionError:
         final inner = e.error;
+        // A TLS handshake failure (self-signed / private-PKI certificate)
+        // can surface here instead of under DioExceptionType.unknown or
+        // .badCertificate, depending on Dio/platform version — when it
+        // does, it must still be classified as SslException, or the
+        // server-setup screen's SSL-bypass dialog never gets offered and
+        // this falls through to a generic, misleading "server
+        // unreachable" message instead.
+        if (inner is HandshakeException) {
+          return const SslException(
+              'SSL certificate error — the server certificate chain could not be verified.');
+        }
         if (inner is SocketException) {
           final msg = inner.message.toLowerCase();
           if (msg.contains('connection refused')) {

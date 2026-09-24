@@ -326,15 +326,22 @@ class QsoNotifier extends AsyncNotifier<List<QsoModel>> {
   }
 }
 
-// Fires QsoNotifier.syncConfirmationFields once per stationId (autoDispose
-// caches per argument, so re-watching the same station on rebuild doesn't
-// re-fetch). Used by the QSO detail screen to backfill QSL/LoTW/eQSL/
-// ClubLog fields the list sync never carries. Station-scoped rather than
-// per-QSO: the ADIF export endpoint has no per-QSO filter, so one sync
-// covers every QSO for that station. The return value is unused — the
-// notifier's own state update is what the UI reacts to.
+// Fires QsoNotifier.syncConfirmationFields once per stationId per app
+// session. Used by the QSO detail screen and the Statistics/DXCC screen to
+// backfill QSL/LoTW/eQSL/ClubLog fields the list sync never carries — both
+// screens watch the same family instance per stationId, so whichever runs
+// first pays the ADIF-export cost and the other reuses its result.
+// keepAlive() is required: plain autoDispose only survives while at least
+// one widget is watching, so navigating from the detail screen to
+// Statistics (nothing watches it in between) would otherwise refetch the
+// whole log again. Station-scoped rather than per-QSO: the ADIF export
+// endpoint has no per-QSO filter, so one sync covers every QSO for that
+// station. The return value is unused — the notifier's own state update is
+// what the UI reacts to. The refresh action on Statistics invalidates this
+// family explicitly when the user wants a forced re-sync.
 final confirmationSyncProvider =
     FutureProvider.autoDispose.family<void, int>((ref, stationId) {
+  ref.keepAlive();
   return ref.read(qsoProvider.notifier).syncConfirmationFields(stationId);
 });
 

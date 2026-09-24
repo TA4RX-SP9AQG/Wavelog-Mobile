@@ -91,9 +91,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final url = _urlCtrl.text.trim();
     final key = _keyCtrl.text.trim();
 
+    final allowInsecureSsl = ref.read(settingsProvider).allowInsecureSsl;
     final repo = ref.read(settingsRepositoryProvider);
     final remote = WavelogRemoteDatasource(
-      dio: buildWavelogDio(url, bearerToken: key),
+      dio: buildWavelogDio(url,
+          bearerToken: key, allowInsecureSsl: allowInsecureSsl),
     );
 
     ConnectionTestResult result;
@@ -146,7 +148,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _scopeChecks = checks;
     });
 
-    final testDio = buildWavelogDio(url, bearerToken: key);
+    final testDio = buildWavelogDio(url,
+        bearerToken: key, allowInsecureSsl: allowInsecureSsl);
     final endpoints = [
       (ApiEndpoints.station, null),
       (ApiEndpoints.logbook, null),

@@ -243,6 +243,8 @@
   "mitLicense": "MIT Lisansı",
   "mitDescription": "Bu uygulama ve Wavelog projesi MIT lisansı kapsamında dağıtılmaktadır. Açık kaynak olup herhangi bir garanti verilmemektedir.",
   "licenseSection": "Lisans",
+  "dxccDataSection": "DXCC Verisi",
+  "dxccDataDescription": "DXCC varlık ve çağrı işareti öneki verileri © 1994– Jim Reisert, AD1C (country-files.com), MIT Lisansı kapsamında kullanılmaktadır.",
 
   "errorNoConnection": "Bağlantı yok",
   "errorUnauthorized": "Yetkisiz — API anahtarını kontrol edin",

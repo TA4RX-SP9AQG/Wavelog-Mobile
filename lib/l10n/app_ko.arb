@@ -277,6 +277,8 @@
   "mitLicense": "MIT 라이선스",
   "mitDescription": "이 앱과 Wavelog 프로젝트는 MIT 라이선스 하에 배포됩니다. 오픈소스, 무보증.",
   "licenseSection": "라이선스",
+  "dxccDataSection": "DXCC 데이터",
+  "dxccDataDescription": "DXCC 엔티티 및 콜사인 접두사 데이터 © 1994– Jim Reisert, AD1C (country-files.com), MIT 라이선스에 따라 사용됨.",
 
   "errorNoConnection": "연결 없음",
   "errorUnauthorized": "인증 실패 — API 키를 확인하세요",

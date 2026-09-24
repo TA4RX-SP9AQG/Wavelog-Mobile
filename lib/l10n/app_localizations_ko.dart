@@ -717,6 +717,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get licenseSection => '라이선스';
 
   @override
+  String get dxccDataSection => 'DXCC 데이터';
+
+  @override
+  String get dxccDataDescription =>
+      'DXCC 엔티티 및 콜사인 접두사 데이터 © 1994– Jim Reisert, AD1C (country-files.com), MIT 라이선스에 따라 사용됨.';
+
+  @override
   String get errorNoConnection => '연결 없음';
 
   @override

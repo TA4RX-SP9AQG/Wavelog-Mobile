@@ -1,7 +1,7 @@
 name: wavelog_mobile
 description: Wavelog Amateur Radio Logging Mobile App
 publish_to: 'none'
-version: 3.2.8+99
+version: 3.2.8+104
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -95,6 +95,7 @@ flutter:
     - assets/images/
     - assets/icon/
     - assets/animations/achievements/
+    - assets/dxcc/dxcc_prefix_table.json
   fonts:
     - family: Manrope
       fonts:

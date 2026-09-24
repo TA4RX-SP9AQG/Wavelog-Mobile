@@ -301,6 +301,8 @@
   "mitLicense": "Лицензия MIT",
   "mitDescription": "Это приложение и проект Wavelog распространяются под лицензией MIT. Открытый исходный код, без гарантий.",
   "licenseSection": "Лицензия",
+  "dxccDataSection": "Данные DXCC",
+  "dxccDataDescription": "Данные о территориях DXCC и префиксах позывных © 1994– Jim Reisert, AD1C (country-files.com), используются по лицензии MIT.",
   "errorNoConnection": "Нет соединения",
   "errorUnauthorized": "Не авторизован — проверьте ключ API",
   "errorServer": "Ошибка сервера",

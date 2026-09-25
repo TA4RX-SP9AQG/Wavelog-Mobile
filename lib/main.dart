@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +17,27 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await ChatNotificationService.handleData(message.data);
 }
 
+/// Bildirim izni istemi (Android 13+ sistem popup'ı gösterir ve kullanıcının
+/// cevabını bekler) ve topic aboneliği (ağ round-trip'i) — ilk karenin
+/// çizilmesini bloklamaması için runApp()'tan SONRA, awaitlenmeden
+/// çalıştırılır. Daha önce main()'in içinde, runApp()'tan önce await
+/// ediliyordu; ilk kurulumda kullanıcı sistem popup'ını hemen fark
+/// etmezse veya bağlantı yavaşsa, uygulamanın kendi splash animasyonu
+/// bile görünmeden ekran donmuş gibi kalıyordu.
+Future<void> _deferredFirebaseMessagingSetup() async {
+  try {
+    await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    await FirebaseMessaging.instance.subscribeToTopic('new_activations');
+  } catch (_) {
+    // Bildirim izni reddedilmesi veya ağ hatası — sessizce yut, uygulama
+    // bildirimler olmadan da tam işlevsel.
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -24,16 +47,6 @@ void main() async {
     (message) => ChatNotificationService.handleData(message.data),
   );
   await ChatNotificationService.initialize();
-
-  // Android 13+ bildirim izni (iOS için de gerekli)
-  await FirebaseMessaging.instance.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
-
-  // Genel aktivasyon feed'ine abone ol
-  await FirebaseMessaging.instance.subscribeToTopic('new_activations');
 
   await initializeDateFormatting();
 
@@ -48,4 +61,8 @@ void main() async {
       child: WavelogMobileApp(),
     ),
   );
+
+  // Splash ekranı zaten görünür durumda — bildirim izni/abonelik artık
+  // arayüzü bloklamadan arka planda tamamlanabilir.
+  unawaited(_deferredFirebaseMessagingSetup());
 }

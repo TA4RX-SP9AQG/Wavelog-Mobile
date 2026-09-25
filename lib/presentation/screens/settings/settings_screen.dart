@@ -52,7 +52,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _save({bool navigate = true}) async {
     if (!_formKey.currentState!.validate()) return;
-    await ref.read(settingsProvider.notifier).updateServerUrl(_urlCtrl.text);
+    // Unlike server_setup_screen (first-time setup), this save path never
+    // normalized the URL before persisting it — a value pasted with a
+    // trailing path (e.g. copied from the browser while on some
+    // non-API Wavelog page) was stored as-is, then doubled up when
+    // ApiEndpoints appended its own "/index.php/api/v2/..." on every
+    // request, breaking every call made with the saved settings.
+    final cleanUrl = normalizeServerUrl(_urlCtrl.text.trim());
+    await ref.read(settingsProvider.notifier).updateServerUrl(cleanUrl);
+    if (mounted && cleanUrl != _urlCtrl.text) {
+      _urlCtrl.text = cleanUrl;
+    }
     await ref.read(settingsProvider.notifier).updateApiKey(_keyCtrl.text);
     // Force data providers to reload with the new token immediately.
     ref.invalidate(stationProvider);

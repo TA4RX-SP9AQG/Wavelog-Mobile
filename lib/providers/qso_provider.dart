@@ -149,14 +149,30 @@ class QsoNotifier extends AsyncNotifier<List<QsoModel>> {
     final stations = await ref.read(stationProvider.future);
     if (stations.isEmpty) return [];
 
-    final futures = stations.map((s) => repo
-        .fetchQsos(
-          stationId: s.id,
-          forceLocal: settings.offlineModeEnabled,
-        )
-        .catchError((_) => <QsoModel>[]));
+    // Fetch in bounded-concurrency batches rather than all stations at
+    // once. A logbook with many stations (reported real case: 14 US
+    // stations vs. 3 Swedish ones in the same account) means that many
+    // parallel multi-page pagination loops compete for the same
+    // connection pool and hit the server at the same time, making any one
+    // station's request measurably more likely to time out — which then
+    // silently falls back to whatever's in that station's local cache
+    // from its last *fully successful* sync (see QsoRepository.fetchQsos),
+    // potentially many months stale, with no indication anything failed.
+    // A handful of stations at a time keeps most of the parallelism's
+    // speed benefit while greatly reducing that contention.
+    const maxConcurrentStations = 4;
+    final results = <List<QsoModel>>[];
+    for (var i = 0; i < stations.length; i += maxConcurrentStations) {
+      final batch = stations.skip(i).take(maxConcurrentStations);
+      final batchResults = await Future.wait(batch.map((s) => repo
+          .fetchQsos(
+            stationId: s.id,
+            forceLocal: settings.offlineModeEnabled,
+          )
+          .catchError((_) => <QsoModel>[])));
+      results.addAll(batchResults);
+    }
 
-    final results = await Future.wait(futures);
     final seen = <String>{};
     final all = results
         .expand((list) => list)

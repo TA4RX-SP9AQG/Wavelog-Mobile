@@ -69,42 +69,64 @@ class QsoRepository {
           stationId: stationId, band: band, mode: mode, callsign: callsign);
     }
 
-    try {
-      final fetched = await _remote.getContacts(
-        stationId: stationId,
-        fetchFromId: fetchFromId,
-        band: band,
-      );
-      // Çevrimdışı silinen (henüz sunucuya iletilmemiş) QSO'lar listede
-      // yeniden belirmesin
-      final pendingDeleteIds = await _local.getPendingDeleteServerIds();
-      // Assign a deterministic localId to every server QSO so the
-      // detail screen can always find it by ID.
-      final remoteQsos = fetched
-          .where((q) =>
-              q.serverId == null || !pendingDeleteIds.contains(q.serverId))
-          .map((q) => q.localId != null
-              ? q
-              : q.copyWith(localId: q.serverId?.toString() ?? _qsoId(q)))
-          .toList();
-      // Fark tabanlı önbellek eşitleme: değişmeyen kayıtlar yeniden
-      // yazılmaz. Her istasyon kendi alt kümesini eşitlediği için paralel
-      // fetchQsos çağrıları birbiriyle yarışmaz.
-      await _local.replaceSyncedQsosForStation(stationId, remoteQsos);
+    // Multi-logbook accounts fetch every station's QSOs in parallel (see
+    // QsoNotifier._fetch) — a logbook with many stations (e.g. 14) means
+    // many concurrent multi-page pagination loops competing for the same
+    // connection pool and hitting the server at once, which makes a single
+    // station's request measurably more likely to time out than it would
+    // fetching alone. Before this retry, a timed-out station silently fell
+    // back to whatever was in the local cache from its last *fully
+    // successful* sync — which, for a busy station, could be many months
+    // stale — with no indication to the user that anything had failed.
+    // One retry clears most of these transient, contention-driven timeouts
+    // outright; when it doesn't, the stale-cache fallback below still
+    // applies as the last resort.
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final fetched = await _remote.getContacts(
+          stationId: stationId,
+          fetchFromId: fetchFromId,
+          band: band,
+        );
+        // Çevrimdışı silinen (henüz sunucuya iletilmemiş) QSO'lar listede
+        // yeniden belirmesin
+        final pendingDeleteIds = await _local.getPendingDeleteServerIds();
+        // Assign a deterministic localId to every server QSO so the
+        // detail screen can always find it by ID.
+        final remoteQsos = fetched
+            .where((q) =>
+                q.serverId == null || !pendingDeleteIds.contains(q.serverId))
+            .map((q) => q.localId != null
+                ? q
+                : q.copyWith(localId: q.serverId?.toString() ?? _qsoId(q)))
+            .toList();
+        // Fark tabanlı önbellek eşitleme: değişmeyen kayıtlar yeniden
+        // yazılmaz. Her istasyon kendi alt kümesini eşitlediği için paralel
+        // fetchQsos çağrıları birbiriyle yarışmaz.
+        await _local.replaceSyncedQsosForStation(stationId, remoteQsos);
 
-      // Apply local filters
-      if (mode != null || callsign != null) {
-        return await _local.getCachedQsos(
+        // Apply local filters
+        if (mode != null || callsign != null) {
+          return await _local.getCachedQsos(
+              stationId: stationId,
+              band: band,
+              mode: mode,
+              callsign: callsign);
+        }
+        return remoteQsos;
+      } on NetworkException {
+        // No connectivity at all — retrying immediately won't help.
+        return _local.getCachedQsos(
+            stationId: stationId, band: band, mode: mode, callsign: callsign);
+      } on TimeoutException {
+        if (attempt == 0) continue; // one retry, then fall back
+        return _local.getCachedQsos(
             stationId: stationId, band: band, mode: mode, callsign: callsign);
       }
-      return remoteQsos;
-    } on NetworkException {
-      return _local.getCachedQsos(
-          stationId: stationId, band: band, mode: mode, callsign: callsign);
-    } on TimeoutException {
-      return _local.getCachedQsos(
-          stationId: stationId, band: band, mode: mode, callsign: callsign);
     }
+    // Unreachable — the loop always returns on its second iteration.
+    return _local.getCachedQsos(
+        stationId: stationId, band: band, mode: mode, callsign: callsign);
   }
 
   /// Fetches the full ADIF export for [stationId] and merges QSL/LoTW/eQSL/

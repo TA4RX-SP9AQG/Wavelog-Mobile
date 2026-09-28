@@ -1037,12 +1037,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get deleteLogbook => 'Supprimer le carnet';
 
   @override
-  String get setActiveLogbook => 'Définir actif';
-
-  @override
-  String get activeLogbook => 'Carnet actif';
-
-  @override
   String get editStation => 'Modifier';
 
   @override

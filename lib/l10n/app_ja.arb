@@ -400,8 +400,6 @@
   "logbookName": "ログブック名",
   "renameLogbook": "名前変更",
   "deleteLogbook": "ログブック削除",
-  "setActiveLogbook": "アクティブに設定",
-  "activeLogbook": "アクティブログブック",
   "editStation": "編集",
   "cloneStation": "複製",
   "deleteStation": "削除",

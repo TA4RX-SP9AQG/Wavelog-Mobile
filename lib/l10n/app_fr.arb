@@ -343,8 +343,6 @@
   "logbookName": "Nom du carnet",
   "renameLogbook": "Renommer",
   "deleteLogbook": "Supprimer le carnet",
-  "setActiveLogbook": "Définir actif",
-  "activeLogbook": "Carnet actif",
   "editStation": "Modifier",
   "cloneStation": "Cloner",
   "deleteStation": "Supprimer",

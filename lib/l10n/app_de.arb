@@ -405,8 +405,6 @@
   "logbookName": "Logbuchname",
   "renameLogbook": "Umbenennen",
   "deleteLogbook": "Logbuch löschen",
-  "setActiveLogbook": "Aktiv setzen",
-  "activeLogbook": "Aktives Logbuch",
   "editStation": "Bearbeiten",
   "cloneStation": "Klonen",
   "deleteStation": "Löschen",

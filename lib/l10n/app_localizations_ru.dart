@@ -1037,12 +1037,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get deleteLogbook => 'Удалить журнал';
 
   @override
-  String get setActiveLogbook => 'Сделать активным';
-
-  @override
-  String get activeLogbook => 'Активный журнал';
-
-  @override
   String get editStation => 'Редактировать';
 
   @override

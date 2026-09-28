@@ -330,8 +330,6 @@
   "logbookName": "Nazwa logbooka",
   "renameLogbook": "Zmień nazwę",
   "deleteLogbook": "Usuń logbook",
-  "setActiveLogbook": "Ustaw aktywny",
-  "activeLogbook": "Aktywny logbook",
   "editStation": "Edytuj",
   "cloneStation": "Klonuj",
   "deleteStation": "Usuń",

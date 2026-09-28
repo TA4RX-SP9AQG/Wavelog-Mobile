@@ -2056,18 +2056,6 @@ abstract class AppLocalizations {
   /// **'Delete Logbook'**
   String get deleteLogbook;
 
-  /// No description provided for @setActiveLogbook.
-  ///
-  /// In en, this message translates to:
-  /// **'Set Active'**
-  String get setActiveLogbook;
-
-  /// No description provided for @activeLogbook.
-  ///
-  /// In en, this message translates to:
-  /// **'Active Logbook'**
-  String get activeLogbook;
-
   /// No description provided for @editStation.
   ///
   /// In en, this message translates to:

@@ -1036,12 +1036,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get deleteLogbook => 'Usuń logbook';
 
   @override
-  String get setActiveLogbook => 'Ustaw aktywny';
-
-  @override
-  String get activeLogbook => 'Aktywny logbook';
-
-  @override
   String get editStation => 'Edytuj';
 
   @override

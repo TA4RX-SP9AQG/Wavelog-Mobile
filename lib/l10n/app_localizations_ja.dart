@@ -1026,12 +1026,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get deleteLogbook => 'ログブック削除';
 
   @override
-  String get setActiveLogbook => 'アクティブに設定';
-
-  @override
-  String get activeLogbook => 'アクティブログブック';
-
-  @override
   String get editStation => '編集';
 
   @override

@@ -339,8 +339,6 @@
   "logbookName": "Logbook Adı",
   "renameLogbook": "Yeniden Adlandır",
   "deleteLogbook": "Logbook'u Sil",
-  "setActiveLogbook": "Aktif Yap",
-  "activeLogbook": "Aktif Logbook",
   "editStation": "Düzenle",
   "cloneStation": "Klonla",
   "deleteStation": "Sil",

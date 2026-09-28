@@ -455,8 +455,6 @@
   "logbookName": "Название журнала",
   "renameLogbook": "Переименовать",
   "deleteLogbook": "Удалить журнал",
-  "setActiveLogbook": "Сделать активным",
-  "activeLogbook": "Активный журнал",
   "editStation": "Редактировать",
   "cloneStation": "Клонировать",
   "deleteStation": "Удалить",

@@ -191,8 +191,11 @@ class _LogbookTile extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       color: isActive ? theme.colorScheme.primaryContainer : null,
       child: ListTile(
-        onTap: () =>
-            context.push('/stations/logbook/${logbook.id}', extra: logbook),
+        // Tapping now activates immediately, matching the Locations tab
+        // (was previously "Set Active" buried in the ⋮ menu, while tapping
+        // opened this linking screen — an inconsistency users reported).
+        // The linking screen moved into the ⋮ menu instead.
+        onTap: () => _activate(context, ref),
         leading: Icon(
           Icons.book_outlined,
           color: isActive ? theme.colorScheme.primary : null,
@@ -205,8 +208,9 @@ class _LogbookTile extends ConsumerWidget {
           children: [
             if (isActive)
               Chip(
-                label: Text(l10n.activeLogbook,
-                    style: const TextStyle(fontSize: 11)),
+                // Same "Active" label as the Locations tab (was "Active
+                // Logbook") — no reason for the wording to differ.
+                label: Text(l10n.active, style: const TextStyle(fontSize: 11)),
                 backgroundColor:
                     theme.colorScheme.primary.withValues(alpha: 0.2),
                 padding: EdgeInsets.zero,
@@ -215,8 +219,8 @@ class _LogbookTile extends ConsumerWidget {
             PopupMenuButton<_LogbookAction>(
               onSelected: (a) => _handle(context, ref, a),
               itemBuilder: (_) => [
-                _item(Icons.check_circle_outline, l10n.setActiveLogbook,
-                    _LogbookAction.setActive, theme),
+                _item(Icons.link, l10n.linkLocation,
+                    _LogbookAction.linkLocations, theme),
                 _item(Icons.edit_outlined, l10n.renameLogbook,
                     _LogbookAction.rename, theme),
                 _item(Icons.delete_outlined, l10n.deleteLogbook,
@@ -244,18 +248,21 @@ class _LogbookTile extends ConsumerWidget {
     );
   }
 
+  Future<void> _activate(BuildContext context, WidgetRef ref) async {
+    final err =
+        await ref.read(stationLogbookProvider.notifier).setActive(logbook.id);
+    if (err != null && context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(err)));
+    }
+  }
+
   Future<void> _handle(
       BuildContext context, WidgetRef ref, _LogbookAction action) async {
     final l10n = context.l10n;
     switch (action) {
-      case _LogbookAction.setActive:
-        final err = await ref
-            .read(stationLogbookProvider.notifier)
-            .setActive(logbook.id);
-        if (err != null && context.mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(err)));
-        }
+      case _LogbookAction.linkLocations:
+        context.push('/stations/logbook/${logbook.id}', extra: logbook);
 
       case _LogbookAction.rename:
         final ctrl = TextEditingController(text: logbook.name);
@@ -323,7 +330,7 @@ class _LogbookTile extends ConsumerWidget {
   }
 }
 
-enum _LogbookAction { setActive, rename, delete }
+enum _LogbookAction { linkLocations, rename, delete }
 
 // ─────────────────────────── Locations Tab ─────────────────────────────────
 

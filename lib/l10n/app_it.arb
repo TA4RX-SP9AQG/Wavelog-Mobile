@@ -343,8 +343,6 @@
   "logbookName": "Nome diario",
   "renameLogbook": "Rinomina",
   "deleteLogbook": "Elimina diario",
-  "setActiveLogbook": "Imposta attivo",
-  "activeLogbook": "Diario attivo",
   "editStation": "Modifica",
   "cloneStation": "Clona",
   "deleteStation": "Elimina",

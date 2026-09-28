@@ -1026,12 +1026,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deleteLogbook => '로그북 삭제';
 
   @override
-  String get setActiveLogbook => '활성으로 설정';
-
-  @override
-  String get activeLogbook => '활성 로그북';
-
-  @override
   String get editStation => '편집';
 
   @override

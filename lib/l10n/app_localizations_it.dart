@@ -1034,12 +1034,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get deleteLogbook => 'Elimina diario';
 
   @override
-  String get setActiveLogbook => 'Imposta attivo';
-
-  @override
-  String get activeLogbook => 'Diario attivo';
-
-  @override
   String get editStation => 'Modifica';
 
   @override

@@ -1031,12 +1031,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteLogbook => 'Delete Logbook';
 
   @override
-  String get setActiveLogbook => 'Set Active';
-
-  @override
-  String get activeLogbook => 'Active Logbook';
-
-  @override
   String get editStation => 'Edit';
 
   @override

@@ -1035,12 +1035,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get deleteLogbook => 'Logbook\'u Sil';
 
   @override
-  String get setActiveLogbook => 'Aktif Yap';
-
-  @override
-  String get activeLogbook => 'Aktif Logbook';
-
-  @override
   String get editStation => 'Düzenle';
 
   @override

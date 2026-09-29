@@ -8,7 +8,7 @@ import 'package:wavelog_mobile/core/errors/app_exception.dart';
 import 'package:wavelog_mobile/data/datasources/remote/wavelog_remote_datasource.dart';
 
 /// A minimal [HttpClientAdapter] that always answers with a canned status
-/// code + JSON body, regardless of the request — enough to drive
+/// code + JSON body, regardless of the request, enough to drive
 /// WavelogRemoteDatasource's private _mapDioException through a real Dio
 /// error path without hitting the network.
 class _CannedAdapter implements HttpClientAdapter {

@@ -68,7 +68,7 @@ class _MigrationScreenState extends ConsumerState<MigrationScreen> {
         _tokenError = l10n.migrationTokenInvalid;
       });
     } on ForbiddenException {
-      // 403 here would mean the token can't even list stations — treat it
+      // 403 here would mean the token can't even list stations, treat it
       // the same as a wrong token rather than falling through to the
       // "patch not installed" dialog, which would be misleading.
       setState(() {

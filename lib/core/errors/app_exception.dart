@@ -33,7 +33,7 @@ class UnauthorizedException extends AppException {
 }
 
 /// The API key is valid but lacks the scope the endpoint requires (HTTP
-/// 403) — distinct from [UnauthorizedException] (401, the key itself is
+/// 403), distinct from [UnauthorizedException] (401, the key itself is
 /// wrong/expired) so the UI can tell the user what's actually missing
 /// instead of "invalid API key".
 class ForbiddenException extends AppException {

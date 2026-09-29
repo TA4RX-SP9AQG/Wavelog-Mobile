@@ -81,11 +81,25 @@ class QsoRepository {
     // One retry clears most of these transient, contention-driven timeouts
     // outright; when it doesn't, the stale-cache fallback below still
     // applies as the last resort.
+    //
+    // Once a station has been synced at least once, every later fetch asks
+    // the server for only QSOs newer than what's already cached
+    // (?since_id=) instead of re-downloading the entire log — a station
+    // that's already thousands of QSOs deep would otherwise redo all of
+    // that work, and be exposed to the timeout above, on every single
+    // refresh. Trade-off: a QSO deleted server-side after the first sync
+    // won't be pruned locally by an incremental fetch (only
+    // replaceSyncedQsosForStation does that); acceptable against a station
+    // that previously couldn't reliably sync at all.
+    final sinceId =
+        fetchFromId > 0 ? fetchFromId : _local.maxServerIdForStation(stationId);
+    final isIncremental = sinceId > 0;
+
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
         final fetched = await _remote.getContacts(
           stationId: stationId,
-          fetchFromId: fetchFromId,
+          fetchFromId: sinceId,
           band: band,
         );
         // Çevrimdışı silinen (henüz sunucuya iletilmemiş) QSO'lar listede
@@ -100,10 +114,14 @@ class QsoRepository {
                 ? q
                 : q.copyWith(localId: q.serverId?.toString() ?? _qsoId(q)))
             .toList();
-        // Fark tabanlı önbellek eşitleme: değişmeyen kayıtlar yeniden
-        // yazılmaz. Her istasyon kendi alt kümesini eşitlediği için paralel
-        // fetchQsos çağrıları birbiriyle yarışmaz.
-        await _local.replaceSyncedQsosForStation(stationId, remoteQsos);
+        if (isIncremental) {
+          await _local.upsertQsosForStation(stationId, remoteQsos);
+        } else {
+          // Fark tabanlı önbellek eşitleme: değişmeyen kayıtlar yeniden
+          // yazılmaz. Her istasyon kendi alt kümesini eşitlediği için
+          // paralel fetchQsos çağrıları birbiriyle yarışmaz.
+          await _local.replaceSyncedQsosForStation(stationId, remoteQsos);
+        }
 
         // Apply local filters
         if (mode != null || callsign != null) {
@@ -113,7 +131,12 @@ class QsoRepository {
               mode: mode,
               callsign: callsign);
         }
-        return remoteQsos;
+        // remoteQsos is only the delta on an incremental fetch — the
+        // caller needs the station's full current list, so read the
+        // now-merged result back from the cache instead.
+        return isIncremental
+            ? await _local.getCachedQsos(stationId: stationId, band: band)
+            : remoteQsos;
       } on NetworkException {
         // No connectivity at all — retrying immediately won't help.
         return _local.getCachedQsos(

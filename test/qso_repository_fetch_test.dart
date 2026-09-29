@@ -17,36 +17,37 @@ QsoModel _qso(int i, int station) => QsoModel(
       stationProfileId: station,
     );
 
-/// Minimal in-memory fake of the local cache — just enough of the surface
-/// fetchQsos() touches (no real Hive box needed for this test).
+/// Minimal in-memory fake of the local cache, just enough of the surface
+/// fetchQsos() touches (no real Hive box needed for this test). Unlike the
+/// real datasource, upsert/prune calls here only record what happened; they
+/// don't mutate [staleByStation], so [getCachedQsos] always returns exactly
+/// what a test seeds it with.
 class _FakeCache extends QsoCacheDatasource {
   final Map<int, List<QsoModel>> staleByStation;
   final int maxServerId;
-  final List<int> replacedForStation = [];
   final List<int> upsertedForStation = [];
+  final List<int> prunedForStation = [];
+  Set<String>? lastPruneKeepKeys;
 
   _FakeCache(this.staleByStation, {this.maxServerId = 0});
 
   @override
   Future<Set<int>> getPendingDeleteServerIds() async => {};
 
-  // Defaults to 0 (no station synced before), so most tests take
-  // fetchQsos()'s full-fetch path — matches what they exercise (retry /
-  // fallback around getContacts()). Tests of the incremental merge path
-  // override this via the constructor.
   @override
   int maxServerIdForStation(int stationId) => maxServerId;
-
-  @override
-  Future<void> replaceSyncedQsosForStation(
-      int stationId, List<QsoModel> incoming) async {
-    replacedForStation.add(stationId);
-  }
 
   @override
   Future<void> upsertQsosForStation(
       int stationId, List<QsoModel> incoming) async {
     upsertedForStation.add(stationId);
+  }
+
+  @override
+  Future<void> pruneStaleForStation(
+      int stationId, Set<String> keepKeys) async {
+    prunedForStation.add(stationId);
+    lastPruneKeepKeys = keepKeys;
   }
 
   @override
@@ -62,7 +63,9 @@ class _FakeCache extends QsoCacheDatasource {
 /// Fake remote datasource whose getContacts() can be scripted to fail a
 /// fixed number of times (with any exception, e.g. the TimeoutException
 /// _mapDioException produces for a real Dio receive/connect timeout) before
-/// succeeding, or to always fail.
+/// succeeding, or to always fail. On success it delivers successResult as a
+/// single page via onPage (matching how a real single-page fetch behaves)
+/// before returning it.
 class _FakeRemote extends WavelogRemoteDatasource {
   final int failuresBeforeSuccess;
   final Object exceptionToThrow;
@@ -82,10 +85,12 @@ class _FakeRemote extends WavelogRemoteDatasource {
     int fetchFromId = 0,
     String? band,
     int? stationProfileId,
+    Future<void> Function(List<QsoModel> page)? onPage,
   }) async {
     calls++;
     lastFetchFromId = fetchFromId;
     if (calls <= failuresBeforeSuccess) throw exceptionToThrow;
+    if (onPage != null && successResult.isNotEmpty) await onPage(successResult);
     return successResult;
   }
 }
@@ -102,7 +107,7 @@ void main() {
         successResult: fresh,
       );
       final cache = _FakeCache({
-        10: [_qso(999, 10)], // old stale entry — must NOT be what we get back
+        10: fresh, // what getCachedQsos should hand back post-sync
       });
       final repo = QsoRepository(remote: remote, local: cache);
 
@@ -110,7 +115,8 @@ void main() {
 
       expect(remote.calls, 2); // first call failed, retry succeeded
       expect(result, fresh);
-      expect(cache.replacedForStation, [10]); // cache was updated with fresh data
+      expect(cache.upsertedForStation, [10]); // page persisted as it arrived
+      expect(cache.prunedForStation, [10]); // first-of-session fetch reconciles
     });
 
     test(
@@ -129,6 +135,8 @@ void main() {
 
       expect(remote.calls, 2); // one attempt + one retry, then gives up
       expect(result, stale);
+      // Never completed, must not prune based on a partial/failed fetch.
+      expect(cache.prunedForStation, isEmpty);
     });
 
     test('a network failure (no connectivity) falls back immediately, '
@@ -149,51 +157,66 @@ void main() {
     });
   });
 
-  group('QsoRepository.fetchQsos incremental sync', () {
-    test('a station synced before fetches only newer QSOs (since_id) and '
-        'upserts instead of replacing', () async {
-      final delta = [_qso(500, 10)];
+  group('QsoRepository.fetchQsos session-based full resync', () {
+    test('the first fetch of a station in a session is always a full, '
+        'reconciling resync, even when the cache already has a baseline '
+        'from an earlier session', () async {
       final remote = _FakeRemote(
         failuresBeforeSuccess: 0,
         exceptionToThrow: const TimeoutException(),
-        successResult: delta,
+        successResult: [_qso(1, 10)],
       );
-      // Cache already has a baseline of 2 QSOs for station 10 (highest
-      // server id 42) — an incremental fetch merges into that rather than
-      // replacing it, so the read-back below should reflect the baseline,
-      // not just the 1-item delta the fake remote returns.
-      final cache = _FakeCache(
-        {10: [_qso(1, 10), _qso(2, 10)]},
-        maxServerId: 42,
-      );
+      // maxServerId: 42 simulates a station already synced in a previous
+      // app run, but this repo instance (= this session) has never
+      // fetched it yet.
+      final cache = _FakeCache({10: [_qso(1, 10)]}, maxServerId: 42);
       final repo = QsoRepository(remote: remote, local: cache);
 
-      final result = await repo.fetchQsos(stationId: 10);
+      await repo.fetchQsos(stationId: 10);
 
-      expect(remote.lastFetchFromId, 42); // asked for only what's newer
-      expect(cache.upsertedForStation, [10]); // merged, not replaced
-      expect(cache.replacedForStation, isEmpty);
-      // Result comes back from the (now merged) cache, not the bare delta.
-      expect(result.length, 2);
+      expect(remote.lastFetchFromId, 0); // full fetch, since_id ignored
+      expect(cache.prunedForStation, [10]); // reconciled against a full set
     });
 
-    test('a station never synced before (max id 0) does a full fetch as '
-        'before', () async {
-      final full = [_qso(1, 10), _qso(2, 10)];
+    test('a later fetch of the same station in the same session is '
+        'incremental (since_id), and does not prune', () async {
       final remote = _FakeRemote(
         failuresBeforeSuccess: 0,
         exceptionToThrow: const TimeoutException(),
-        successResult: full,
+        successResult: [_qso(1, 10)],
       );
-      final cache = _FakeCache({10: []}, maxServerId: 0);
+      final cache = _FakeCache({10: [_qso(1, 10)]}, maxServerId: 42);
       final repo = QsoRepository(remote: remote, local: cache);
 
-      final result = await repo.fetchQsos(stationId: 10);
+      await repo.fetchQsos(stationId: 10); // first: full resync
+      await repo.fetchQsos(stationId: 10); // second: same session
 
+      expect(remote.calls, 2);
+      expect(remote.lastFetchFromId, 42); // second call went incremental
+      expect(cache.prunedForStation, [10]); // only from the first call
+    });
+
+    test('a fetch that never completes does not mark the station as '
+        'resynced, the next attempt (even same session) tries a full '
+        'resync again', () async {
+      final remote = _FakeRemote(
+        failuresBeforeSuccess: 999, // always times out
+        exceptionToThrow: const TimeoutException(),
+        successResult: [_qso(1, 10)],
+      );
+      final cache = _FakeCache({10: []}, maxServerId: 42);
+      final repo = QsoRepository(remote: remote, local: cache);
+
+      await repo.fetchQsos(stationId: 10); // fails both attempts
+      final callsAfterFirst = remote.calls;
+      await repo.fetchQsos(stationId: 10); // should still attempt full resync
+
+      // Both fetchQsos() calls used since_id=0 (full resync), the second
+      // one wasn't treated as "already resynced this session" because the
+      // first one never actually succeeded.
       expect(remote.lastFetchFromId, 0);
-      expect(cache.replacedForStation, [10]);
-      expect(cache.upsertedForStation, isEmpty);
-      expect(result, full);
+      expect(remote.calls, callsAfterFirst + 2); // second call also retried once
+      expect(cache.prunedForStation, isEmpty);
     });
   });
 }

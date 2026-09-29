@@ -14,14 +14,14 @@ import '../../models/station_logbook_model.dart';
 import '../../models/station_model.dart';
 import '../../models/statistics_model.dart';
 
-/// Talks to the official Wavelog API v2 (Bearer token) exclusively — no
+/// Talks to the official Wavelog API v2 (Bearer token) exclusively, no
 /// server-side patch/plugin required as of Wavelog v3.2.0.
 class WavelogRemoteDatasource {
   final Dio _dio;
 
   WavelogRemoteDatasource({required Dio dio}) : _dio = dio;
 
-  // ── QSO — v2 native ─────────────────────────────────────────────────────────
+  // ── QSO, v2 native ─────────────────────────────────────────────────────────
 
   Future<bool> importQso(String adifData, int stationProfileId) async {
     try {
@@ -41,7 +41,7 @@ class WavelogRemoteDatasource {
 
   // Wavelog v2 uses page-based pagination (page=1,2,…) with meta.has_more.
   // fetchFromId maps to the server's ?since_id= filter (only QSOs with a
-  // higher primary key) — passing the highest id already cached turns a
+  // higher primary key), passing the highest id already cached turns a
   // full re-download of the station's history into a fetch of just what's
   // new, which matters once a station has thousands of QSOs.
   Future<List<QsoModel>> getContacts({
@@ -49,6 +49,13 @@ class WavelogRemoteDatasource {
     int fetchFromId = 0,
     String? band,
     int? stationProfileId,
+    // Invoked once per fetched page, before the next page is requested ,
+    // lets the caller persist each page as it arrives (see
+    // QsoRepository.fetchQsos) instead of holding the whole multi-page
+    // result in memory until the very end, which for a large station
+    // (thousands of QSOs, 100+ pages) is both a memory spike and one big
+    // blocking write with no progress in between.
+    Future<void> Function(List<QsoModel> page)? onPage,
   }) async {
     final allQsos = <QsoModel>[];
     int page = 1;
@@ -66,7 +73,7 @@ class WavelogRemoteDatasource {
 
       // Retry the single page that failed, in place, rather than letting
       // the caller retry the whole multi-page fetch from page 1. A station
-      // with thousands of QSOs can mean 100+ sequential page requests —
+      // with thousands of QSOs can mean 100+ sequential page requests ,
       // requiring every single one of them to succeed in one run made any
       // one flaky request enough to discard all the pages already fetched
       // and restart from scratch (confirmed against a real account: a
@@ -106,10 +113,11 @@ class WavelogRemoteDatasource {
         }
       } else if (data is List) {
         batch = data.whereType<Map<String, dynamic>>().map(QsoModel.fromJson).toList();
-        // Legacy flat list — no pagination info, assume single page
+        // Legacy flat list, no pagination info, assume single page
       }
 
       allQsos.addAll(batch);
+      if (onPage != null && batch.isNotEmpty) await onPage(batch);
 
       if (!hasMore) break;
       page++;
@@ -121,11 +129,11 @@ class WavelogRemoteDatasource {
   // ADIF export (GET /api/v2/qso?format=adif). Confirmed live against a real
   // server: neither the JSON list endpoint nor the single-QSO detail
   // endpoint (GET /api/v2/qso/{id}) ever return QSL/LoTW/eQSL/ClubLog/HRDLog
-  // confirmation fields — both return the exact same limited field set, even
+  // confirmation fields, both return the exact same limited field set, even
   // for a QSO independently confirmed via /api/v2/confirmation. ADIF export
   // is the only mode that carries them. There's no per-QSO or per-callsign
   // filter for this endpoint (a call= query param is silently ignored), so
-  // this always pulls the whole station log — callers should sync once per
+  // this always pulls the whole station log, callers should sync once per
   // station per session, not per QSO. Pages via the same page/per_page/
   // meta.has_more pattern as getContacts; each page is parsed independently
   // (not concatenated as raw text) since every page carries its own ADIF
@@ -187,7 +195,7 @@ class WavelogRemoteDatasource {
     }
   }
 
-  // ── Callsign Lookup — v2 native ──────────────────────────────────────────────
+  // ── Callsign Lookup, v2 native ──────────────────────────────────────────────
 
   Future<CallsignLookupModel> lookupCallsign({
     required String callsign,
@@ -225,7 +233,7 @@ class WavelogRemoteDatasource {
     }
   }
 
-  // ── Statistics — v2 native ───────────────────────────────────────────────────
+  // ── Statistics, v2 native ───────────────────────────────────────────────────
 
   Future<StatisticsModel> getStatistics() async {
     try {
@@ -244,7 +252,7 @@ class WavelogRemoteDatasource {
     }
   }
 
-  // ── Version — v2 native ──────────────────────────────────────────────────────
+  // ── Version, v2 native ──────────────────────────────────────────────────────
 
   Future<String?> getVersion() async {
     try {
@@ -258,7 +266,7 @@ class WavelogRemoteDatasource {
   }
 
   /// Same request as [getVersion] but rethrows a mapped [AppException] on
-  /// failure instead of swallowing it — used by the server-setup connection
+  /// failure instead of swallowing it, used by the server-setup connection
   /// test, which needs to tell an SSL failure apart from "no server here".
   Future<String?> checkVersion() async {
     try {
@@ -271,7 +279,7 @@ class WavelogRemoteDatasource {
     }
   }
 
-  // ── Station list/create — v2 native ─────────────────────────────────────────
+  // ── Station list/create, v2 native ─────────────────────────────────────────
 
   Future<List<StationModel>> getStations() async {
     try {
@@ -320,7 +328,7 @@ class WavelogRemoteDatasource {
     }
   }
 
-  // ── Station extensions — v2 ──────────────────────────────────────────────────
+  // ── Station extensions, v2 ──────────────────────────────────────────────────
 
   Future<StationModel> getStationDetail(int stationId) async {
     try {
@@ -390,7 +398,7 @@ class WavelogRemoteDatasource {
     }
   }
 
-  // ── Logbook — v2 ────────────────────────────────────────────────────────────
+  // ── Logbook, v2 ────────────────────────────────────────────────────────────
 
   Future<List<StationLogbookModel>> getLogbooks() async {
     try {
@@ -490,7 +498,7 @@ class WavelogRemoteDatasource {
     return [];
   }
 
-  // ── DXCC / Catalog — v2 ─────────────────────────────────────────────────────
+  // ── DXCC / Catalog, v2 ─────────────────────────────────────────────────────
 
   Future<List<DxccEntity>> getDxccList() async {
     try {
@@ -528,7 +536,7 @@ class WavelogRemoteDatasource {
     }
   }
 
-  // ── Contest — v2 ────────────────────────────────────────────────────────────
+  // ── Contest, v2 ────────────────────────────────────────────────────────────
 
   Future<List<ContestTemplate>> getContestList() async {
     try {
@@ -684,12 +692,12 @@ class WavelogRemoteDatasource {
           data: {'link_qso_ids': [qsoId]},
         );
       } on DioException catch (_) {
-        // QSO logged but not linked to session — non-critical
+        // QSO logged but not linked to session, non-critical
       }
     }
   }
 
-  // ── Confirmations — v2 ──────────────────────────────────────────────────────
+  // ── Confirmations, v2 ──────────────────────────────────────────────────────
 
   /// Fetches all confirmation pages and returns a map of qsoId → list of types.
   ///
@@ -697,14 +705,14 @@ class WavelogRemoteDatasource {
   /// undercounting, disproportionately for older QSOs. Root cause: this loop
   /// used the server's small default per_page (unlike [getContacts]/
   /// [getAdifExportRecords], which explicitly request 1000) and silently
-  /// swallowed any mid-pagination DioException by breaking out of the loop —
+  /// swallowed any mid-pagination DioException by breaking out of the loop ,
   /// a single transient failure on any later page (confirmation records are
   /// newest-first, like everything else in this API) truncated the whole
   /// result with no error surfaced anywhere, so callers just saw an
   /// incomplete map and never knew it was incomplete. Now requests 1000/page
   /// (far fewer round trips, so far less exposure to a mid-fetch failure)
   /// and rethrows instead of swallowing, matching [getContacts]/
-  /// [getAdifExportRecords] — an incomplete fetch should surface as an error
+  /// [getAdifExportRecords], an incomplete fetch should surface as an error
   /// callers can retry, not silently render wrong numbers.
   Future<Map<int, List<String>>> getConfirmations() async {
     final all = <ConfirmationRecord>[];
@@ -778,30 +786,30 @@ class WavelogRemoteDatasource {
         final inner = e.error;
         // A TLS handshake failure (self-signed / private-PKI certificate)
         // can surface here instead of under DioExceptionType.unknown or
-        // .badCertificate, depending on Dio/platform version — when it
+        // .badCertificate, depending on Dio/platform version, when it
         // does, it must still be classified as SslException, or the
         // server-setup screen's SSL-bypass dialog never gets offered and
         // this falls through to a generic, misleading "server
         // unreachable" message instead.
         if (inner is HandshakeException) {
           return const SslException(
-              'SSL certificate error — the server certificate chain could not be verified.');
+              'SSL certificate error, the server certificate chain could not be verified.');
         }
         if (inner is SocketException) {
           final msg = inner.message.toLowerCase();
           if (msg.contains('connection refused')) {
             return const NetworkException(
-                'Cannot connect to server — check the URL or port');
+                'Cannot connect to server, check the URL or port');
           }
           if (msg.contains('failed host lookup') ||
               msg.contains('no address associated') ||
               msg.contains('nodename nor servname')) {
             return const NetworkException(
-                'Server address not found — check the URL');
+                'Server address not found, check the URL');
           }
         }
         return const NetworkException(
-            'Connection failed — server unreachable');
+            'Connection failed, server unreachable');
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
@@ -819,7 +827,7 @@ class WavelogRemoteDatasource {
         }
         if (statusCode == 401) return const UnauthorizedException();
         // 403 means the key itself is valid but lacks the scope this call
-        // needs (e.g. a read-only token trying to PATCH set_active) — a
+        // needs (e.g. a read-only token trying to PATCH set_active), a
         // different problem from an invalid key, so it needs its own
         // message. The v2 API's 403 body names the missing scope directly
         // ("Token is missing the required scope: logbook:write"); surface
@@ -832,12 +840,12 @@ class WavelogRemoteDatasource {
         final inner = e.error;
         if (inner is HandshakeException) {
           return const SslException(
-              'SSL certificate error — the server certificate chain could not be verified.');
+              'SSL certificate error, the server certificate chain could not be verified.');
         }
         return NetworkException(e.message ?? 'Unknown error');
       case DioExceptionType.badCertificate:
         return const SslException(
-            'SSL certificate error — the server certificate chain could not be verified.');
+            'SSL certificate error, the server certificate chain could not be verified.');
       default:
         return NetworkException(e.message ?? 'Unknown error');
     }

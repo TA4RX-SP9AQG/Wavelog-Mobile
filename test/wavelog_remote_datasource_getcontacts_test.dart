@@ -77,7 +77,7 @@ void main() {
       expect(adapter.seenQueries.single.containsKey('since_id'), isFalse);
     });
 
-    test('a single flaky page is retried in place — the fetch still '
+    test('a single flaky page is retried in place, the fetch still '
         'succeeds without restarting from page 1', () async {
       final adapter = _ScriptedAdapter(timeoutsBeforeSuccess: 1);
       final remote = _remoteWith(adapter);

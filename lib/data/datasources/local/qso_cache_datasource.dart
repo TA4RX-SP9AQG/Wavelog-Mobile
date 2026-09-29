@@ -94,44 +94,26 @@ class QsoCacheDatasource {
     await _box.put(localId, updated.copyWith(localId: localId));
   }
 
-  /// Bir istasyonun senkron kayıtlarını [incoming] ile eşitler.
-  /// Tam sil+yaz yerine fark tabanlı çalışır: değişmeyen kayıtlar diske
-  /// yeniden yazılmaz, sunucuda artık olmayan senkron kayıtlar silinir.
-  Future<void> replaceSyncedQsosForStation(
-      int stationId, List<QsoModel> incoming) async {
-    final incomingKeys = <String>{};
-    final toWrite = <String, QsoModel>{};
-
-    for (final qso in incoming) {
-      final key = qso.localId ?? _uuid.v4();
-      incomingKeys.add(key);
-      final entry =
-          qso.localId != null ? qso : qso.copyWith(localId: key, synced: true);
-      final existing = _box.get(key);
-      // İçerik aynıysa diske dokunma
-      if (existing != null &&
-          existing.synced == entry.synced &&
-          mapEquals(existing.rawAdif, entry.rawAdif)) {
-        continue;
-      }
-      toWrite[key] = entry;
-    }
-
-    // Sunucuda artık olmayan eski senkron kayıtlar
+  /// Deletes cached synced QSOs for [stationId] whose key isn't in
+  /// [keepKeys], the trailing step of a full reconciliation fetch, run
+  /// only after every QSO the server currently has for that station has
+  /// already been upserted (page by page, via [upsertQsosForStation]).
+  /// This is what makes a QSO deleted server-side eventually disappear
+  /// locally too; an incremental (`since_id`) fetch never sees removals,
+  /// only additions, so it must never call this.
+  Future<void> pruneStaleForStation(int stationId, Set<String> keepKeys) async {
     final staleKeys = _box.keys.cast<String>().where((k) {
-      if (incomingKeys.contains(k)) return false;
+      if (keepKeys.contains(k)) return false;
       final q = _box.get(k);
       return q != null && q.synced && q.stationProfileId == stationId;
     }).toList();
-
     if (staleKeys.isNotEmpty) await _box.deleteAll(staleKeys);
-    if (toWrite.isNotEmpty) await _box.putAll(toWrite);
   }
 
   /// Highest known server QSO id already cached for [stationId], or 0 when
   /// the station has never been synced. Lets [QsoRepository.fetchQsos] ask
   /// the server for only QSOs newer than this (`since_id`) instead of
-  /// re-downloading a station's entire history on every fetch — essential
+  /// re-downloading a station's entire history on every fetch, essential
   /// once a station's QSO count gets large (a real reported case: 104,983
   /// QSOs on one profile, ~105 pages at 1000/page every single time).
   int maxServerIdForStation(int stationId) {
@@ -145,7 +127,7 @@ class QsoCacheDatasource {
   }
 
   /// Merges [incoming] into the cache without deleting anything else for
-  /// [stationId] — unlike [replaceSyncedQsosForStation], which treats the
+  /// [stationId], unlike [replaceSyncedQsosForStation], which treats the
   /// incoming list as the complete current server-side set and prunes
   /// whatever isn't in it. An incremental (`since_id`) fetch is
   /// deliberately a partial view (only QSOs newer than some id), so
@@ -217,7 +199,7 @@ class QsoCacheDatasource {
   }
 
   // Clears the Hive cache when the API token changes (e.g., v1→v2 migration).
-  // Stored token is compared without hashing — it never leaves the device.
+  // Stored token is compared without hashing, it never leaves the device.
   static const _tokenKey = 'wl_cache_token';
 
   Future<void> clearIfTokenChanged(String currentToken) async {

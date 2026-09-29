@@ -40,7 +40,10 @@ class WavelogRemoteDatasource {
   }
 
   // Wavelog v2 uses page-based pagination (page=1,2,…) with meta.has_more.
-  // fetchFromId is kept for API compatibility but is no longer used for paging.
+  // fetchFromId maps to the server's ?since_id= filter (only QSOs with a
+  // higher primary key) — passing the highest id already cached turns a
+  // full re-download of the station's history into a fetch of just what's
+  // new, which matters once a station has thousands of QSOs.
   Future<List<QsoModel>> getContacts({
     required int stationId,
     int fetchFromId = 0,
@@ -51,49 +54,65 @@ class WavelogRemoteDatasource {
     int page = 1;
 
     while (true) {
+      // The server default is 50 per page (max 5000); a bigger page means
+      // far fewer sequential round trips when the whole log is refreshed.
+      final params = <String, dynamic>{
+        'station_id': stationId,
+        'page': page,
+        'per_page': 1000,
+      };
+      if (band != null && band.isNotEmpty) params['band'] = band;
+      if (fetchFromId > 0) params['since_id'] = fetchFromId;
+
+      // Retry the single page that failed, in place, rather than letting
+      // the caller retry the whole multi-page fetch from page 1. A station
+      // with thousands of QSOs can mean 100+ sequential page requests —
+      // requiring every single one of them to succeed in one run made any
+      // one flaky request enough to discard all the pages already fetched
+      // and restart from scratch (confirmed against a real account: a
+      // 104,983-QSO station, ~105 pages, was effectively never completing).
+      Response response;
       try {
-        // The server default is 50 per page (max 5000); a bigger page means
-        // far fewer sequential round trips when the whole log is refreshed.
-        final params = <String, dynamic>{
-          'station_id': stationId,
-          'page': page,
-          'per_page': 1000,
-        };
-        if (band != null && band.isNotEmpty) params['band'] = band;
-
-        final response = await _dio.get(ApiEndpoints.qso, queryParameters: params);
-        final data = response.data;
-
-        if (data is Map && data['status'] == 'failed') {
-          throw ServerException(data['reason']?.toString() ?? 'Server error');
-        }
-
-        List<QsoModel> batch = const [];
-        bool hasMore = false;
-
-        if (data is Map) {
-          // Paginated response with meta envelope
-          final contacts = data['data'] ?? data['qsos'] ?? [];
-          if (contacts is List) {
-            batch = contacts.whereType<Map<String, dynamic>>().map(QsoModel.fromJson).toList();
-          }
-          // Read has_more from meta if present
-          final meta = data['meta'];
-          if (meta is Map) {
-            hasMore = meta['has_more'] == true;
-          }
-        } else if (data is List) {
-          batch = data.whereType<Map<String, dynamic>>().map(QsoModel.fromJson).toList();
-          // Legacy flat list — no pagination info, assume single page
-        }
-
-        allQsos.addAll(batch);
-
-        if (!hasMore) break;
-        page++;
+        response = await _dio.get(ApiEndpoints.qso, queryParameters: params);
       } on DioException catch (e) {
-        throw _mapDioException(e);
+        final mapped = _mapDioException(e);
+        if (mapped is! TimeoutException) throw mapped;
+        try {
+          response = await _dio.get(ApiEndpoints.qso, queryParameters: params);
+        } on DioException catch (e2) {
+          throw _mapDioException(e2);
+        }
       }
+
+      final data = response.data;
+
+      if (data is Map && data['status'] == 'failed') {
+        throw ServerException(data['reason']?.toString() ?? 'Server error');
+      }
+
+      List<QsoModel> batch = const [];
+      bool hasMore = false;
+
+      if (data is Map) {
+        // Paginated response with meta envelope
+        final contacts = data['data'] ?? data['qsos'] ?? [];
+        if (contacts is List) {
+          batch = contacts.whereType<Map<String, dynamic>>().map(QsoModel.fromJson).toList();
+        }
+        // Read has_more from meta if present
+        final meta = data['meta'];
+        if (meta is Map) {
+          hasMore = meta['has_more'] == true;
+        }
+      } else if (data is List) {
+        batch = data.whereType<Map<String, dynamic>>().map(QsoModel.fromJson).toList();
+        // Legacy flat list — no pagination info, assume single page
+      }
+
+      allQsos.addAll(batch);
+
+      if (!hasMore) break;
+      page++;
     }
 
     return allQsos;

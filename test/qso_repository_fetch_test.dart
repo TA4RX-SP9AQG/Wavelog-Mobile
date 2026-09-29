@@ -21,17 +21,32 @@ QsoModel _qso(int i, int station) => QsoModel(
 /// fetchQsos() touches (no real Hive box needed for this test).
 class _FakeCache extends QsoCacheDatasource {
   final Map<int, List<QsoModel>> staleByStation;
+  final int maxServerId;
   final List<int> replacedForStation = [];
+  final List<int> upsertedForStation = [];
 
-  _FakeCache(this.staleByStation);
+  _FakeCache(this.staleByStation, {this.maxServerId = 0});
 
   @override
   Future<Set<int>> getPendingDeleteServerIds() async => {};
+
+  // Defaults to 0 (no station synced before), so most tests take
+  // fetchQsos()'s full-fetch path — matches what they exercise (retry /
+  // fallback around getContacts()). Tests of the incremental merge path
+  // override this via the constructor.
+  @override
+  int maxServerIdForStation(int stationId) => maxServerId;
 
   @override
   Future<void> replaceSyncedQsosForStation(
       int stationId, List<QsoModel> incoming) async {
     replacedForStation.add(stationId);
+  }
+
+  @override
+  Future<void> upsertQsosForStation(
+      int stationId, List<QsoModel> incoming) async {
+    upsertedForStation.add(stationId);
   }
 
   @override
@@ -53,6 +68,7 @@ class _FakeRemote extends WavelogRemoteDatasource {
   final Object exceptionToThrow;
   final List<QsoModel> successResult;
   int calls = 0;
+  int? lastFetchFromId;
 
   _FakeRemote({
     required this.failuresBeforeSuccess,
@@ -68,6 +84,7 @@ class _FakeRemote extends WavelogRemoteDatasource {
     int? stationProfileId,
   }) async {
     calls++;
+    lastFetchFromId = fetchFromId;
     if (calls <= failuresBeforeSuccess) throw exceptionToThrow;
     return successResult;
   }
@@ -129,6 +146,54 @@ void main() {
 
       expect(remote.calls, 1); // no retry for a hard network failure
       expect(result, stale);
+    });
+  });
+
+  group('QsoRepository.fetchQsos incremental sync', () {
+    test('a station synced before fetches only newer QSOs (since_id) and '
+        'upserts instead of replacing', () async {
+      final delta = [_qso(500, 10)];
+      final remote = _FakeRemote(
+        failuresBeforeSuccess: 0,
+        exceptionToThrow: const TimeoutException(),
+        successResult: delta,
+      );
+      // Cache already has a baseline of 2 QSOs for station 10 (highest
+      // server id 42) — an incremental fetch merges into that rather than
+      // replacing it, so the read-back below should reflect the baseline,
+      // not just the 1-item delta the fake remote returns.
+      final cache = _FakeCache(
+        {10: [_qso(1, 10), _qso(2, 10)]},
+        maxServerId: 42,
+      );
+      final repo = QsoRepository(remote: remote, local: cache);
+
+      final result = await repo.fetchQsos(stationId: 10);
+
+      expect(remote.lastFetchFromId, 42); // asked for only what's newer
+      expect(cache.upsertedForStation, [10]); // merged, not replaced
+      expect(cache.replacedForStation, isEmpty);
+      // Result comes back from the (now merged) cache, not the bare delta.
+      expect(result.length, 2);
+    });
+
+    test('a station never synced before (max id 0) does a full fetch as '
+        'before', () async {
+      final full = [_qso(1, 10), _qso(2, 10)];
+      final remote = _FakeRemote(
+        failuresBeforeSuccess: 0,
+        exceptionToThrow: const TimeoutException(),
+        successResult: full,
+      );
+      final cache = _FakeCache({10: []}, maxServerId: 0);
+      final repo = QsoRepository(remote: remote, local: cache);
+
+      final result = await repo.fetchQsos(stationId: 10);
+
+      expect(remote.lastFetchFromId, 0);
+      expect(cache.replacedForStation, [10]);
+      expect(cache.upsertedForStation, isEmpty);
+      expect(result, full);
     });
   });
 }

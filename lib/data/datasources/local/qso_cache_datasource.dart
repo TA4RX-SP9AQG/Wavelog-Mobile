@@ -128,6 +128,47 @@ class QsoCacheDatasource {
     if (toWrite.isNotEmpty) await _box.putAll(toWrite);
   }
 
+  /// Highest known server QSO id already cached for [stationId], or 0 when
+  /// the station has never been synced. Lets [QsoRepository.fetchQsos] ask
+  /// the server for only QSOs newer than this (`since_id`) instead of
+  /// re-downloading a station's entire history on every fetch — essential
+  /// once a station's QSO count gets large (a real reported case: 104,983
+  /// QSOs on one profile, ~105 pages at 1000/page every single time).
+  int maxServerIdForStation(int stationId) {
+    var maxId = 0;
+    for (final q in _box.values) {
+      if (q.stationProfileId != stationId) continue;
+      final id = q.serverId;
+      if (id != null && id > maxId) maxId = id;
+    }
+    return maxId;
+  }
+
+  /// Merges [incoming] into the cache without deleting anything else for
+  /// [stationId] — unlike [replaceSyncedQsosForStation], which treats the
+  /// incoming list as the complete current server-side set and prunes
+  /// whatever isn't in it. An incremental (`since_id`) fetch is
+  /// deliberately a partial view (only QSOs newer than some id), so
+  /// applying that same stale-deletion logic to it would wipe out every
+  /// older QSO already cached for the station.
+  Future<void> upsertQsosForStation(
+      int stationId, List<QsoModel> incoming) async {
+    final toWrite = <String, QsoModel>{};
+    for (final qso in incoming) {
+      final key = qso.localId ?? _uuid.v4();
+      final entry =
+          qso.localId != null ? qso : qso.copyWith(localId: key, synced: true);
+      final existing = _box.get(key);
+      if (existing != null &&
+          existing.synced == entry.synced &&
+          mapEquals(existing.rawAdif, entry.rawAdif)) {
+        continue;
+      }
+      toWrite[key] = entry;
+    }
+    if (toWrite.isNotEmpty) await _box.putAll(toWrite);
+  }
+
   // ── Bekleyen sunucu silmeleri (çevrimdışı silinen QSO'lar) ───────────
 
   static const _pendingDeleteKey = 'wl_pending_qso_deletes';

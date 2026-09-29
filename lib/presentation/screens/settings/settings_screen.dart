@@ -519,6 +519,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
             const SizedBox(height: 24),
 
+            // QSO sync
+            _sectionHeader(l10n.qsoSyncSection),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.sync_outlined),
+              title: Text(l10n.qsoSyncIntervalLabel),
+              subtitle: Text(l10n.qsoSyncIntervalHint),
+              trailing: DropdownButton<int>(
+                value: settings.qsoSyncCheckIntervalMinutes,
+                underline: const SizedBox.shrink(),
+                items: const [
+                  DropdownMenuItem(value: 5, child: Text('5m')),
+                  DropdownMenuItem(value: 10, child: Text('10m')),
+                  DropdownMenuItem(value: 30, child: Text('30m')),
+                  DropdownMenuItem(value: 60, child: Text('60m')),
+                ],
+                onChanged: (v) => v != null
+                    ? ref
+                        .read(settingsProvider.notifier)
+                        .setQsoSyncCheckIntervalMinutes(v)
+                    : null,
+              ),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.restart_alt),
+              title: Text(l10n.qsoSyncResetBtn),
+              subtitle: Text(l10n.qsoSyncResetHint),
+              onTap: () async {
+                await ref.read(qsoProvider.notifier).forceFullResync();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.qsoSyncResetStarted)),
+                );
+              },
+            ),
+
+            const SizedBox(height: 24),
+
             // Danger zone
             _sectionHeader(l10n.dataSection),
             ListTile(

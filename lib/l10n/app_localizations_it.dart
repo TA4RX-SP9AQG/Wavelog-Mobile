@@ -113,6 +113,33 @@ class AppLocalizationsIt extends AppLocalizations {
       'Aggiungi questo permesso durante la creazione del token API';
 
   @override
+  String get qsoSyncBigTitle => 'Wow, quanti QSO!!';
+
+  @override
+  String get qsoSyncBigBody =>
+      'Sincronizzazione dei tuoi QSO in corso, potrebbe richiedere 1-2 minuti.';
+
+  @override
+  String get qsoSyncSection => 'Sincronizzazione QSO';
+
+  @override
+  String get qsoSyncResetBtn => 'Reimposta sincronizzazione';
+
+  @override
+  String get qsoSyncResetHint =>
+      'Utile dopo modifiche ai QSO o se qualcosa non sembra corretto';
+
+  @override
+  String get qsoSyncResetStarted => 'Sincronizzazione riavviata in background';
+
+  @override
+  String get qsoSyncIntervalLabel => 'Intervallo di controllo';
+
+  @override
+  String get qsoSyncIntervalHint =>
+      'Con quale frequenza il contenuto dei QSO viene ricontrollato in background';
+
+  @override
   String get connectionSuccess => 'Connessione riuscita!';
 
   @override

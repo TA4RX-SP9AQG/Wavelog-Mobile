@@ -110,12 +110,58 @@ class QsoCacheDatasource {
     if (staleKeys.isNotEmpty) await _box.deleteAll(staleKeys);
   }
 
+  /// Cached QSO count for [stationId]. An incremental fetch only ever adds,
+  /// so this only ever grows on its own, if the server's true count for the
+  /// station (see WavelogRemoteDatasource.getQsoCount) is ever lower than
+  /// this, something was deleted server-side.
+  int countForStation(int stationId) =>
+      _box.values.where((q) => q.stationProfileId == stationId).length;
+
   /// Highest known server QSO id already cached for [stationId], or 0 when
   /// the station has never been synced. Lets [QsoRepository.fetchQsos] ask
   /// the server for only QSOs newer than this (`since_id`) instead of
   /// re-downloading a station's entire history on every fetch, essential
   /// once a station's QSO count gets large (a real reported case: 104,983
   /// QSOs on one profile, ~105 pages at 1000/page every single time).
+  static const _lastFullCheckKeyPrefix = 'wl_last_full_check_';
+
+  /// When [stationId] last had a full, field-by-field reconciling fetch, or
+  /// null if never. A deletion is caught immediately (see
+  /// QsoRepository.reconcileIfNeeded's count check), but an *edit* to an
+  /// existing QSO (same id, changed content) changes neither the count nor
+  /// the max id, so it's invisible to every cheaper check, catching it
+  /// needs this periodic full fetch, which already does a field-by-field
+  /// comparison per record (see upsertQsosForStation's mapEquals check).
+  Future<DateTime?> getLastFullCheckAt(int stationId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ms = prefs.getInt('$_lastFullCheckKeyPrefix$stationId');
+    return ms != null ? DateTime.fromMillisecondsSinceEpoch(ms) : null;
+  }
+
+  Future<void> setLastFullCheckAt(int stationId, DateTime time) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('$_lastFullCheckKeyPrefix$stationId', time.millisecondsSinceEpoch);
+  }
+
+  /// Forgets every station's last-full-check timestamp, without touching
+  /// any cached QSO, so the next background reconciliation pass treats
+  /// every station as due for a full, field-by-field re-check against the
+  /// server, the manual "resync" a user reaches for when something looks
+  /// wrong (a missed edit, a stats mismatch) rather than waiting out
+  /// [SettingsModel.qsoSyncCheckIntervalMinutes]. Nothing currently shown
+  /// disappears, reconcileIfNeeded's fetch runs in the background and only
+  /// replaces what changed once it completes.
+  Future<void> clearAllFullCheckTimestamps() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs
+        .getKeys()
+        .where((k) => k.startsWith(_lastFullCheckKeyPrefix))
+        .toList();
+    for (final k in keys) {
+      await prefs.remove(k);
+    }
+  }
+
   int maxServerIdForStation(int stationId) {
     var maxId = 0;
     for (final q in _box.values) {
@@ -127,12 +173,12 @@ class QsoCacheDatasource {
   }
 
   /// Merges [incoming] into the cache without deleting anything else for
-  /// [stationId], unlike [replaceSyncedQsosForStation], which treats the
-  /// incoming list as the complete current server-side set and prunes
-  /// whatever isn't in it. An incremental (`since_id`) fetch is
-  /// deliberately a partial view (only QSOs newer than some id), so
-  /// applying that same stale-deletion logic to it would wipe out every
-  /// older QSO already cached for the station.
+  /// [stationId], unlike [pruneStaleForStation], which is what actually
+  /// removes cached QSOs the server no longer has, and is only safe to run
+  /// after a *complete* fetch of the station (see QsoRepository). An
+  /// incremental (`since_id`) fetch is deliberately a partial view (only
+  /// QSOs newer than some id), so treating it as the complete current set
+  /// would wipe out every older QSO already cached for the station.
   Future<void> upsertQsosForStation(
       int stationId, List<QsoModel> incoming) async {
     final toWrite = <String, QsoModel>{};

@@ -112,6 +112,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scopeTestAddHint => 'Add this scope when creating your API token';
 
   @override
+  String get qsoSyncBigTitle => 'Whoa, that is a lot of QSOs!!';
+
+  @override
+  String get qsoSyncBigBody =>
+      'Syncing your QSOs, this might take a minute or two.';
+
+  @override
+  String get qsoSyncSection => 'QSO Sync';
+
+  @override
+  String get qsoSyncResetBtn => 'Reset Sync';
+
+  @override
+  String get qsoSyncResetHint =>
+      'Useful after QSO edits or if something looks wrong';
+
+  @override
+  String get qsoSyncResetStarted => 'Sync restarted in the background';
+
+  @override
+  String get qsoSyncIntervalLabel => 'Check Interval';
+
+  @override
+  String get qsoSyncIntervalHint =>
+      'How often QSO content is re-checked in the background';
+
+  @override
   String get connectionSuccess => 'Connection successful!';
 
   @override

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -103,19 +104,126 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
   // carry them either (it only tracks electronic confirmations). Skipped
   // when unscoped (dxccIds == null): that means no active station/logbook,
   // so there's no bounded station list to sync against.
+  //
+  // Batched 4 at a time rather than firing every station's ADIF export at
+  // once, for the same reason QsoNotifier batches its own fetch: a
+  // callsign with many stations (real reported case: 14) means that many
+  // concurrent multi-page pagination loops competing for the same
+  // connection pool, making any one page more likely to time out, which
+  // used to be enough to fail this whole wait and leave the DXCC tab
+  // stuck loading.
   if (dxccIds != null) {
-    await Future.wait(
-      dxccIds.map((id) => ref.watch(confirmationSyncProvider(id).future)),
-    );
+    const batchSize = 4;
+    final ids = dxccIds.toList();
+    for (var i = 0; i < ids.length; i += batchSize) {
+      final batch = ids.skip(i).take(batchSize);
+      await Future.wait(
+        // One station stubbornly failing (exhausted its own retry) no
+        // longer takes the whole DXCC tab down with it, whatever
+        // confirmation data the other stations already have still renders.
+        batch.map((id) =>
+            ref.watch(confirmationSyncProvider(id).future).catchError((_) {})),
+      );
+    }
   }
 
-  // v2 QSO list does not return QSL fields — use /api/v2/confirmation as source of truth.
+  // v2 QSO list does not return QSL fields, use /api/v2/confirmation as source of truth.
   final confirmationMap = ref.watch(confirmationProvider).valueOrNull ?? {};
 
   final qsos = filterByStations(
       Hive.box<QsoModel>('qso_cache').values.toList(), dxccIds);
 
-  // Build worked map from QSO cache: adif → confirmation status + continent
+  // Try to fetch the full DXCC entity catalog (pure v2, no patch needed,
+  // /api/v2/catalog?topic=dxcc). Wrapped in try/catch purely for network
+  // robustness (unreachable server, or a pre-3.2.0 Wavelog without this
+  // endpoint), not because of any patch requirement.
+  List<DxccEntity> entities = [];
+  try {
+    entities = (await ref.read(wavelogRemoteDatasourceProvider).getDxccList())
+        .where((e) => !e.deleted)
+        .toList();
+  } catch (_) {}
+
+  // Everything from here down is CPU-bound, not I/O: two passes over every
+  // QSO in scope (real reported case: ~100k on one station alone) plus a
+  // prefix-match per QSO against the DXCC catalog. Run on the UI isolate,
+  // that was measured to block it for 5+ seconds, long enough to trip
+  // Android's ANR ("Input dispatching timed out") on a real device. compute()
+  // runs it on a background isolate instead; only plain, isolate-transferable
+  // data crosses that boundary, QsoModel itself extends HiveObject, whose
+  // internal box reference isn't safely sendable, so each QSO is reduced to
+  // the handful of fields this computation actually reads first.
+  final qsoInputs = [
+    for (final q in qsos)
+      (
+        serverId: q.serverId,
+        callsign: q.callsign,
+        dxcc: q.dxcc,
+        country: q.country,
+        continent: q.continent,
+        lotwRcvd: q.lotwRcvd,
+        eqslRcvd: q.eqslRcvd,
+        qslRcvd: q.qslRcvd,
+      ),
+  ];
+
+  final computed = await compute(
+    _computeDxccEntries,
+    (qsos: qsoInputs, confirmationMap: confirmationMap, entities: entities),
+  );
+
+  final total = entities.isNotEmpty ? entities.length : _totalDxccEntities;
+
+  // Summary card always shows server-authoritative counts.
+  // Prefix-matched local counts power the per-entity breakdown but may differ slightly.
+  final workedCount    = !scoped && serverStats.dxccWorked > 0    ? serverStats.dxccWorked    : computed.localWorked;
+  final confirmedCount = !scoped && serverStats.dxccConfirmed > 0 ? serverStats.dxccConfirmed : computed.localConfirmed;
+  final entityTotal    = serverStats.dxccAvailable > 0 ? serverStats.dxccAvailable : total;
+
+  return _DxccData(
+    totalEntities: entityTotal,
+    worked:        workedCount,
+    confirmed:     confirmedCount,
+    remaining:     (entityTotal - workedCount).clamp(0, entityTotal),
+    entries:       computed.allEntries,
+  );
+});
+
+/// Compact, isolate-transferable snapshot of the QsoModel fields
+/// _computeDxccEntries actually reads.
+typedef _DxccQsoInput = ({
+  int? serverId,
+  String callsign,
+  String? dxcc,
+  String? country,
+  String? continent,
+  String? lotwRcvd,
+  String? eqslRcvd,
+  String? qslRcvd,
+});
+
+typedef _DxccComputeInput = ({
+  List<_DxccQsoInput> qsos,
+  Map<int, List<String>> confirmationMap,
+  List<DxccEntity> entities,
+});
+
+typedef _DxccComputeResult = ({
+  List<_DxccEntry> allEntries,
+  int localWorked,
+  int localConfirmed,
+});
+
+/// The CPU-bound half of _dxccStatsProvider, run on a background isolate via
+/// compute(). Must be a top-level (or static) function, not a closure, that
+/// is what lets the isolate machinery re-invoke it on the other side. See
+/// the call site for why this exists.
+Future<_DxccComputeResult> _computeDxccEntries(_DxccComputeInput input) async {
+  final qsos = input.qsos;
+  final confirmationMap = input.confirmationMap;
+  final entities = input.entities;
+
+  // Build worked map from QSO cache: adif -> confirmation status + continent
   final workedByAdif = <int, ({int count, bool lotw, bool eqsl, bool qsl, String cont})>{};
   // Fallback by country name (when dxcc field missing)
   final workedByName = <String, ({String cont, int count, bool lotw, bool eqsl, bool qsl})>{};
@@ -151,21 +259,10 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
     }
   }
 
-  // Try to fetch the full DXCC entity catalog (pure v2, no patch needed —
-  // /api/v2/catalog?topic=dxcc). Wrapped in try/catch purely for network
-  // robustness (unreachable server, or a pre-3.2.0 Wavelog without this
-  // endpoint), not because of any patch requirement.
-  List<DxccEntity> entities = [];
-  try {
-    entities = (await ref.read(wavelogRemoteDatasourceProvider).getDxccList())
-        .where((e) => !e.deleted)
-        .toList();
-  } catch (_) {}
-
   // v2 API QSOs lack a `dxcc` field, so workedByAdif is empty after the first pass.
   // Derive DXCC entity from callsign prefix using the bundled cty.dat-derived
   // prefix table (longest-match against every known prefix variant per
-  // entity, not just the single primary prefix the catalog returns — see
+  // entity, not just the single primary prefix the catalog returns, see
   // DxccPrefixMatcher for why this matters).
   if (entities.isNotEmpty && workedByAdif.isEmpty) {
     final matcher = await DxccPrefixMatcher.build(entities);
@@ -202,7 +299,7 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
         .map((entity) {
       final w = workedByAdif[entity.adif];
       // ARRL DXCC only credits LoTW and physical paper QSL cards (mailed to
-      // ARRL HQ or verified by a Card Checker) — eQSL is not DXCC-valid, so
+      // ARRL HQ or verified by a Card Checker), eQSL is not DXCC-valid, so
       // it must not flip an entity to "confirmed" here. See dxccConfirmed
       // summary row below for the single unified count this feeds.
       final confirmed = w != null && (w.lotw || w.qsl);
@@ -225,7 +322,7 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
     }).toList();
   } else {
     // Fallback: catalog fetch above failed (server unreachable, or a
-    // pre-3.2.0 Wavelog without this endpoint) — show only worked
+    // pre-3.2.0 Wavelog without this endpoint), show only worked
     // countries, derived from local QSOs instead of the full catalog.
     allEntries = workedByName.entries.map((e) {
       final w = e.value;
@@ -243,22 +340,9 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
 
   final localWorked    = allEntries.where((e) => e.status != _DxccStatus.notWorked).length;
   final localConfirmed = allEntries.where((e) => e.status == _DxccStatus.confirmed).length;
-  final total          = entities.isNotEmpty ? entities.length : _totalDxccEntities;
 
-  // Summary card always shows server-authoritative counts.
-  // Prefix-matched local counts power the per-entity breakdown but may differ slightly.
-  final workedCount    = !scoped && serverStats.dxccWorked > 0    ? serverStats.dxccWorked    : localWorked;
-  final confirmedCount = !scoped && serverStats.dxccConfirmed > 0 ? serverStats.dxccConfirmed : localConfirmed;
-  final entityTotal    = serverStats.dxccAvailable > 0 ? serverStats.dxccAvailable : total;
-
-  return _DxccData(
-    totalEntities: entityTotal,
-    worked:        workedCount,
-    confirmed:     confirmedCount,
-    remaining:     (entityTotal - workedCount).clamp(0, entityTotal),
-    entries:       allEntries,
-  );
-});
+  return (allEntries: allEntries, localWorked: localWorked, localConfirmed: localConfirmed);
+}
 
 class StatisticsScreen extends ConsumerWidget {
   const StatisticsScreen({super.key});

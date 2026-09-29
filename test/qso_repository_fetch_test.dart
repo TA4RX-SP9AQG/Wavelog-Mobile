@@ -18,24 +18,54 @@ QsoModel _qso(int i, int station) => QsoModel(
     );
 
 /// Minimal in-memory fake of the local cache, just enough of the surface
-/// fetchQsos() touches (no real Hive box needed for this test). Unlike the
-/// real datasource, upsert/prune calls here only record what happened; they
-/// don't mutate [staleByStation], so [getCachedQsos] always returns exactly
-/// what a test seeds it with.
+/// fetchQsos()/reconcileIfNeeded() touch (no real Hive box or
+/// SharedPreferences needed for this test). Upsert/prune calls here only
+/// record what happened, they don't mutate [staleByStation], so
+/// [getCachedQsos] always returns exactly what a test seeds it with.
+/// [lastFullCheckAt] defaults to "just now" (never due for the periodic
+/// edit check), so tests focused on the count-based deletion check aren't
+/// also, incidentally, exercising the time-based one, unless a test passes
+/// its own value.
 class _FakeCache extends QsoCacheDatasource {
   final Map<int, List<QsoModel>> staleByStation;
   final int maxServerId;
+  final int localCount;
+  final DateTime? lastFullCheckAt;
   final List<int> upsertedForStation = [];
   final List<int> prunedForStation = [];
-  Set<String>? lastPruneKeepKeys;
+  final List<int> lastFullCheckSetFor = [];
 
-  _FakeCache(this.staleByStation, {this.maxServerId = 0});
+  // Sentinel so a test can pass lastFullCheckAt: null (genuinely "never
+  // checked") and have that stick, distinct from "the parameter wasn't
+  // passed at all" (defaults to "just now" below), a plain `??` can't
+  // tell those two cases apart.
+  static const _unset = Object();
+
+  _FakeCache(
+    this.staleByStation, {
+    this.maxServerId = 0,
+    this.localCount = 0,
+    Object? lastFullCheckAt = _unset,
+  }) : lastFullCheckAt = identical(lastFullCheckAt, _unset)
+            ? DateTime.now()
+            : lastFullCheckAt as DateTime?;
 
   @override
   Future<Set<int>> getPendingDeleteServerIds() async => {};
 
   @override
   int maxServerIdForStation(int stationId) => maxServerId;
+
+  @override
+  int countForStation(int stationId) => localCount;
+
+  @override
+  Future<DateTime?> getLastFullCheckAt(int stationId) async => lastFullCheckAt;
+
+  @override
+  Future<void> setLastFullCheckAt(int stationId, DateTime time) async {
+    lastFullCheckSetFor.add(stationId);
+  }
 
   @override
   Future<void> upsertQsosForStation(
@@ -47,7 +77,6 @@ class _FakeCache extends QsoCacheDatasource {
   Future<void> pruneStaleForStation(
       int stationId, Set<String> keepKeys) async {
     prunedForStation.add(stationId);
-    lastPruneKeepKeys = keepKeys;
   }
 
   @override
@@ -65,18 +94,23 @@ class _FakeCache extends QsoCacheDatasource {
 /// _mapDioException produces for a real Dio receive/connect timeout) before
 /// succeeding, or to always fail. On success it delivers successResult as a
 /// single page via onPage (matching how a real single-page fetch behaves)
-/// before returning it.
+/// before returning it. getQsoCount() is separately scriptable.
 class _FakeRemote extends WavelogRemoteDatasource {
   final int failuresBeforeSuccess;
   final Object exceptionToThrow;
   final List<QsoModel> successResult;
+  final int? qsoCount;
+  final Object? qsoCountError;
   int calls = 0;
+  int qsoCountCalls = 0;
   int? lastFetchFromId;
 
   _FakeRemote({
-    required this.failuresBeforeSuccess,
-    required this.exceptionToThrow,
-    required this.successResult,
+    this.failuresBeforeSuccess = 0,
+    this.exceptionToThrow = const TimeoutException(),
+    this.successResult = const [],
+    this.qsoCount,
+    this.qsoCountError,
   }) : super(dio: Dio());
 
   @override
@@ -86,6 +120,7 @@ class _FakeRemote extends WavelogRemoteDatasource {
     String? band,
     int? stationProfileId,
     Future<void> Function(List<QsoModel> page)? onPage,
+    void Function(int pagesDone, int totalPages)? onProgress,
   }) async {
     calls++;
     lastFetchFromId = fetchFromId;
@@ -93,22 +128,23 @@ class _FakeRemote extends WavelogRemoteDatasource {
     if (onPage != null && successResult.isNotEmpty) await onPage(successResult);
     return successResult;
   }
+
+  @override
+  Future<int> getQsoCount({required int stationId}) async {
+    qsoCountCalls++;
+    if (qsoCountError != null) throw qsoCountError!;
+    return qsoCount ?? 0;
+  }
 }
 
 void main() {
-  group('QsoRepository.fetchQsos resilience', () {
+  group('QsoRepository.fetchQsos resilience (never-synced station)', () {
     test(
         'a single transient timeout is retried once and succeeds, without '
         'falling back to the stale local cache', () async {
       final fresh = [_qso(1, 10), _qso(2, 10)];
-      final remote = _FakeRemote(
-        failuresBeforeSuccess: 1,
-        exceptionToThrow: const TimeoutException(),
-        successResult: fresh,
-      );
-      final cache = _FakeCache({
-        10: fresh, // what getCachedQsos should hand back post-sync
-      });
+      final remote = _FakeRemote(failuresBeforeSuccess: 1, successResult: fresh);
+      final cache = _FakeCache({10: fresh}); // maxServerId: 0 -> never synced
       final repo = QsoRepository(remote: remote, local: cache);
 
       final result = await repo.fetchQsos(stationId: 10);
@@ -116,17 +152,14 @@ void main() {
       expect(remote.calls, 2); // first call failed, retry succeeded
       expect(result, fresh);
       expect(cache.upsertedForStation, [10]); // page persisted as it arrived
-      expect(cache.prunedForStation, [10]); // first-of-session fetch reconciles
+      expect(cache.prunedForStation, [10]); // first-ever fetch is always full
     });
 
     test(
         'two consecutive timeouts fall back to the local cache (no '
         'exception escapes to the caller)', () async {
       final remote = _FakeRemote(
-        failuresBeforeSuccess: 999, // always times out
-        exceptionToThrow: const TimeoutException(),
-        successResult: [_qso(1, 10)],
-      );
+          failuresBeforeSuccess: 999, successResult: [_qso(1, 10)]);
       final stale = [_qso(999, 10)];
       final cache = _FakeCache({10: stale});
       final repo = QsoRepository(remote: remote, local: cache);
@@ -157,66 +190,151 @@ void main() {
     });
   });
 
-  group('QsoRepository.fetchQsos session-based full resync', () {
-    test('the first fetch of a station in a session is always a full, '
-        'reconciling resync, even when the cache already has a baseline '
-        'from an earlier session', () async {
-      final remote = _FakeRemote(
-        failuresBeforeSuccess: 0,
-        exceptionToThrow: const TimeoutException(),
-        successResult: [_qso(1, 10)],
-      );
-      // maxServerId: 42 simulates a station already synced in a previous
-      // app run, but this repo instance (= this session) has never
-      // fetched it yet.
+  group('QsoRepository.fetchQsos incremental path (already has a baseline)', () {
+    test('a station with any cached baseline always fetches incrementally, '
+        'never blocks on a full resync', () async {
+      final remote = _FakeRemote(successResult: [_qso(1, 10)]);
       final cache = _FakeCache({10: [_qso(1, 10)]}, maxServerId: 42);
       final repo = QsoRepository(remote: remote, local: cache);
 
       await repo.fetchQsos(stationId: 10);
 
-      expect(remote.lastFetchFromId, 0); // full fetch, since_id ignored
-      expect(cache.prunedForStation, [10]); // reconciled against a full set
+      expect(remote.lastFetchFromId, 42); // since_id, not a full fetch
+      expect(cache.prunedForStation, isEmpty); // incremental never prunes
     });
 
-    test('a later fetch of the same station in the same session is '
-        'incremental (since_id), and does not prune', () async {
-      final remote = _FakeRemote(
-        failuresBeforeSuccess: 0,
-        exceptionToThrow: const TimeoutException(),
-        successResult: [_qso(1, 10)],
-      );
-      final cache = _FakeCache({10: [_qso(1, 10)]}, maxServerId: 42);
+    test('a station with no baseline (maxServerId 0) does a full fetch, '
+        'and records it as the periodic edit check too', () async {
+      final remote = _FakeRemote(successResult: [_qso(1, 10)]);
+      final cache = _FakeCache({10: [_qso(1, 10)]}, maxServerId: 0);
       final repo = QsoRepository(remote: remote, local: cache);
 
-      await repo.fetchQsos(stationId: 10); // first: full resync
-      await repo.fetchQsos(stationId: 10); // second: same session
+      await repo.fetchQsos(stationId: 10);
 
-      expect(remote.calls, 2);
-      expect(remote.lastFetchFromId, 42); // second call went incremental
-      expect(cache.prunedForStation, [10]); // only from the first call
-    });
-
-    test('a fetch that never completes does not mark the station as '
-        'resynced, the next attempt (even same session) tries a full '
-        'resync again', () async {
-      final remote = _FakeRemote(
-        failuresBeforeSuccess: 999, // always times out
-        exceptionToThrow: const TimeoutException(),
-        successResult: [_qso(1, 10)],
-      );
-      final cache = _FakeCache({10: []}, maxServerId: 42);
-      final repo = QsoRepository(remote: remote, local: cache);
-
-      await repo.fetchQsos(stationId: 10); // fails both attempts
-      final callsAfterFirst = remote.calls;
-      await repo.fetchQsos(stationId: 10); // should still attempt full resync
-
-      // Both fetchQsos() calls used since_id=0 (full resync), the second
-      // one wasn't treated as "already resynced this session" because the
-      // first one never actually succeeded.
       expect(remote.lastFetchFromId, 0);
-      expect(remote.calls, callsAfterFirst + 2); // second call also retried once
-      expect(cache.prunedForStation, isEmpty);
+      expect(cache.prunedForStation, [10]);
+      expect(cache.lastFullCheckSetFor, [10]);
+    });
+  });
+
+  group('QsoRepository.reconcileIfNeeded, deletion check (count-based)', () {
+    test('returns false without any network call when nothing is cached '
+        'yet for the station', () async {
+      final remote = _FakeRemote(qsoCount: 0);
+      final cache = _FakeCache({}, localCount: 0);
+      final repo = QsoRepository(remote: remote, local: cache);
+
+      final changed = await repo.reconcileIfNeeded(10);
+
+      expect(changed, isFalse);
+      expect(remote.qsoCountCalls, 0);
+      expect(remote.calls, 0);
+    });
+
+    test('server count >= local count and the edit check is not due means '
+        'nothing changed, no full fetch is attempted', () async {
+      final remote = _FakeRemote(qsoCount: 50);
+      final cache = _FakeCache({}, localCount: 50); // lastFullCheckAt: now
+      final repo = QsoRepository(remote: remote, local: cache);
+
+      final changed = await repo.reconcileIfNeeded(10);
+
+      expect(changed, isFalse);
+      expect(remote.qsoCountCalls, 1);
+      expect(remote.calls, 0); // no getContacts call, cheap check only
+    });
+
+    test('server count < local count means something was deleted, does a '
+        'full fetch and prunes even though the edit check is not due',
+        () async {
+      final remote = _FakeRemote(qsoCount: 48, successResult: [_qso(1, 10)]);
+      final cache = _FakeCache({10: [_qso(1, 10)]}, localCount: 50);
+      final repo = QsoRepository(remote: remote, local: cache);
+
+      final changed = await repo.reconcileIfNeeded(10);
+
+      expect(changed, isTrue);
+      expect(remote.lastFetchFromId, 0); // full fetch, not incremental
+      expect(cache.prunedForStation, [10]);
+    });
+
+    test('a getQsoCount failure with the edit check not due returns false '
+        'without attempting a full fetch, the caller retries next time',
+        () async {
+      final remote = _FakeRemote(qsoCountError: const NetworkException('offline'));
+      final cache = _FakeCache({}, localCount: 50);
+      final repo = QsoRepository(remote: remote, local: cache);
+
+      final changed = await repo.reconcileIfNeeded(10);
+
+      expect(changed, isFalse);
+      expect(remote.calls, 0);
+    });
+  });
+
+  group('QsoRepository.reconcileIfNeeded, periodic edit check (content, '
+      'not count)', () {
+    test('never checked before (null) triggers a full fetch even when the '
+        'count matches exactly, an in-place edit changes neither', () async {
+      final remote = _FakeRemote(qsoCount: 50, successResult: [_qso(1, 10)]);
+      final cache = _FakeCache({10: [_qso(1, 10)]},
+          localCount: 50, lastFullCheckAt: null);
+      final repo = QsoRepository(remote: remote, local: cache);
+
+      final changed = await repo.reconcileIfNeeded(10);
+
+      expect(changed, isTrue);
+      expect(remote.lastFetchFromId, 0);
+      expect(cache.lastFullCheckSetFor, [10]);
+    });
+
+    test('checked longer ago than the interval triggers a full fetch even '
+        'when the count matches exactly', () async {
+      final remote = _FakeRemote(qsoCount: 50, successResult: [_qso(1, 10)]);
+      final cache = _FakeCache(
+        {10: [_qso(1, 10)]},
+        localCount: 50,
+        lastFullCheckAt: DateTime.now().subtract(const Duration(minutes: 40)),
+      );
+      final repo = QsoRepository(remote: remote, local: cache);
+
+      final changed = await repo.reconcileIfNeeded(10,
+          editCheckInterval: const Duration(minutes: 30));
+
+      expect(changed, isTrue);
+    });
+
+    test('checked more recently than the interval and the count matches '
+        'skips the full fetch entirely', () async {
+      final remote = _FakeRemote(qsoCount: 50);
+      final cache = _FakeCache(
+        {10: [_qso(1, 10)]},
+        localCount: 50,
+        lastFullCheckAt: DateTime.now().subtract(const Duration(minutes: 5)),
+      );
+      final repo = QsoRepository(remote: remote, local: cache);
+
+      final changed = await repo.reconcileIfNeeded(10,
+          editCheckInterval: const Duration(minutes: 30));
+
+      expect(changed, isFalse);
+      expect(remote.calls, 0);
+    });
+
+    test('a getQsoCount failure still runs the full fetch when the edit '
+        'check is independently due', () async {
+      final remote = _FakeRemote(
+        qsoCountError: const NetworkException('offline'),
+        successResult: [_qso(1, 10)],
+      );
+      final cache = _FakeCache({10: [_qso(1, 10)]},
+          localCount: 50, lastFullCheckAt: null);
+      final repo = QsoRepository(remote: remote, local: cache);
+
+      final changed = await repo.reconcileIfNeeded(10);
+
+      expect(changed, isTrue);
+      expect(remote.lastFetchFromId, 0);
     });
   });
 }

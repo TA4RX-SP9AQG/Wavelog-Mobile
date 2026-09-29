@@ -316,6 +316,54 @@ abstract class AppLocalizations {
   /// **'Add this scope when creating your API token'**
   String get scopeTestAddHint;
 
+  /// No description provided for @qsoSyncBigTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Whoa, that is a lot of QSOs!!'**
+  String get qsoSyncBigTitle;
+
+  /// No description provided for @qsoSyncBigBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing your QSOs, this might take a minute or two.'**
+  String get qsoSyncBigBody;
+
+  /// No description provided for @qsoSyncSection.
+  ///
+  /// In en, this message translates to:
+  /// **'QSO Sync'**
+  String get qsoSyncSection;
+
+  /// No description provided for @qsoSyncResetBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Sync'**
+  String get qsoSyncResetBtn;
+
+  /// No description provided for @qsoSyncResetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Useful after QSO edits or if something looks wrong'**
+  String get qsoSyncResetHint;
+
+  /// No description provided for @qsoSyncResetStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync restarted in the background'**
+  String get qsoSyncResetStarted;
+
+  /// No description provided for @qsoSyncIntervalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Check Interval'**
+  String get qsoSyncIntervalLabel;
+
+  /// No description provided for @qsoSyncIntervalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'How often QSO content is re-checked in the background'**
+  String get qsoSyncIntervalHint;
+
   /// No description provided for @connectionSuccess.
   ///
   /// In en, this message translates to:

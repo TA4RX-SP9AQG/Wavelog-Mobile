@@ -18,6 +18,13 @@ class SettingsModel {
   /// Auto-refresh interval for the spot list, in seconds. 0 = off (manual only).
   final int spotRefreshSeconds;
 
+  /// How often (in minutes) a station's background reconciliation
+  /// re-checks content, not just new/deleted QSOs, against the server, see
+  /// QsoRepository.reconcileIfNeeded. Runs in the background regardless of
+  /// this value, old QSOs keep showing until it finds something to
+  /// change, only the interval is configurable.
+  final int qsoSyncCheckIntervalMinutes;
+
   const SettingsModel({
     this.serverUrl = '',
     this.apiKey = '',
@@ -35,6 +42,7 @@ class SettingsModel {
     this.useModernNav = true,
     this.allowInsecureSsl = false,
     this.spotRefreshSeconds = 0,
+    this.qsoSyncCheckIntervalMinutes = 30,
   });
 
   bool get hasValidConfig => serverUrl.isNotEmpty;
@@ -68,6 +76,7 @@ class SettingsModel {
     bool? useModernNav,
     bool? allowInsecureSsl,
     int? spotRefreshSeconds,
+    int? qsoSyncCheckIntervalMinutes,
   }) {
     return SettingsModel(
       serverUrl: serverUrl ?? this.serverUrl,
@@ -95,6 +104,8 @@ class SettingsModel {
       useModernNav: useModernNav ?? this.useModernNav,
       allowInsecureSsl: allowInsecureSsl ?? this.allowInsecureSsl,
       spotRefreshSeconds: spotRefreshSeconds ?? this.spotRefreshSeconds,
+      qsoSyncCheckIntervalMinutes:
+          qsoSyncCheckIntervalMinutes ?? this.qsoSyncCheckIntervalMinutes,
     );
   }
 }

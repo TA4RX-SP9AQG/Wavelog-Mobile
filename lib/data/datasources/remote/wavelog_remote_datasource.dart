@@ -789,19 +789,25 @@ class WavelogRemoteDatasource {
         return const TimeoutException();
       case DioExceptionType.badResponse:
         final statusCode = e.response?.statusCode;
-        if (statusCode == 401 || statusCode == 403) return const UnauthorizedException();
         final body = e.response?.data;
-        final String msg;
+        // v2 API: {"error": {"code": "...", "message": "..."}}
+        String? serverMsg;
         if (body is Map) {
-          // v2 API: {"error": {"code": "...", "message": "..."}}
           final errObj = body['error'];
-          msg = (errObj is Map
-                  ? errObj['message']?.toString()
-                  : body['message']?.toString()) ??
-              'Server error ($statusCode)';
-        } else {
-          msg = 'Server error ($statusCode)';
+          serverMsg = (errObj is Map
+              ? errObj['message']?.toString()
+              : body['message']?.toString());
         }
+        if (statusCode == 401) return const UnauthorizedException();
+        // 403 means the key itself is valid but lacks the scope this call
+        // needs (e.g. a read-only token trying to PATCH set_active) — a
+        // different problem from an invalid key, so it needs its own
+        // message. The v2 API's 403 body names the missing scope directly
+        // ("Token is missing the required scope: logbook:write"); surface
+        // that instead of the generic "invalid API key" text, which sends
+        // users chasing the wrong fix.
+        if (statusCode == 403) return ForbiddenException(serverMsg);
+        final msg = serverMsg ?? 'Server error ($statusCode)';
         return ServerException(msg, statusCode: statusCode);
       case DioExceptionType.unknown:
         final inner = e.error;

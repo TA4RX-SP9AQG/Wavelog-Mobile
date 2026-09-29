@@ -457,9 +457,13 @@ class _LocationTile extends ConsumerWidget {
   Future<void> _activate(BuildContext context, WidgetRef ref) async {
     await ref.read(settingsProvider.notifier).setActiveStation(station);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content:
-              Text(context.l10n.stationActivated(station.callsign))));
+      // Clear any still-queued snackbar from a previous rapid switch first —
+      // otherwise it plays later, by which point it names a station that's
+      // no longer the active one.
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(SnackBar(
+            content: Text(context.l10n.stationActivated(station.callsign))));
     }
     // Sync active station to server in background — ignore failures (offline-safe)
     ref.read(wavelogRemoteDatasourceProvider).setActiveStation(station.id).catchError((_) {});

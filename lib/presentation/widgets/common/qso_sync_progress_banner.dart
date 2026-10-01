@@ -4,10 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../providers/qso_sync_progress_provider.dart';
 
-/// A slim banner with a progress bar, shown only while a station's fetch is
-/// spread across more than one page, a large station's first sync, or a
-/// background deletion reconciliation catching up on one. Absent for the
-/// common case (small stations, incremental refreshes), so it never
+/// A slim banner with a progress bar, shown only while a station's genuine
+/// first-ever sync is spread across more than one page. Background
+/// reconciliation (periodic deletion/edit checks) never drives this, even
+/// though it can also be a multi-page fetch, it's meant to stay silent. Absent
+/// for the common case (small stations, incremental refreshes), so it never
 /// interrupts routine use of the app.
 class QsoSyncProgressBanner extends ConsumerWidget {
   const QsoSyncProgressBanner({super.key});

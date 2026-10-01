@@ -546,13 +546,19 @@ class _StatsRow extends StatelessWidget {
     // Local Hive count is always accurate (updates immediately on add/delete).
     // Server todayQsos can lag due to caching, so never trust it over local.
     final todayCount = localTodayQsos;
-    return Row(
-      children: [
-        _StatCard(l10n.statsToday, todayCount.toString(), Icons.today),
-        _StatCard(l10n.statsMonth, stats.monthQsos.toString(), Icons.calendar_month),
-        _StatCard(l10n.statsYear, stats.yearQsos.toString(), Icons.calendar_today),
-        _StatCard(l10n.statsTotal, stats.totalQsos.toString(), Icons.storage),
-      ].map((w) => Expanded(child: w)).toList(),
+    // IntrinsicHeight forces all 4 cards to the tallest one's height, a large
+    // account's Total (6+ digits) shrinks via FittedBox below and would
+    // otherwise make that one card shorter than its Today/Month/Year
+    // siblings, an uneven row on exactly the accounts large enough to hit it.
+    return IntrinsicHeight(
+      child: Row(
+        children: [
+          _StatCard(l10n.statsToday, todayCount.toString(), Icons.today),
+          _StatCard(l10n.statsMonth, stats.monthQsos.toString(), Icons.calendar_month),
+          _StatCard(l10n.statsYear, stats.yearQsos.toString(), Icons.calendar_today),
+          _StatCard(l10n.statsTotal, stats.totalQsos.toString(), Icons.storage),
+        ].map((w) => Expanded(child: w)).toList(),
+      ),
     );
   }
 }

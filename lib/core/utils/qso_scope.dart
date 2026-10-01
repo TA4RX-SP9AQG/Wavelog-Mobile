@@ -69,10 +69,12 @@ class QsoCounts {
 }
 
 QsoCounts countQsos(List<QsoModel> qsos) {
-  final now = DateTime.now();
+  // UTC boundaries (matching Wavelog web, and dateTimeOn's own storage
+  // convention), not the device's local timezone.
+  final now = DateTime.now().toUtc();
   var today = 0, month = 0, year = 0;
   for (final q in qsos) {
-    final d = q.dateTimeOn.toLocal();
+    final d = q.dateTimeOn;
     if (d.year != now.year) continue;
     year++;
     if (d.month != now.month) continue;

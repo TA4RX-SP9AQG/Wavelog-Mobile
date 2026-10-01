@@ -23,6 +23,12 @@ final detailedStatisticsProvider =
   final counts = countQsos(scoped);
   final cacheStats = QsoCacheDatasource.computeStatsFor(scoped);
 
+  // Current streak belongs to the operator, not to a single callsign/logbook
+  // (same reasoning as achievement_provider.dart), so it's computed from the
+  // full, unscoped cache instead of `scoped`. A day logged only under a
+  // different logbook must not read as a gap in the streak.
+  final unscopedStats = cache.computeStats();
+
   // Map per-station counts to station names
   final stations = await ref.read(stationProvider.future);
   final qsosByStation = stations
@@ -48,7 +54,7 @@ final detailedStatisticsProvider =
     monthQsos: counts.monthQsos,
     todayQsos: counts.todayQsos,
     uniqueCallsigns: cacheStats.uniqueCallsigns,
-    currentStreakDays: cacheStats.currentStreakDays,
+    currentStreakDays: unscopedStats.currentStreakDays,
     qsosByBand: qsosByBand,
     qsosByMode: qsosByMode,
     qsosByStation: qsosByStation,

@@ -63,60 +63,194 @@ class QsoRepository {
     String? callsign,
     int fetchFromId = 0,
     bool forceLocal = false,
+    // See getContacts. Only ever called for a multi-page fetch, lets a
+    // caller drive a progress indicator during a large station's first
+    // sync (or a background reconciliation, see reconcileIfNeeded).
+    void Function(int pagesDone, int totalPages)? onProgress,
   }) async {
     if (forceLocal) {
       return _local.getCachedQsos(
           stationId: stationId, band: band, mode: mode, callsign: callsign);
     }
 
-    try {
-      final fetched = await _remote.getContacts(
-        stationId: stationId,
-        fetchFromId: fetchFromId,
-        band: band,
-      );
-      // Çevrimdışı silinen (henüz sunucuya iletilmemiş) QSO'lar listede
-      // yeniden belirmesin
-      final pendingDeleteIds = await _local.getPendingDeleteServerIds();
-      // Assign a deterministic localId to every server QSO so the
-      // detail screen can always find it by ID.
-      final remoteQsos = fetched
-          .where((q) =>
-              q.serverId == null || !pendingDeleteIds.contains(q.serverId))
-          .map((q) => q.localId != null
-              ? q
-              : q.copyWith(localId: q.serverId?.toString() ?? _qsoId(q)))
-          .toList();
-      // Fark tabanlı önbellek eşitleme: değişmeyen kayıtlar yeniden
-      // yazılmaz. Her istasyon kendi alt kümesini eşitlediği için paralel
-      // fetchQsos çağrıları birbiriyle yarışmaz.
-      await _local.replaceSyncedQsosForStation(stationId, remoteQsos);
+    // A station with no cached baseline at all has to be fetched in full,
+    // there is no "since" to ask for yet. Every station that already has
+    // one, from this session or any earlier one, always takes the fast
+    // incremental path below instead, no matter how long ago it was last
+    // fully synced, so the UI never waits on a multi-page resync more than
+    // once per station, ever. Catching a server-side deletion also needs a
+    // full fetch, but that happens separately, in the background, and
+    // never blocks this. See reconcileIfNeeded, called from
+    // QsoNotifier after this returns.
+    final cachedMaxId =
+        fetchFromId > 0 ? fetchFromId : _local.maxServerIdForStation(stationId);
 
-      // Apply local filters
-      if (mode != null || callsign != null) {
+    return _fetchAndPersist(
+      stationId: stationId,
+      band: band,
+      mode: mode,
+      callsign: callsign,
+      sinceId: cachedMaxId,
+      isFullFetch: cachedMaxId == 0,
+      onProgress: onProgress,
+    );
+  }
+
+  /// Detects and repairs a server-side deletion, or a content edit to an
+  /// existing QSO, for [stationId]. Meant to be run with a fire-and-forget
+  /// call from a background task, never awaited inline in a code path the
+  /// UI is blocked on, since either check can mean doing a full multi-page
+  /// fetch.
+  ///
+  /// Two independent triggers, since they need different checks:
+  /// - Deletion: the v2 API has no deletions feed (checked against the
+  ///   official docs), so this relies on a property that always holds
+  ///   given fetchQsos() above only ever adds locally: the cached count for
+  ///   a station can only exceed the server's true current count when
+  ///   something was deleted server-side. A single per_page=1 request gets
+  ///   that true count without paging through the whole station, so this
+  ///   half is cheap enough to run after every fetch.
+  /// - Edit: an in-place edit to an existing QSO (say, a corrected band or
+  ///   mode) changes neither the count nor any id, so it's invisible to
+  ///   every cheap check, including the one above. There is no
+  ///   "updated_since" filter either (also checked against the docs), so
+  ///   catching this needs an actual full fetch, which already compares
+  ///   every record field-by-field while persisting it (see
+  ///   upsertQsosForStation's mapEquals check). Bounded to once per
+  ///   [editCheckInterval] (from SettingsModel.qsoSyncCheckIntervalMinutes,
+  ///   defaultEditCheckInterval otherwise) per station so it doesn't turn
+  ///   into a full resync on every single fetch.
+  ///
+  /// Returns true if a deletion or an edit was found (and a repair
+  /// attempted).
+  static const defaultEditCheckInterval = Duration(minutes: 30);
+
+  Future<bool> reconcileIfNeeded(
+    int stationId, {
+    void Function(int pagesDone, int totalPages)? onProgress,
+    Duration editCheckInterval = defaultEditCheckInterval,
+  }) async {
+    final localCount = _local.countForStation(stationId);
+    if (localCount == 0) return false; // nothing cached yet to go stale
+
+    final lastFullCheck = await _local.getLastFullCheckAt(stationId);
+    final editCheckDue = lastFullCheck == null ||
+        DateTime.now().difference(lastFullCheck) > editCheckInterval;
+
+    var deletionSuspected = false;
+    try {
+      final serverCount = await _remote.getQsoCount(stationId: stationId);
+      deletionSuspected = serverCount < localCount;
+    } catch (_) {
+      // Network hiccup on the cheap check. Still fine to proceed if an
+      // edit check is independently due, otherwise bail, the deletion
+      // check will retry on the next fetch.
+      if (!editCheckDue) return false;
+    }
+
+    if (!deletionSuspected && !editCheckDue) return false;
+
+    await _fetchAndPersist(
+        stationId: stationId, sinceId: 0, isFullFetch: true, onProgress: onProgress);
+    return true;
+  }
+
+  Future<List<QsoModel>> _fetchAndPersist({
+    required int stationId,
+    String? band,
+    String? mode,
+    String? callsign,
+    required int sinceId,
+    required bool isFullFetch,
+    void Function(int pagesDone, int totalPages)? onProgress,
+  }) async {
+    // Multi-logbook accounts fetch every station's QSOs in parallel (see
+    // QsoNotifier._fetch). A logbook with many stations (e.g. 14) means
+    // many concurrent multi-page pagination loops competing for the same
+    // connection pool and hitting the server at once, which makes a single
+    // station's request measurably more likely to time out than it would
+    // fetching alone. One retry clears most of these transient,
+    // contention-driven timeouts outright, when it doesn't, the
+    // stale-cache fallback below still applies as the last resort.
+    //
+    // Çevrimdışı silinen (henüz sunucuya iletilmemiş) QSO'lar listede
+    // yeniden belirmesin. Assign a deterministic localId to every server
+    // QSO so the detail screen can always find it by ID.
+    final pendingDeleteIds = await _local.getPendingDeleteServerIds();
+    List<QsoModel> prepare(List<QsoModel> batch) => batch
+        .where((q) =>
+            q.serverId == null || !pendingDeleteIds.contains(q.serverId))
+        .map((q) => q.localId != null
+            ? q
+            : q.copyWith(localId: q.serverId?.toString() ?? _qsoId(q)))
+        .toList();
+
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final seenKeys = <String>{};
+        await _remote.getContacts(
+          stationId: stationId,
+          fetchFromId: sinceId,
+          band: band,
+          // Persist each page as it arrives instead of accumulating the
+          // whole multi-page result and writing it once at the end, for
+          // a big station (real reported case: 104,983 QSOs, ~21 pages at
+          // the raised per_page) that was both a memory spike and one long
+          // blocking write, and meant an attempt that failed partway lost
+          // everything it had already fetched.
+          onPage: (page) async {
+            final prepared = prepare(page);
+            seenKeys.addAll(prepared.map((q) => q.localId!));
+            await _local.upsertQsosForStation(stationId, prepared);
+          },
+          onProgress: onProgress,
+        );
+
+        if (isFullFetch) {
+          // Every QSO the server has for this station has now been
+          // upserted page by page above, anything still cached for this
+          // station that ISN'T in what we just saw was deleted
+          // server-side, so prune it. Only safe to do after a complete
+          // fetch (no exception escaped above), pruning against a
+          // partial page set would wrongly delete QSOs simply not
+          // reached yet.
+          await _local.pruneStaleForStation(stationId, seenKeys);
+          // A full fetch just compared every record field-by-field while
+          // persisting it (upsertQsosForStation's mapEquals check), so this
+          // also counts as this station's periodic edit check, see
+          // reconcileIfNeeded, whatever triggered this full fetch.
+          await _local.setLastFullCheckAt(stationId, DateTime.now());
+        }
+
+        // Data is already fully persisted above, read the merged result
+        // back from the cache rather than tracking it separately here.
         return await _local.getCachedQsos(
             stationId: stationId, band: band, mode: mode, callsign: callsign);
+      } on NetworkException {
+        // No connectivity at all, retrying immediately won't help.
+        return _local.getCachedQsos(
+            stationId: stationId, band: band, mode: mode, callsign: callsign);
+      } on TimeoutException {
+        if (attempt == 0) continue; // one retry, then fall back
+        return _local.getCachedQsos(
+            stationId: stationId, band: band, mode: mode, callsign: callsign);
       }
-      return remoteQsos;
-    } on NetworkException {
-      return _local.getCachedQsos(
-          stationId: stationId, band: band, mode: mode, callsign: callsign);
-    } on TimeoutException {
-      return _local.getCachedQsos(
-          stationId: stationId, band: band, mode: mode, callsign: callsign);
     }
+    // Unreachable, the loop always returns on its second iteration.
+    return _local.getCachedQsos(
+        stationId: stationId, band: band, mode: mode, callsign: callsign);
   }
 
   /// Fetches the full ADIF export for [stationId] and merges QSL/LoTW/eQSL/
   /// ClubLog/HRDLog confirmation fields into locally cached QSOs for that
   /// station, persisting each merge. Confirmed live against a real server:
   /// the JSON list endpoint used by [fetchQsos] AND the single-QSO detail
-  /// endpoint both omit these fields entirely — ADIF export
+  /// endpoint both omit these fields entirely, ADIF export
   /// (GET /api/v2/qso?format=adif) is the only mode that carries them. Read
   /// only: a paper-QSL write path was tried and confirmed live against a
   /// real server that the v2 PATCH endpoint silently drops qsl_sent/
   /// qsl_rcvd/qsl_*_via/qsl*date, so no such write path exists in this app.
-  /// There's no per-QSO server-side filter, so this pulls the whole log —
+  /// There's no per-QSO server-side filter, so this pulls the whole log ,
   /// callers should run it once per station per session, not per QSO.
   ///
   /// ADIF carries no unique per-record ID, so records are matched to cached
@@ -169,7 +303,7 @@ class QsoRepository {
       await _local.saveLocalQso(qso.copyWith(synced: false));
       rethrow;
     } on TimeoutException {
-      // Zaman aşımı da ağ hatası gibi ele alınır — QSO kaybolmasın
+      // Zaman aşımı da ağ hatası gibi ele alınır, QSO kaybolmasın
       await _local.saveLocalQso(qso.copyWith(synced: false));
       rethrow;
     }
@@ -271,7 +405,7 @@ class QsoRepository {
       try {
         await _remote.deleteQso(id, qso.stationProfileId);
       } catch (_) {
-        // Herhangi bir hata (ağ, zaman aşımı, sunucu hatası) — kuyruğa al.
+        // Herhangi bir hata (ağ, zaman aşımı, sunucu hatası), kuyruğa al.
         // _processPendingDeletes, 404 gibi "zaten silindi" durumlarını
         // yakalayıp kuyruktan düşürür.
         await _local.addPendingDelete(id, qso.stationProfileId);
@@ -370,13 +504,13 @@ class QsoRepository {
     return f;
   }
 
-  // YYYY-MM-DD — v2 PATCH date format (strtotime-safe)
+  // YYYY-MM-DD, v2 PATCH date format (strtotime-safe)
   static String _patchDate(DateTime dt) =>
       '${dt.year.toString().padLeft(4, '0')}-'
       '${dt.month.toString().padLeft(2, '0')}-'
       '${dt.day.toString().padLeft(2, '0')}';
 
-  // HHMMSS — v2 PATCH time format
+  // HHMMSS, v2 PATCH time format
   static String _patchTime(DateTime dt) =>
       '${dt.hour.toString().padLeft(2, '0')}'
       '${dt.minute.toString().padLeft(2, '0')}'
@@ -422,7 +556,7 @@ class QsoRepository {
             failed += chunk.length;
           }
         } on NetworkException catch (e) {
-          // Still offline — stop, the rest stays queued for the next attempt.
+          // Still offline, stop, the rest stays queued for the next attempt.
           offline = true;
           error = e.message;
           break outer;
@@ -461,12 +595,12 @@ class QsoRepository {
         await _local.removePendingDelete(d.serverId, d.stationProfileId);
         done++;
       } on NetworkException {
-        // hâlâ çevrimdışı — sonraki senkronda tekrar dene
+        // hâlâ çevrimdışı, sonraki senkronda tekrar dene
         return (done: done, left: deletes.length - done, offline: true);
       } on TimeoutException {
         return (done: done, left: deletes.length - done, offline: true);
       } catch (_) {
-        // Sunucu kaydı zaten silmiş olabilir — kuyruktan düş
+        // Sunucu kaydı zaten silmiş olabilir, kuyruktan düş
         await _local.removePendingDelete(d.serverId, d.stationProfileId);
         done++;
       }
@@ -477,7 +611,7 @@ class QsoRepository {
   int get unsyncedCount => _local.unsyncedCount;
 
   static String _qsoId(QsoModel q) {
-    // Saniye hassasiyeti kullan — MySQL DATETIME milisaniyeleri saklamaz.
+    // Saniye hassasiyeti kullan, MySQL DATETIME milisaniyeleri saklamaz.
     // Optimistik ID ile sunucudan geri çekilen ID'nin eşleşmesi için gerekli.
     final ts = q.dateTimeOn.millisecondsSinceEpoch ~/ 1000;
     final safeCall = q.callsign.replaceAll('/', '-');

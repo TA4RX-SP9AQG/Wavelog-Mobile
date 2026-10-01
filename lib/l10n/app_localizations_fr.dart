@@ -114,6 +114,33 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ajoutez cette autorisation lors de la création de votre jeton API';
 
   @override
+  String get qsoSyncBigTitle => 'Waouh, que de QSO !!';
+
+  @override
+  String get qsoSyncBigBody =>
+      'Synchronisation de vos QSO en cours, cela peut prendre 1 a 2 minutes.';
+
+  @override
+  String get qsoSyncSection => 'Synchronisation QSO';
+
+  @override
+  String get qsoSyncResetBtn => 'Réinitialiser la synchronisation';
+
+  @override
+  String get qsoSyncResetHint =>
+      'Utile après une modification de QSO ou si quelque chose semble incorrect';
+
+  @override
+  String get qsoSyncResetStarted => 'Synchronisation relancée en arrière-plan';
+
+  @override
+  String get qsoSyncIntervalLabel => 'Intervalle de vérification';
+
+  @override
+  String get qsoSyncIntervalHint =>
+      'Fréquence à laquelle le contenu des QSO est revérifié en arrière-plan';
+
+  @override
   String get connectionSuccess => 'Connexion réussie !';
 
   @override
@@ -1035,12 +1062,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get deleteLogbook => 'Supprimer le carnet';
-
-  @override
-  String get setActiveLogbook => 'Définir actif';
-
-  @override
-  String get activeLogbook => 'Carnet actif';
 
   @override
   String get editStation => 'Modifier';

@@ -113,6 +113,33 @@ class AppLocalizationsPl extends AppLocalizations {
       'Dodaj to uprawnienie podczas tworzenia tokenu API';
 
   @override
+  String get qsoSyncBigTitle => 'O rety, ale duzo QSO!!';
+
+  @override
+  String get qsoSyncBigBody =>
+      'Synchronizacja QSO w toku, moze to potrwac 1-2 minuty.';
+
+  @override
+  String get qsoSyncSection => 'Synchronizacja QSO';
+
+  @override
+  String get qsoSyncResetBtn => 'Zresetuj synchronizację';
+
+  @override
+  String get qsoSyncResetHint =>
+      'Przydatne po edycji QSO lub gdy coś wygląda nie tak';
+
+  @override
+  String get qsoSyncResetStarted => 'Synchronizacja uruchomiona ponownie w tle';
+
+  @override
+  String get qsoSyncIntervalLabel => 'Interwał sprawdzania';
+
+  @override
+  String get qsoSyncIntervalHint =>
+      'Jak często zawartość QSO jest ponownie sprawdzana w tle';
+
+  @override
   String get connectionSuccess => 'Połączono pomyślnie!';
 
   @override
@@ -1034,12 +1061,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get deleteLogbook => 'Usuń logbook';
-
-  @override
-  String get setActiveLogbook => 'Ustaw aktywny';
-
-  @override
-  String get activeLogbook => 'Aktywny logbook';
 
   @override
   String get editStation => 'Edytuj';

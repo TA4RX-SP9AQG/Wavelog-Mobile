@@ -133,6 +133,12 @@ class SettingsNotifier extends StateNotifier<SettingsModel> {
     state = s;
   }
 
+  Future<void> setQsoSyncCheckIntervalMinutes(int value) async {
+    final s = state.copyWith(qsoSyncCheckIntervalMinutes: value);
+    await _repo.saveSettings(s);
+    state = s;
+  }
+
   Future<void> setLocale(String? locale) async {
     final s = locale == null
         ? state.copyWith(clearLocale: true)

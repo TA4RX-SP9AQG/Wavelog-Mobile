@@ -114,6 +114,34 @@ class AppLocalizationsRu extends AppLocalizations {
       'Добавьте эту область доступа при создании токена API';
 
   @override
+  String get qsoSyncBigTitle => 'Ого, сколько QSO!!';
+
+  @override
+  String get qsoSyncBigBody =>
+      'Идёт синхронизация QSO, это может занять 1-2 минуты.';
+
+  @override
+  String get qsoSyncSection => 'Синхронизация QSO';
+
+  @override
+  String get qsoSyncResetBtn => 'Сбросить синхронизацию';
+
+  @override
+  String get qsoSyncResetHint =>
+      'Полезно после редактирования QSO или если что-то выглядит неправильно';
+
+  @override
+  String get qsoSyncResetStarted =>
+      'Синхронизация перезапущена в фоновом режиме';
+
+  @override
+  String get qsoSyncIntervalLabel => 'Интервал проверки';
+
+  @override
+  String get qsoSyncIntervalHint =>
+      'Как часто содержимое QSO повторно проверяется в фоновом режиме';
+
+  @override
   String get connectionSuccess => 'Соединение установлено!';
 
   @override
@@ -1035,12 +1063,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get deleteLogbook => 'Удалить журнал';
-
-  @override
-  String get setActiveLogbook => 'Сделать активным';
-
-  @override
-  String get activeLogbook => 'Активный журнал';
 
   @override
   String get editStation => 'Редактировать';

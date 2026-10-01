@@ -87,6 +87,15 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
         _testSuccess = true;
         _testResult = context.l10n.connectionSuccess;
       });
+    } on ForbiddenException {
+      // Same as above, this step runs without a key at all, so a 403 here
+      // still just means "reachable", never a real scope problem.
+      if (!mounted) return;
+      setState(() {
+        _testing = false;
+        _testSuccess = true;
+        _testResult = context.l10n.connectionSuccess;
+      });
     } on NetworkException {
       if (!mounted) return;
       setState(() {

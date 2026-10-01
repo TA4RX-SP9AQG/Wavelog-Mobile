@@ -113,6 +113,34 @@ class AppLocalizationsTr extends AppLocalizations {
       'API token oluştururken bu yetkiyi de işaretleyin';
 
   @override
+  String get qsoSyncBigTitle => 'Abo ne kadar fazla QSO!!';
+
+  @override
+  String get qsoSyncBigBody =>
+      'QSO\'lar senkronize ediliyor, bu işlem 1-2 dakika sürebilir.';
+
+  @override
+  String get qsoSyncSection => 'QSO Senkronizasyonu';
+
+  @override
+  String get qsoSyncResetBtn => 'Senkronizasyonu Sıfırla';
+
+  @override
+  String get qsoSyncResetHint =>
+      'QSO güncellemelerinde veya bir şeyler yanlış görünüyorsa kullanılabilir';
+
+  @override
+  String get qsoSyncResetStarted =>
+      'Senkronizasyon arka planda yeniden başlatıldı';
+
+  @override
+  String get qsoSyncIntervalLabel => 'Kontrol Aralığı';
+
+  @override
+  String get qsoSyncIntervalHint =>
+      'QSO içeriği arka planda ne sıklıkla yeniden kontrol edilsin';
+
+  @override
   String get connectionSuccess => 'Bağlantı başarılı!';
 
   @override
@@ -1033,12 +1061,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get deleteLogbook => 'Logbook\'u Sil';
-
-  @override
-  String get setActiveLogbook => 'Aktif Yap';
-
-  @override
-  String get activeLogbook => 'Aktif Logbook';
 
   @override
   String get editStation => 'Düzenle';

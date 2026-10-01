@@ -112,6 +112,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String get scopeTestAddHint => 'API 토큰을 만들 때 이 권한도 선택하세요';
 
   @override
+  String get qsoSyncBigTitle => 'QSO가 엄청 많네요!!';
+
+  @override
+  String get qsoSyncBigBody => 'QSO를 동기화하는 중입니다. 1~2분 정도 걸릴 수 있어요.';
+
+  @override
+  String get qsoSyncSection => 'QSO 동기화';
+
+  @override
+  String get qsoSyncResetBtn => '동기화 재설정';
+
+  @override
+  String get qsoSyncResetHint => 'QSO 수정 후나 뭔가 잘못되어 보일 때 사용할 수 있습니다';
+
+  @override
+  String get qsoSyncResetStarted => '백그라운드에서 동기화가 다시 시작되었습니다';
+
+  @override
+  String get qsoSyncIntervalLabel => '확인 주기';
+
+  @override
+  String get qsoSyncIntervalHint => '백그라운드에서 QSO 내용을 다시 확인하는 주기';
+
+  @override
   String get connectionSuccess => '연결 성공!';
 
   @override
@@ -1024,12 +1048,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get deleteLogbook => '로그북 삭제';
-
-  @override
-  String get setActiveLogbook => '활성으로 설정';
-
-  @override
-  String get activeLogbook => '활성 로그북';
 
   @override
   String get editStation => '편집';

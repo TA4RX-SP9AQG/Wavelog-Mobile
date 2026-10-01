@@ -112,6 +112,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get scopeTestAddHint => 'APIトークン作成時にこの権限も選択してください';
 
   @override
+  String get qsoSyncBigTitle => 'QSO多すぎ!!';
+
+  @override
+  String get qsoSyncBigBody => 'QSOを同期しています。1〜2分ほどかかることがあります。';
+
+  @override
+  String get qsoSyncSection => 'QSO同期';
+
+  @override
+  String get qsoSyncResetBtn => '同期をリセット';
+
+  @override
+  String get qsoSyncResetHint => 'QSOの編集後や、何かおかしいと感じたときに使えます';
+
+  @override
+  String get qsoSyncResetStarted => 'バックグラウンドで同期を再開しました';
+
+  @override
+  String get qsoSyncIntervalLabel => '確認間隔';
+
+  @override
+  String get qsoSyncIntervalHint => 'QSOの内容をバックグラウンドで再確認する頻度';
+
+  @override
   String get connectionSuccess => '接続成功！';
 
   @override
@@ -1024,12 +1048,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get deleteLogbook => 'ログブック削除';
-
-  @override
-  String get setActiveLogbook => 'アクティブに設定';
-
-  @override
-  String get activeLogbook => 'アクティブログブック';
 
   @override
   String get editStation => '編集';

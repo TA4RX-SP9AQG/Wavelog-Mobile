@@ -94,21 +94,99 @@ class QsoCacheDatasource {
     await _box.put(localId, updated.copyWith(localId: localId));
   }
 
-  /// Bir istasyonun senkron kayıtlarını [incoming] ile eşitler.
-  /// Tam sil+yaz yerine fark tabanlı çalışır: değişmeyen kayıtlar diske
-  /// yeniden yazılmaz, sunucuda artık olmayan senkron kayıtlar silinir.
-  Future<void> replaceSyncedQsosForStation(
-      int stationId, List<QsoModel> incoming) async {
-    final incomingKeys = <String>{};
-    final toWrite = <String, QsoModel>{};
+  /// Deletes cached synced QSOs for [stationId] whose key isn't in
+  /// [keepKeys], the trailing step of a full reconciliation fetch, run
+  /// only after every QSO the server currently has for that station has
+  /// already been upserted (page by page, via [upsertQsosForStation]).
+  /// This is what makes a QSO deleted server-side eventually disappear
+  /// locally too; an incremental (`since_id`) fetch never sees removals,
+  /// only additions, so it must never call this.
+  Future<void> pruneStaleForStation(int stationId, Set<String> keepKeys) async {
+    final staleKeys = _box.keys.cast<String>().where((k) {
+      if (keepKeys.contains(k)) return false;
+      final q = _box.get(k);
+      return q != null && q.synced && q.stationProfileId == stationId;
+    }).toList();
+    if (staleKeys.isNotEmpty) await _box.deleteAll(staleKeys);
+  }
 
+  /// Cached QSO count for [stationId]. An incremental fetch only ever adds,
+  /// so this only ever grows on its own, if the server's true count for the
+  /// station (see WavelogRemoteDatasource.getQsoCount) is ever lower than
+  /// this, something was deleted server-side.
+  int countForStation(int stationId) =>
+      _box.values.where((q) => q.stationProfileId == stationId).length;
+
+  /// Highest known server QSO id already cached for [stationId], or 0 when
+  /// the station has never been synced. Lets [QsoRepository.fetchQsos] ask
+  /// the server for only QSOs newer than this (`since_id`) instead of
+  /// re-downloading a station's entire history on every fetch, essential
+  /// once a station's QSO count gets large (a real reported case: 104,983
+  /// QSOs on one profile, ~105 pages at 1000/page every single time).
+  static const _lastFullCheckKeyPrefix = 'wl_last_full_check_';
+
+  /// When [stationId] last had a full, field-by-field reconciling fetch, or
+  /// null if never. A deletion is caught immediately (see
+  /// QsoRepository.reconcileIfNeeded's count check), but an *edit* to an
+  /// existing QSO (same id, changed content) changes neither the count nor
+  /// the max id, so it's invisible to every cheaper check, catching it
+  /// needs this periodic full fetch, which already does a field-by-field
+  /// comparison per record (see upsertQsosForStation's mapEquals check).
+  Future<DateTime?> getLastFullCheckAt(int stationId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ms = prefs.getInt('$_lastFullCheckKeyPrefix$stationId');
+    return ms != null ? DateTime.fromMillisecondsSinceEpoch(ms) : null;
+  }
+
+  Future<void> setLastFullCheckAt(int stationId, DateTime time) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('$_lastFullCheckKeyPrefix$stationId', time.millisecondsSinceEpoch);
+  }
+
+  /// Forgets every station's last-full-check timestamp, without touching
+  /// any cached QSO, so the next background reconciliation pass treats
+  /// every station as due for a full, field-by-field re-check against the
+  /// server, the manual "resync" a user reaches for when something looks
+  /// wrong (a missed edit, a stats mismatch) rather than waiting out
+  /// [SettingsModel.qsoSyncCheckIntervalMinutes]. Nothing currently shown
+  /// disappears, reconcileIfNeeded's fetch runs in the background and only
+  /// replaces what changed once it completes.
+  Future<void> clearAllFullCheckTimestamps() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs
+        .getKeys()
+        .where((k) => k.startsWith(_lastFullCheckKeyPrefix))
+        .toList();
+    for (final k in keys) {
+      await prefs.remove(k);
+    }
+  }
+
+  int maxServerIdForStation(int stationId) {
+    var maxId = 0;
+    for (final q in _box.values) {
+      if (q.stationProfileId != stationId) continue;
+      final id = q.serverId;
+      if (id != null && id > maxId) maxId = id;
+    }
+    return maxId;
+  }
+
+  /// Merges [incoming] into the cache without deleting anything else for
+  /// [stationId], unlike [pruneStaleForStation], which is what actually
+  /// removes cached QSOs the server no longer has, and is only safe to run
+  /// after a *complete* fetch of the station (see QsoRepository). An
+  /// incremental (`since_id`) fetch is deliberately a partial view (only
+  /// QSOs newer than some id), so treating it as the complete current set
+  /// would wipe out every older QSO already cached for the station.
+  Future<void> upsertQsosForStation(
+      int stationId, List<QsoModel> incoming) async {
+    final toWrite = <String, QsoModel>{};
     for (final qso in incoming) {
       final key = qso.localId ?? _uuid.v4();
-      incomingKeys.add(key);
       final entry =
           qso.localId != null ? qso : qso.copyWith(localId: key, synced: true);
       final existing = _box.get(key);
-      // İçerik aynıysa diske dokunma
       if (existing != null &&
           existing.synced == entry.synced &&
           mapEquals(existing.rawAdif, entry.rawAdif)) {
@@ -116,15 +194,6 @@ class QsoCacheDatasource {
       }
       toWrite[key] = entry;
     }
-
-    // Sunucuda artık olmayan eski senkron kayıtlar
-    final staleKeys = _box.keys.cast<String>().where((k) {
-      if (incomingKeys.contains(k)) return false;
-      final q = _box.get(k);
-      return q != null && q.synced && q.stationProfileId == stationId;
-    }).toList();
-
-    if (staleKeys.isNotEmpty) await _box.deleteAll(staleKeys);
     if (toWrite.isNotEmpty) await _box.putAll(toWrite);
   }
 
@@ -176,7 +245,7 @@ class QsoCacheDatasource {
   }
 
   // Clears the Hive cache when the API token changes (e.g., v1→v2 migration).
-  // Stored token is compared without hashing — it never leaves the device.
+  // Stored token is compared without hashing, it never leaves the device.
   static const _tokenKey = 'wl_cache_token';
 
   Future<void> clearIfTokenChanged(String currentToken) async {

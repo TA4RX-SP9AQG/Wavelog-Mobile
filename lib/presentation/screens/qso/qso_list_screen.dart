@@ -13,6 +13,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/qso_model.dart';
 import '../../../providers/qso_provider.dart';
 import '../../widgets/common/error_view.dart';
+import '../../widgets/common/qso_sync_progress_banner.dart';
 import '../../widgets/qso/qso_list_tile.dart';
 import '../../../router.dart';
 
@@ -193,6 +194,7 @@ class _QsoListScreenState extends ConsumerState<QsoListScreen> {
               ),
         body: Column(
           children: [
+            const QsoSyncProgressBanner(),
             if (!_selectionMode) ...[
               SizedBox(
                 height: 44,

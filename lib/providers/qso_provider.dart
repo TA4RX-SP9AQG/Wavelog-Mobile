@@ -213,10 +213,14 @@ class QsoNotifier extends AsyncNotifier<List<QsoModel>> {
       unawaited(() async {
         for (var i = 0; i < toReconcile.length; i += maxConcurrentStations) {
           final batch = toReconcile.skip(i).take(maxConcurrentStations);
+          // No onProgress here, deliberately: this runs on every resume once
+          // editCheckInterval has elapsed, for stations that already have a
+          // full cache, and must stay silent, not re-show the "first sync"
+          // banner (see qsoSyncProgressProvider's one reader) for what is
+          // routine background reconciliation.
           final changed = await Future.wait(batch.map((s) => repo
               .reconcileIfNeeded(
                 s.id,
-                onProgress: reportProgress,
                 editCheckInterval:
                     Duration(minutes: settings.qsoSyncCheckIntervalMinutes),
               )
@@ -476,9 +480,10 @@ final logbookSummaryProvider =
     source = await cache.getCachedQsos();
   }
   final all = filterByStations(source, ids);
-  final now = DateTime.now();
+  // UTC boundary (matching Wavelog web), not the device's local timezone.
+  final now = DateTime.now().toUtc();
   final todayCount = all.where((q) {
-    final d = q.dateTimeOn.toLocal();
+    final d = q.dateTimeOn;
     return d.year == now.year && d.month == now.month && d.day == now.day;
   }).length;
   return (last5: all.take(5).toList(), todayCount: todayCount);

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/utils/adif_parser.dart';
@@ -196,7 +197,17 @@ class WavelogRemoteDatasource {
       // Paginated response with meta envelope
       final contacts = data['data'] ?? data['qsos'] ?? [];
       if (contacts is List) {
-        batch = contacts.whereType<Map<String, dynamic>>().map(QsoModel.fromJson).toList();
+        // Parsing (date parsing, rawAdif map construction, field alias
+        // lookups) is CPU-bound, up to 5000 records a page, and was blocking
+        // the UI isolate long enough to be felt on a large station, exactly
+        // the same class of problem already fixed for DXCC stats (see
+        // statistics_screen.dart's _computeDxccEntries), so it's offloaded
+        // the same way. Safe to send QsoModels back across the isolate
+        // boundary here specifically because these are freshly built and
+        // never attached to a Hive box yet, unlike instances read from
+        // Hive.box.values (whose HiveObject box reference isn't sendable).
+        batch = await compute(_parseQsoBatch,
+            contacts.whereType<Map<String, dynamic>>().toList());
       }
       final meta = data['meta'];
       if (meta is Map) {
@@ -204,12 +215,19 @@ class WavelogRemoteDatasource {
         totalPages = (meta['total_pages'] as num?)?.toInt() ?? 1;
       }
     } else if (data is List) {
-      batch = data.whereType<Map<String, dynamic>>().map(QsoModel.fromJson).toList();
       // Legacy flat list, no pagination info, assume single page
+      batch = await compute(
+          _parseQsoBatch, data.whereType<Map<String, dynamic>>().toList());
     }
 
     return (batch: batch, hasMore: hasMore, totalPages: totalPages);
   }
+
+  /// The CPU-bound half of [_fetchQsoPage], run on a background isolate via
+  /// [compute]. Must be a top-level function, not a closure, for the isolate
+  /// machinery to re-invoke it on the other side.
+  static List<QsoModel> _parseQsoBatch(List<Map<String, dynamic>> records) =>
+      records.map(QsoModel.fromJson).toList();
 
   // ADIF export (GET /api/v2/qso?format=adif). Confirmed live against a real
   // server: neither the JSON list endpoint nor the single-QSO detail

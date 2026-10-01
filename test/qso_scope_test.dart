@@ -78,8 +78,12 @@ void main() {
   });
 
   test('countQsos splits today / month / year / total', () {
-    final now = DateTime.now();
-    final lastYear = DateTime(now.year - 1, 6, 15);
+    // dateTimeOn is always UTC in production (see QsoModel.fromJson), and
+    // countQsos' boundaries are UTC too, construct accordingly rather than
+    // with local DateTime.now(), which only coincidentally matches near the
+    // UTC day boundary.
+    final now = DateTime.now().toUtc();
+    final lastYear = DateTime.utc(now.year - 1, 6, 15);
     final qsos = [
       _qso(10, now),
       _qso(10, now.subtract(const Duration(minutes: 5))),
@@ -90,6 +94,18 @@ void main() {
     expect(c.yearQsos, 2);
     expect(c.monthQsos, 2);
     expect(c.todayQsos >= 1, isTrue);
+  });
+
+  test('countQsos uses UTC day boundaries, not the device local timezone',
+      () {
+    final nowUtc = DateTime.now().toUtc();
+    final todayMidnightUtc =
+        DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day);
+    final justBeforeTodayUtc =
+        todayMidnightUtc.subtract(const Duration(minutes: 1));
+    final qsos = [_qso(10, todayMidnightUtc), _qso(10, justBeforeTodayUtc)];
+    final c = countQsos(qsos);
+    expect(c.todayQsos, 1);
   });
 
   group('dxccStationIds', () {

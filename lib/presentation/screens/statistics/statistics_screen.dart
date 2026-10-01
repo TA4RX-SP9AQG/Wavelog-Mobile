@@ -718,37 +718,41 @@ class _StatisticsBody extends StatelessWidget {
           // ── Time-based totals ─────────────────────────────────────
           _SectionHeader(l10n.statsTotal),
           const SizedBox(height: 6),
-          Row(
-            children: [
-              _StatCard(l10n.statsToday, data.todayQsos.toString(), Icons.today),
-              _StatCard(l10n.statsMonth, data.monthQsos.toString(), Icons.calendar_month),
-              _StatCard(l10n.statsYear, data.yearQsos.toString(), Icons.calendar_today),
-              _StatCard(l10n.statsTotal, data.totalQsos.toString(), Icons.storage),
-            ].map((w) => Expanded(child: w)).toList(),
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                _StatCard(l10n.statsToday, data.todayQsos.toString(), Icons.today),
+                _StatCard(l10n.statsMonth, data.monthQsos.toString(), Icons.calendar_month),
+                _StatCard(l10n.statsYear, data.yearQsos.toString(), Icons.calendar_today),
+                _StatCard(l10n.statsTotal, data.totalQsos.toString(), Icons.storage),
+              ].map((w) => Expanded(child: w)).toList(),
+            ),
           ),
           const SizedBox(height: 16),
 
           // ── Highlights ────────────────────────────────────────────
-          Row(
-            children: [
-              Expanded(
-                child: _HighlightCard(
-                  icon: Icons.people_outline,
-                  value: data.uniqueCallsigns.toString(),
-                  label: l10n.uniqueCallsigns,
-                  color: Theme.of(context).colorScheme.tertiary,
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _HighlightCard(
+                    icon: Icons.people_outline,
+                    value: data.uniqueCallsigns.toString(),
+                    label: l10n.uniqueCallsigns,
+                    color: Theme.of(context).colorScheme.tertiary,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _HighlightCard(
-                  icon: Icons.local_fire_department_outlined,
-                  value: l10n.streakDays(data.currentStreakDays),
-                  label: l10n.currentStreak,
-                  color: Colors.orange,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _HighlightCard(
+                    icon: Icons.local_fire_department_outlined,
+                    value: l10n.streakDays(data.currentStreakDays),
+                    label: l10n.currentStreak,
+                    color: Colors.orange,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 20),
 
@@ -941,15 +945,23 @@ class _StatCard extends StatelessWidget {
           children: [
             Icon(icon, size: 18, color: theme.colorScheme.primary),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontFamily: 'monospace',
+            // A large account's total can run to 6+ digits, FittedBox
+            // shrinks it to fit the card's width instead of overflowing.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                ),
               ),
             ),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.secondary,
               ),
@@ -987,16 +999,27 @@ class _HighlightCard extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    value,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'monospace',
+                  // "{count} day(s)" runs noticeably longer than a bare
+                  // count, FittedBox keeps it to one line instead of
+                  // wrapping and making this card taller than its sibling.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
+                      ),
                     ),
                   ),
                   Text(
                     label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.secondary,
                     ),
@@ -1090,26 +1113,28 @@ class _PotaContent extends StatelessWidget {
         const SizedBox(height: 8),
 
         // ── Summary cards ────────────────────────────────────────────
-        Row(
-          children: [
-            Expanded(
-              child: _HighlightCard(
-                icon: Icons.contacts_outlined,
-                value: stats.totalQsos.toString(),
-                label: l10n.potaTotalQsos,
-                color: potaGreen,
+        IntrinsicHeight(
+          child: Row(
+            children: [
+              Expanded(
+                child: _HighlightCard(
+                  icon: Icons.contacts_outlined,
+                  value: stats.totalQsos.toString(),
+                  label: l10n.potaTotalQsos,
+                  color: potaGreen,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _HighlightCard(
-                icon: Icons.flag_outlined,
-                value: stats.activatedCount.toString(),
-                label: l10n.potaActivatedParks,
-                color: potaGreen,
+              const SizedBox(width: 8),
+              Expanded(
+                child: _HighlightCard(
+                  icon: Icons.flag_outlined,
+                  value: stats.activatedCount.toString(),
+                  label: l10n.potaActivatedParks,
+                  color: potaGreen,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 12),
 

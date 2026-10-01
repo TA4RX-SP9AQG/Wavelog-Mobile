@@ -266,13 +266,15 @@ class QsoCacheDatasource {
     final uniqueCallsigns =
         all.map((q) => q.callsign.toUpperCase()).toSet().length;
 
-    // Consecutive-day streak ending today (or yesterday if no QSOs today)
+    // Consecutive-day streak ending today (or yesterday if no QSOs today).
+    // Boundaries are UTC (matching Wavelog web, and dateTimeOn's own storage
+    // convention, see QsoModel.fromJson), not the device's local timezone.
     final days = all
-        .map((q) =>
-            DateTime(q.dateTimeOn.year, q.dateTimeOn.month, q.dateTimeOn.day))
+        .map((q) => DateTime.utc(
+            q.dateTimeOn.year, q.dateTimeOn.month, q.dateTimeOn.day))
         .toSet();
-    final now = DateTime.now();
-    DateTime check = DateTime(now.year, now.month, now.day);
+    final now = DateTime.now().toUtc();
+    DateTime check = DateTime.utc(now.year, now.month, now.day);
     int streak = 0;
     // If today has no QSOs, start from yesterday
     if (!days.contains(check)) {
@@ -283,10 +285,11 @@ class QsoCacheDatasource {
       check = check.subtract(const Duration(days: 1));
     }
 
-    final todayDate = DateTime(now.year, now.month, now.day);
+    final todayDate = DateTime.utc(now.year, now.month, now.day);
     final todayQsos = all.where((q) {
-      final local = q.dateTimeOn.toLocal();
-      return DateTime(local.year, local.month, local.day) == todayDate;
+      return DateTime.utc(q.dateTimeOn.year, q.dateTimeOn.month,
+              q.dateTimeOn.day) ==
+          todayDate;
     }).length;
 
     final byBand = <String, int>{};

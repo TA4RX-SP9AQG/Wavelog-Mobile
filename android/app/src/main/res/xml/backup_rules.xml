@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 11 and below (fullBackupContent). The Wavelog server URL and API
+    key are stored in flutter_secure_storage, encrypted with an Android
+    Keystore key that is never backed up. After a restore the shared_prefs
+    file would exist but be undecryptable, so exclude it from backup entirely.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+</full-backup-content>

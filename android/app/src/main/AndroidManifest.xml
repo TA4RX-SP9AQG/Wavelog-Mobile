@@ -19,7 +19,9 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:networkSecurityConfig="@xml/network_security_config">
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules">
 
         <activity
             android:name=".MainActivity"
@@ -47,26 +49,26 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
 
-            <!-- Open .adif / .adi files — Birlikte Aç -->
-            <intent-filter android:label="İçe Aktar">
+            <!-- Open .adif / .adi files -->
+            <intent-filter android:label="@string/adif_import_label">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="content" android:mimeType="*/*"
                       android:pathPattern=".*\\.adif" />
             </intent-filter>
-            <intent-filter android:label="İçe Aktar">
+            <intent-filter android:label="@string/adif_import_label">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="content" android:mimeType="*/*"
                       android:pathPattern=".*\\.adi" />
             </intent-filter>
-            <intent-filter android:label="İçe Aktar">
+            <intent-filter android:label="@string/adif_import_label">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="file" android:mimeType="*/*"
                       android:pathPattern=".*\\.adif" />
             </intent-filter>
-            <intent-filter android:label="İçe Aktar">
+            <intent-filter android:label="@string/adif_import_label">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="file" android:mimeType="*/*"

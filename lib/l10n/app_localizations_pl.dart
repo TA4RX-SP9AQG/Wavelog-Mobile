@@ -2018,6 +2018,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get fillFromGps => 'Wypełnij z GPS';
 
   @override
+  String get tapForGridSquare => 'Dotknij, aby pokazać lokator';
+
+  @override
   String get locationPermissionDenied => 'Odmowa dostępu do lokalizacji';
 
   @override

@@ -2019,6 +2019,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get fillFromGps => 'Compila da GPS';
 
   @override
+  String get tapForGridSquare => 'Tocca per mostrare il locatore';
+
+  @override
   String get locationPermissionDenied => 'Autorizzazione posizione negata';
 
   @override

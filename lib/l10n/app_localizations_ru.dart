@@ -2025,6 +2025,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get fillFromGps => 'Заполнить из GPS';
 
   @override
+  String get tapForGridSquare => 'Нажмите, чтобы показать QTH-локатор';
+
+  @override
   String get locationPermissionDenied => 'Доступ к геолокации запрещён';
 
   @override

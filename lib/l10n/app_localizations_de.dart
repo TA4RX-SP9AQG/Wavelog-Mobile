@@ -2021,6 +2021,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get fillFromGps => 'Von GPS ausfüllen';
 
   @override
+  String get tapForGridSquare => 'Tippen, um das Rasterfeld anzuzeigen';
+
+  @override
   String get locationPermissionDenied => 'Standortberechtigung verweigert';
 
   @override

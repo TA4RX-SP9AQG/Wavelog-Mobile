@@ -689,6 +689,7 @@
   "comingSoon": "Wkrótce",
   "noCompassSensor": "Brak czujnika kompasu",
   "fillFromGps": "Wypełnij z GPS",
+  "tapForGridSquare": "Dotknij, aby pokazać lokator",
   "locationPermissionDenied": "Odmowa dostępu do lokalizacji",
   "gpsError": "Błąd GPS: {error}",
   "errParse": "Błąd przetwarzania odpowiedzi serwera",

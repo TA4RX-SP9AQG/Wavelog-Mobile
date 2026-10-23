@@ -881,6 +881,7 @@
   "comingSoon": "Скоро",
   "noCompassSensor": "Нет датчика компаса",
   "fillFromGps": "Заполнить из GPS",
+  "tapForGridSquare": "Нажмите, чтобы показать QTH-локатор",
   "locationPermissionDenied": "Доступ к геолокации запрещён",
   "gpsError": "Ошибка GPS: {error}",
   "@gpsError": {

@@ -2015,6 +2015,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get fillFromGps => 'GPS\'den Doldur';
 
   @override
+  String get tapForGridSquare => 'Grid kareyi göstermek için dokunun';
+
+  @override
   String get locationPermissionDenied => 'Konum izni reddedildi';
 
   @override

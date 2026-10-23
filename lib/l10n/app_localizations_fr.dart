@@ -2023,6 +2023,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get fillFromGps => 'Remplir via GPS';
 
   @override
+  String get tapForGridSquare => 'Appuyez pour afficher le locator';
+
+  @override
   String get locationPermissionDenied => 'Permission de localisation refusée';
 
   @override

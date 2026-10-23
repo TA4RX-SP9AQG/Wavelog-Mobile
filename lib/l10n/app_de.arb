@@ -785,6 +785,7 @@
   "comingSoon": "Demnächst",
   "noCompassSensor": "Kein Kompasssensor",
   "fillFromGps": "Von GPS ausfüllen",
+  "tapForGridSquare": "Tippen, um das Rasterfeld anzuzeigen",
   "locationPermissionDenied": "Standortberechtigung verweigert",
   "gpsError": "GPS-Fehler: {error}",
   "@gpsError": {

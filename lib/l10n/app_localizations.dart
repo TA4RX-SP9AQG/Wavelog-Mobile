@@ -3916,6 +3916,12 @@ abstract class AppLocalizations {
   /// **'Fill from GPS'**
   String get fillFromGps;
 
+  /// No description provided for @tapForGridSquare.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to show grid square'**
+  String get tapForGridSquare;
+
   /// No description provided for @locationPermissionDenied.
   ///
   /// In en, this message translates to:

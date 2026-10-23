@@ -2011,6 +2011,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fillFromGps => 'Fill from GPS';
 
   @override
+  String get tapForGridSquare => 'Tap to show grid square';
+
+  @override
   String get locationPermissionDenied => 'Location permission denied';
 
   @override

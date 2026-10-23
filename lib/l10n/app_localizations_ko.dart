@@ -1991,6 +1991,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get fillFromGps => 'GPS에서 채우기';
 
   @override
+  String get tapForGridSquare => '탭하여 그리드 스퀘어 표시';
+
+  @override
   String get locationPermissionDenied => '위치 권한이 거부되었습니다';
 
   @override

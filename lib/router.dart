@@ -605,13 +605,13 @@ class _DrawerHeaderInfoState extends State<_DrawerHeaderInfo> {
   late Timer _timer;
   String _utcTime = '';
   String? _grid;
+  bool _gridLoading = false;
 
   @override
   void initState() {
     super.initState();
     _tick();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
-    _fetchGrid();
   }
 
   void _tick() {
@@ -623,6 +623,8 @@ class _DrawerHeaderInfoState extends State<_DrawerHeaderInfo> {
   }
 
   Future<void> _fetchGrid() async {
+    if (_gridLoading) return;
+    setState(() => _gridLoading = true);
     try {
       var perm = await NativeLocation.checkPermission();
       if (perm == LocationPermission.denied) {
@@ -635,7 +637,10 @@ class _DrawerHeaderInfoState extends State<_DrawerHeaderInfo> {
       final pos = await NativeLocation.getCurrentPosition();
       final grid = latLngToGrid(pos.latitude, pos.longitude);
       if (mounted && grid != null) { setState(() => _grid = grid); }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _gridLoading = false);
+    }
   }
 
   @override
@@ -654,12 +659,27 @@ class _DrawerHeaderInfoState extends State<_DrawerHeaderInfo> {
         Icon(Icons.access_time_outlined, size: 12, color: textColor),
         const SizedBox(width: 4),
         Text('$_utcTime UTC', style: style),
-        if (_grid != null) ...[
-          const SizedBox(width: 10),
-          Icon(Icons.grid_on_outlined, size: 12, color: textColor),
-          const SizedBox(width: 4),
-          Text(_grid!, style: style),
-        ],
+        const SizedBox(width: 10),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _grid == null ? _fetchGrid : null,
+          child: Row(
+            children: [
+              _gridLoading
+                  ? SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: textColor,
+                      ),
+                    )
+                  : Icon(Icons.grid_on_outlined, size: 12, color: textColor),
+              const SizedBox(width: 4),
+              Text(_grid ?? context.l10n.tapForGridSquare, style: style),
+            ],
+          ),
+        ),
       ],
     );
   }

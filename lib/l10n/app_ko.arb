@@ -782,6 +782,7 @@
   "comingSoon": "곧 출시",
   "noCompassSensor": "나침반 센서 없음",
   "fillFromGps": "GPS에서 채우기",
+  "tapForGridSquare": "탭하여 그리드 스퀘어 표시",
   "locationPermissionDenied": "위치 권한이 거부되었습니다",
   "gpsError": "GPS 오류: {error}",
   "@gpsError": {

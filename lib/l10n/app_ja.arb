@@ -782,6 +782,7 @@
   "comingSoon": "近日公開",
   "noCompassSensor": "コンパスセンサーなし",
   "fillFromGps": "GPS から入力",
+  "tapForGridSquare": "タップしてグリッドスクエアを表示",
   "locationPermissionDenied": "位置情報の権限が拒否されました",
   "gpsError": "GPS エラー: {error}",
   "@gpsError": {

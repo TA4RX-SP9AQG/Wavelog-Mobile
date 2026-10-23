@@ -1991,6 +1991,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get fillFromGps => 'GPS から入力';
 
   @override
+  String get tapForGridSquare => 'タップしてグリッドスクエアを表示';
+
+  @override
   String get locationPermissionDenied => '位置情報の権限が拒否されました';
 
   @override

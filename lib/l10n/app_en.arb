@@ -1373,6 +1373,8 @@
   "@noCompassSensor": {},
   "fillFromGps": "Fill from GPS",
   "@fillFromGps": {},
+  "tapForGridSquare": "Tap to show grid square",
+  "@tapForGridSquare": {},
   "locationPermissionDenied": "Location permission denied",
   "@locationPermissionDenied": {},
   "gpsError": "GPS error: {error}",

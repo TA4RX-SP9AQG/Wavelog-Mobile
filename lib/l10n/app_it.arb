@@ -675,6 +675,7 @@
   "comingSoon": "Prossimamente",
   "noCompassSensor": "Nessun sensore bussola",
   "fillFromGps": "Compila da GPS",
+  "tapForGridSquare": "Tocca per mostrare il locatore",
   "locationPermissionDenied": "Autorizzazione posizione negata",
   "gpsError": "Errore GPS: {error}",
   "@gpsError": { "placeholders": { "error": { "type": "String" } } },

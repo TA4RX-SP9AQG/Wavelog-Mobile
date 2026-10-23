@@ -700,6 +700,7 @@
   "comingSoon": "Yakında",
   "noCompassSensor": "Pusula sensörü yok",
   "fillFromGps": "GPS'den Doldur",
+  "tapForGridSquare": "Grid kareyi göstermek için dokunun",
   "locationPermissionDenied": "Konum izni reddedildi",
   "gpsError": "GPS hatası: {error}",
   "errParse": "Sunucu yanıtı işlenemedi",

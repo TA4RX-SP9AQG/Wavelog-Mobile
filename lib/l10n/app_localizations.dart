@@ -268,6 +268,102 @@ abstract class AppLocalizations {
   /// **'Testing...'**
   String get testingConnection;
 
+  /// No description provided for @sslIssueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'SSL Certificate Issue'**
+  String get sslIssueTitle;
+
+  /// No description provided for @sslIssueBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This server\'s SSL certificate could not be verified — it may be self-signed or expired. Continue without verification? (Only recommended for servers you trust.)'**
+  String get sslIssueBody;
+
+  /// No description provided for @sslIssueAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Without Verification'**
+  String get sslIssueAllow;
+
+  /// No description provided for @scopeTestSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scope Test'**
+  String get scopeTestSectionTitle;
+
+  /// No description provided for @scopeTestRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing permissions…'**
+  String get scopeTestRunning;
+
+  /// No description provided for @scopeTestAllPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'All required scopes are present'**
+  String get scopeTestAllPassed;
+
+  /// No description provided for @scopeTestSomeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Some scopes are missing'**
+  String get scopeTestSomeFailed;
+
+  /// No description provided for @scopeTestAddHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add this scope when creating your API token'**
+  String get scopeTestAddHint;
+
+  /// No description provided for @qsoSyncBigTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Whoa, that is a lot of QSOs!!'**
+  String get qsoSyncBigTitle;
+
+  /// No description provided for @qsoSyncBigBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing your QSOs, this might take a minute or two.'**
+  String get qsoSyncBigBody;
+
+  /// No description provided for @qsoSyncSection.
+  ///
+  /// In en, this message translates to:
+  /// **'QSO Sync'**
+  String get qsoSyncSection;
+
+  /// No description provided for @qsoSyncResetBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Sync'**
+  String get qsoSyncResetBtn;
+
+  /// No description provided for @qsoSyncResetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Useful after QSO edits or if something looks wrong'**
+  String get qsoSyncResetHint;
+
+  /// No description provided for @qsoSyncResetStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync restarted in the background'**
+  String get qsoSyncResetStarted;
+
+  /// No description provided for @qsoSyncIntervalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Check Interval'**
+  String get qsoSyncIntervalLabel;
+
+  /// No description provided for @qsoSyncIntervalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'How often QSO content is re-checked in the background'**
+  String get qsoSyncIntervalHint;
+
   /// No description provided for @connectionSuccess.
   ///
   /// In en, this message translates to:
@@ -1120,6 +1216,12 @@ abstract class AppLocalizations {
   /// **'Connection timed out'**
   String get errTimeout;
 
+  /// No description provided for @errLocalNetworkPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Local network access needed, allow it for this app in Android Settings'**
+  String get errLocalNetworkPermission;
+
   /// No description provided for @errUnauthorized.
   ///
   /// In en, this message translates to:
@@ -1438,6 +1540,18 @@ abstract class AppLocalizations {
   /// **'License'**
   String get licenseSection;
 
+  /// No description provided for @dxccDataSection.
+  ///
+  /// In en, this message translates to:
+  /// **'DXCC Data'**
+  String get dxccDataSection;
+
+  /// No description provided for @dxccDataDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'DXCC entity and callsign prefix data © 1994– Jim Reisert, AD1C (country-files.com), used under the MIT License.'**
+  String get dxccDataDescription;
+
   /// No description provided for @errorNoConnection.
   ///
   /// In en, this message translates to:
@@ -1492,30 +1606,6 @@ abstract class AppLocalizations {
   /// **'Before you can log QSOs, connect the app to your Wavelog server. Follow the steps below.'**
   String get setupGuideIntro;
 
-  /// No description provided for @setupGuidePatchWarning.
-  ///
-  /// In en, this message translates to:
-  /// **'This app requires the Wavelog Mobile patch to be installed on your server. Even if you generate an API v2 token without it, the app will not work correctly.'**
-  String get setupGuidePatchWarning;
-
-  /// No description provided for @setupGuidePatchStepTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Install Server Patch'**
-  String get setupGuidePatchStepTitle;
-
-  /// No description provided for @setupGuidePatchStepBody.
-  ///
-  /// In en, this message translates to:
-  /// **'The app uses Wavelog\'s API v2, which requires a small patch on your server. If you haven\'t installed it yet, open the Installation Guide and follow the steps for your setup (Classic or Docker).'**
-  String get setupGuidePatchStepBody;
-
-  /// No description provided for @setupGuidePatchBtn.
-  ///
-  /// In en, this message translates to:
-  /// **'Installation Guide'**
-  String get setupGuidePatchBtn;
-
   /// No description provided for @setupGuideStep1Title.
   ///
   /// In en, this message translates to:
@@ -1537,7 +1627,7 @@ abstract class AppLocalizations {
   /// No description provided for @setupGuideStep2Body.
   ///
   /// In en, this message translates to:
-  /// **'In Wavelog, go to Settings → API → API Tokens (v2) → New Token. Select the \"Wavelog Mobile\" preset and confirm. Copy the generated token (starts with wl2_) and paste it into the app.'**
+  /// **'In Wavelog, go to Settings → API → API Tokens (v2) → New Token and select the scopes the app needs (the app checks them for you after you paste the token). Copy the generated token (starts with wl2_) and paste it into the app.'**
   String get setupGuideStep2Body;
 
   /// No description provided for @setupGuideStep3Title.
@@ -2019,18 +2109,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete Logbook'**
   String get deleteLogbook;
-
-  /// No description provided for @setActiveLogbook.
-  ///
-  /// In en, this message translates to:
-  /// **'Set Active'**
-  String get setActiveLogbook;
-
-  /// No description provided for @activeLogbook.
-  ///
-  /// In en, this message translates to:
-  /// **'Active Logbook'**
-  String get activeLogbook;
 
   /// No description provided for @editStation.
   ///
@@ -2757,6 +2835,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Automatically self-spot when logging a QSO at a POTA or SOTA station (30 min cooldown each)'**
   String get potaAutoSpotHint;
+
+  /// No description provided for @spotRefreshLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Spot refresh interval'**
+  String get spotRefreshLabel;
+
+  /// No description provided for @spotRefreshHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically reload the spot list at this interval'**
+  String get spotRefreshHint;
 
   /// No description provided for @autoSpotSent.
   ///
@@ -3754,6 +3844,42 @@ abstract class AppLocalizations {
   /// **'Set an active station to chat'**
   String get chatNoStation;
 
+  /// No description provided for @chatToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get chatToday;
+
+  /// No description provided for @chatYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get chatYesterday;
+
+  /// No description provided for @chatFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow'**
+  String get chatFollow;
+
+  /// No description provided for @chatUnfollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfollow'**
+  String get chatUnfollow;
+
+  /// No description provided for @chatFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Following room'**
+  String get chatFollowing;
+
+  /// No description provided for @chatAddReaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add reaction'**
+  String get chatAddReaction;
+
   /// No description provided for @gifPreparing.
   ///
   /// In en, this message translates to:
@@ -4179,6 +4305,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign out & switch account'**
   String get communitySignOut;
+
+  /// No description provided for @syncTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline sync'**
+  String get syncTitle;
+
+  /// No description provided for @syncStatusOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get syncStatusOnline;
+
+  /// No description provided for @syncStatusOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection'**
+  String get syncStatusOffline;
+
+  /// No description provided for @syncOfflineModeNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline mode is on — automatic sync is paused. You can still sync manually.'**
+  String get syncOfflineModeNote;
+
+  /// No description provided for @syncAllDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything is synced'**
+  String get syncAllDone;
+
+  /// No description provided for @syncRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing… {done} / {total}'**
+  String syncRunning(int done, int total);
+
+  /// No description provided for @syncWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to sync'**
+  String get syncWaiting;
+
+  /// No description provided for @syncWaitingDeletes.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletions waiting'**
+  String get syncWaitingDeletes;
+
+  /// No description provided for @syncLastRun.
+  ///
+  /// In en, this message translates to:
+  /// **'Last attempt'**
+  String get syncLastRun;
+
+  /// No description provided for @syncLastSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Last full sync'**
+  String get syncLastSuccess;
+
+  /// No description provided for @syncNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get syncNever;
+
+  /// No description provided for @syncSyncedLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent in last run'**
+  String get syncSyncedLast;
+
+  /// No description provided for @syncFailedLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed in last run'**
+  String get syncFailedLast;
+
+  /// No description provided for @syncLastError.
+  ///
+  /// In en, this message translates to:
+  /// **'Last error'**
+  String get syncLastError;
+
+  /// No description provided for @syncQueueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting QSOs'**
+  String get syncQueueTitle;
+
+  /// No description provided for @syncQueueEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No QSOs are waiting'**
+  String get syncQueueEmpty;
+
+  /// No description provided for @syncNoConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection — sync will start automatically when you\'re back online'**
+  String get syncNoConnection;
+
+  /// No description provided for @syncDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} QSO(s) synced'**
+  String syncDone(int count);
+
+  /// No description provided for @syncNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to sync'**
+  String get syncNothing;
 }
 
 class _AppLocalizationsDelegate

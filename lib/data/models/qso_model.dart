@@ -173,7 +173,7 @@ class QsoModel extends HiveObject {
       if (isV2) {
         // v2 qso_date comes from COL_TIME_ON: "2026-08-11 21:41:00" (UTC)
         final raw = json['qso_date']?.toString() ?? '';
-        dateTime = DateTime.parse(raw.replaceFirst(' ', 'T') + 'Z').toUtc();
+        dateTime = DateTime.parse('${raw.replaceFirst(' ', 'T')}Z').toUtc();
       } else {
         final dateStr = json['QSO_DATE']?.toString() ?? '';
         final timeStr = json['TIME_ON']?.toString() ?? '0000';

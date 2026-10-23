@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/constants/band_mode_data.dart';
 import '../../../core/utils/error_l10n.dart';
+import '../../../core/utils/keyboard_shortcuts.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/validators.dart';
@@ -28,7 +30,24 @@ import '../../../providers/station_provider.dart';
 class AddQsoScreen extends ConsumerStatefulWidget {
   final String? prefillCallsign;
   final QsoModel? editQso;
-  const AddQsoScreen({super.key, this.prefillCallsign, this.editQso});
+
+  /// Spot-tap prefill — frequency in MHz (e.g. "14.285"). When set, the
+  /// screen skips restoring the last-used band/frequency so the spot's own
+  /// frequency wins.
+  final String? prefillFrequencyMhz;
+
+  /// Spot-tap prefill — only applied when it matches a known [kCommonModes]
+  /// entry. Many spots (SOTA especially) don't report a mode at all, in
+  /// which case this stays null and the user picks it manually.
+  final String? prefillMode;
+
+  const AddQsoScreen({
+    super.key,
+    this.prefillCallsign,
+    this.editQso,
+    this.prefillFrequencyMhz,
+    this.prefillMode,
+  });
 
   @override
   ConsumerState<AddQsoScreen> createState() => _AddQsoScreenState();
@@ -60,6 +79,11 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
   final Map<String, String?> _potaNameCache = {};
   List<String> _potaRefs = [];
   late FocusNode _callsignFocus;
+  // Hardware-keyboard Space-in-Callsign jump target (issue #48): RST Rcvd is
+  // the first field that's never pre-filled with a meaningful value and that
+  // the operator actually has to type per contact, the closest equivalent
+  // this screen has to a contest logger's "exchange" field.
+  late FocusNode _rstRcvdFocus;
 
   DateTime _dateTimeOn = DateTime.now().toUtc();
   String _band = '20m';
@@ -121,6 +145,20 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
       _dxccCountry = edit.country ?? edit.rawAdif?['COUNTRY'] ?? edit.dxcc;
       _dxccFlag = edit.rawAdif?['APP_WAVELOG_FLAG'];
     } else {
+      // Spot-tap prefill: apply mode first (only if recognised) and derive
+      // the band from the spot's frequency, so both are in place before the
+      // submode default below is computed.
+      final prefillMode = widget.prefillMode;
+      if (prefillMode != null && kCommonModes.contains(prefillMode)) {
+        _mode = prefillMode;
+      }
+      final prefillFreq = widget.prefillFrequencyMhz;
+      final prefillFreqValue =
+          prefillFreq != null ? double.tryParse(prefillFreq) : null;
+      if (prefillFreqValue != null) {
+        _band = getBandFromFreq(prefillFreqValue) ?? _band;
+      }
+
       // Start with the band-convention default; user's saved preference (loaded
       // asynchronously below) will override this if one exists for this band+mode.
       _submode = (_memBand == _band && _memMode == _mode)
@@ -130,7 +168,9 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
       _callsignCtrl = TextEditingController(
           text: widget.prefillCallsign?.toUpperCase() ?? '');
       _freqCtrl = TextEditingController(
-          text: kBandCenterFreqMhz[_band]?.toString() ?? '');
+          text: prefillFreqValue != null
+              ? prefillFreqValue.toStringAsFixed(3)
+              : kBandCenterFreqMhz[_band]?.toString() ?? '');
       _rstSentCtrl = TextEditingController(text: getDefaultRst(_mode));
       _rstRcvdCtrl = TextEditingController(text: getDefaultRst(_mode));
       _nameCtrl = TextEditingController();
@@ -144,6 +184,7 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
 
     _callsignFocus = FocusNode();
     _callsignFocus.addListener(_onCallsignFocusChange);
+    _rstRcvdFocus = FocusNode();
     _freqCtrl.addListener(_updateAutoSpotStatus);
     if (widget.editQso == null) _freqCtrl.addListener(_saveFreqDebounced);
     _potaInputCtrl.addListener(_onPotaInputChanged);
@@ -158,8 +199,12 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
       _updateAutoSpotStatus();
       _startStatusTimer();
       if (edit == null) {
-        _loadLastBand();
-        _loadLastFreq();
+        // A spot-tap prefill already set band/frequency — don't let the
+        // last-used-session restore clobber it.
+        if (widget.prefillFrequencyMhz == null) {
+          _loadLastBand();
+          _loadLastFreq();
+        }
         _loadLastSubmode(_band, _mode);
       }
       if (_potaRefs.isNotEmpty) _lookupPotaRefs();
@@ -210,6 +255,7 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
     _potaInputCtrl.removeListener(_onPotaInputChanged);
     _callsignFocus.removeListener(_onCallsignFocusChange);
     _callsignFocus.dispose();
+    _rstRcvdFocus.dispose();
     _callsignCtrl.dispose();
     _freqCtrl.dispose();
     _rstSentCtrl.dispose();
@@ -482,6 +528,33 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
       _dxccFlag = null;
       if (_isLive) _dateTimeOn = DateTime.now().toUtc();
     });
+    // Rapid re-entry for pile-ups / hardware keyboard use (issue #48): snap
+    // focus back to Callsign so the next contact can be typed immediately
+    // without reaching for the touchscreen.
+    _callsignFocus.requestFocus();
+  }
+
+  // Hardware-keyboard "quick edit last QSO" shortcut (Ctrl+E / Up, issue
+  // #48). Uses scopedQsoProvider (not the raw qsoProvider) so "most recent"
+  // matches what's already shown elsewhere on screen (same station/logbook
+  // scope as the recent-QSOs list), not a QSO from an unrelated station.
+  void _openMostRecentQsoForEdit() {
+    if (widget.editQso != null) return; // already editing, don't recurse
+    final recent = ref.read(scopedQsoProvider).valueOrNull?.firstOrNull;
+    if (recent == null) return; // nothing logged yet
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => AddQsoScreen(editQso: recent)),
+    );
+  }
+
+  // Hardware-keyboard Enter-to-save (issue #48), scoped to only fire while
+  // Callsign has focus so Enter keeps its normal (no-op) behavior in every
+  // other field, this screen has 13+ fields including several conditional
+  // ones, chaining onFieldSubmitted across all of them (the way
+  // contest_log_screen.dart does) would be disproportionate here.
+  void _submitIfCallsignFocused() {
+    if (_callsignFocus.hasFocus) _submit();
   }
 
   Future<void> _submit() async {
@@ -800,7 +873,41 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
             TextButton(onPressed: _submit, child: Text(l10n.save)),
         ],
       ),
-      body: body,
+      // Hardware-keyboard shortcuts that must work regardless of which
+      // field currently has focus (issue #48). Space-in-Callsign is handled
+      // separately, scoped to just that one field (see the Focus wrapper
+      // around the Callsign TextFormField above), CallbackShortcuts has no
+      // way to express "only when field X is focused" for a key that must
+      // stay a normal character everywhere else.
+      body: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape): _resetForm,
+          const SingleActivator(LogicalKeyboardKey.enter):
+              _submitIfCallsignFocused,
+          const SingleActivator(LogicalKeyboardKey.numpadEnter):
+              _submitIfCallsignFocused,
+          const SingleActivator(LogicalKeyboardKey.keyE, control: true):
+              _openMostRecentQsoForEdit,
+          // Best-effort: plain Up Arrow is claimed by Flutter's own
+          // text-editing shortcuts whenever a text field has focus (true
+          // for Callsign immediately after Enter-saves-and-refocuses, the
+          // common case), so this only actually fires when focus happens to
+          // be elsewhere (e.g. a dropdown). Ctrl+E above is the reliable
+          // binding, this is the issue's offered secondary one.
+          const SingleActivator(LogicalKeyboardKey.arrowUp):
+              _openMostRecentQsoForEdit,
+          const SingleActivator(LogicalKeyboardKey.arrowUp, control: true):
+              () => _onBandChanged(
+                  cycleListValue(kCommonBands, _band, forward: true)),
+          const SingleActivator(LogicalKeyboardKey.arrowDown, control: true):
+              () => _onBandChanged(
+                  cycleListValue(kCommonBands, _band, forward: false)),
+          const SingleActivator(LogicalKeyboardKey.keyM, control: true): () =>
+              _onModeChanged(
+                  cycleListValue(kCommonModes, _mode, forward: true)),
+        },
+        child: body,
+      ),
     );
   }
 
@@ -825,6 +932,21 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
       const SizedBox(height: 16),
 
       // ── Callsign ────────────────────────────────────────────────────
+      // Space jumps to RST Rcvd here, and only here (issue #48): callsigns
+      // never legitimately contain a space, so treating one as a field-jump
+      // is safe in this one field, it must stay a normal character
+      // everywhere else (Name, QTH, Comment, ...).
+      //
+      // Reacting to the committed text (onChanged below) rather than
+      // intercepting the raw key event: a Focus.onKeyEvent handler that
+      // calls requestFocus() on a *different* field, from inside the key
+      // event a focused TextField is still processing, reliably suppresses
+      // the character but does not actually move Android's IME/
+      // InputConnection to the new field (confirmed live on a real Android
+      // 17 emulator — Flutter focus and the native input connection end up
+      // out of sync). Letting the space commit normally and then stripping
+      // it from the controller sidesteps that race entirely, and works the
+      // same for the software keyboard too.
       TextFormField(
         controller: _callsignCtrl,
         focusNode: _callsignFocus,
@@ -859,6 +981,15 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
         textCapitalization: TextCapitalization.characters,
         validator: validateCallsign,
         onChanged: (v) {
+          if (v.endsWith(' ')) {
+            final trimmed = v.substring(0, v.length - 1);
+            _callsignCtrl.value = TextEditingValue(
+              text: trimmed,
+              selection: TextSelection.collapsed(offset: trimmed.length),
+            );
+            _rstRcvdFocus.requestFocus();
+            return;
+          }
           if (_lookupDone) {
             setState(() {
               _lookupDone = false;
@@ -882,7 +1013,25 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
             }
           });
         },
-        onFieldSubmitted: (_) {
+        onFieldSubmitted: (v) {
+          // Hardware-keyboard band/mode quick command (issue #48): typing
+          // e.g. "20m" or "SSB" and pressing Enter changes the active
+          // band/mode instead of creating a QSO, handy on compact Bluetooth
+          // keyboards with no function keys. Checked before the normal
+          // lookup so it can never misfire on a real callsign, every
+          // callsign contains a digit, no band/mode token does.
+          final band = matchBandCommand(v, kCommonBands);
+          if (band != null) {
+            _onBandChanged(band);
+            _callsignCtrl.clear();
+            return;
+          }
+          final mode = matchModeCommand(v, kCommonModes);
+          if (mode != null) {
+            _onModeChanged(mode);
+            _callsignCtrl.clear();
+            return;
+          }
           _lookupDone = false;
           _doLookup();
         },
@@ -968,7 +1117,7 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
           Expanded(
             child: DropdownButtonFormField<String>(
               key: ValueKey('submode_$_mode'),
-              value: _submode,
+              initialValue: _submode,
               decoration: InputDecoration(labelText: context.l10n.submodeLabel),
               items: [
                 const DropdownMenuItem<String>(
@@ -1017,6 +1166,7 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
         Expanded(
           child: TextFormField(
             controller: _rstRcvdCtrl,
+            focusNode: _rstRcvdFocus,
             decoration: InputDecoration(labelText: l10n.rstRcvdField),
             keyboardType: TextInputType.number,
             validator: (v) => validateRst(v, _mode),

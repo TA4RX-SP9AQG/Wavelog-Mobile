@@ -6,8 +6,14 @@ import 'l10n_extension.dart';
 /// AppException dışındaki hatalar için toString() döner.
 String localizeError(BuildContext context, Object error) {
   final l10n = context.l10n;
+  if (error is LocalNetworkPermissionException) {
+    return l10n.errLocalNetworkPermission;
+  }
   if (error is TimeoutException) return l10n.errTimeout;
   if (error is UnauthorizedException) return l10n.errUnauthorized;
+  // Server names the missing scope directly (e.g. "logbook:write"), show
+  // it as-is rather than a static string, like ServerException below.
+  if (error is ForbiddenException) return error.message;
   if (error is NetworkException) return l10n.errNetwork;
   if (error is AdifParseException) return error.message;
   if (error is ParseException) return l10n.errParse;

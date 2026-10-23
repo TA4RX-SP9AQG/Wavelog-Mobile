@@ -12,6 +12,9 @@
 .swiftpm/
 migrate_working_dir/
 
+# codebase-memory-mcp local index cache — regenerated per machine, not source
+.codebase-memory/
+
 # IntelliJ related
 *.iml
 *.ipr
@@ -33,6 +36,8 @@ migrate_working_dir/
 /build/
 /android/build/
 /coverage/
+/android/build/
+/android/app/build/
 
 # Symbolication related
 app.*.symbols
@@ -62,6 +67,9 @@ app.*.map.json
 
 # Tool output
 graphify-out/
+graphify-critical-notes/
+brag-output/
+brag-output-*/
 
 # Local notes and prompt files — never commit
 *Update Prompt*
@@ -70,3 +78,7 @@ graphify-out/
 *.prompt
 notes/
 NOTES*
+
+# Promo website — deployed separately (wavelogmobile.app), not part of the
+# Flutter app's GitHub repo
+/website/

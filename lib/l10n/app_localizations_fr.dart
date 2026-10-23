@@ -87,6 +87,60 @@ class AppLocalizationsFr extends AppLocalizations {
   String get testingConnection => 'Test en cours...';
 
   @override
+  String get sslIssueTitle => 'Problème de certificat SSL';
+
+  @override
+  String get sslIssueBody =>
+      'Le certificat SSL de ce serveur n\'a pas pu être vérifié — il est peut-être auto-signé ou expiré. Continuer sans vérification ? (Recommandé uniquement pour les serveurs de confiance.)';
+
+  @override
+  String get sslIssueAllow => 'Continuer sans vérification';
+
+  @override
+  String get scopeTestSectionTitle => 'Test des autorisations';
+
+  @override
+  String get scopeTestRunning => 'Test des autorisations…';
+
+  @override
+  String get scopeTestAllPassed =>
+      'Toutes les autorisations requises sont présentes';
+
+  @override
+  String get scopeTestSomeFailed => 'Certaines autorisations sont manquantes';
+
+  @override
+  String get scopeTestAddHint =>
+      'Ajoutez cette autorisation lors de la création de votre jeton API';
+
+  @override
+  String get qsoSyncBigTitle => 'Waouh, que de QSO !!';
+
+  @override
+  String get qsoSyncBigBody =>
+      'Synchronisation de vos QSO en cours, cela peut prendre 1 a 2 minutes.';
+
+  @override
+  String get qsoSyncSection => 'Synchronisation QSO';
+
+  @override
+  String get qsoSyncResetBtn => 'Réinitialiser la synchronisation';
+
+  @override
+  String get qsoSyncResetHint =>
+      'Utile après une modification de QSO ou si quelque chose semble incorrect';
+
+  @override
+  String get qsoSyncResetStarted => 'Synchronisation relancée en arrière-plan';
+
+  @override
+  String get qsoSyncIntervalLabel => 'Intervalle de vérification';
+
+  @override
+  String get qsoSyncIntervalHint =>
+      'Fréquence à laquelle le contenu des QSO est revérifié en arrière-plan';
+
+  @override
   String get connectionSuccess => 'Connexion réussie !';
 
   @override
@@ -533,6 +587,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errTimeout => 'Délai de connexion dépassé';
 
   @override
+  String get errLocalNetworkPermission =>
+      'Accès au réseau local requis, autorisez-le pour cette application dans les paramètres Android';
+
+  @override
   String get errUnauthorized => 'Clé API invalide';
 
   @override
@@ -699,6 +757,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get licenseSection => 'Licence';
 
   @override
+  String get dxccDataSection => 'Données DXCC';
+
+  @override
+  String get dxccDataDescription =>
+      'Données d\'entités DXCC et de préfixes d\'indicatifs © 1994– Jim Reisert, AD1C (country-files.com), utilisées sous licence MIT.';
+
+  @override
   String get errorNoConnection => 'Pas de connexion';
 
   @override
@@ -729,20 +794,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Avant de pouvoir enregistrer des QSOs, connectez l\'application à votre serveur Wavelog.';
 
   @override
-  String get setupGuidePatchWarning =>
-      'Cette application nécessite le patch Wavelog Mobile sur votre serveur.';
-
-  @override
-  String get setupGuidePatchStepTitle => 'Installer le patch serveur';
-
-  @override
-  String get setupGuidePatchStepBody =>
-      'L\'application utilise l\'API v2 de Wavelog, qui nécessite un petit patch sur votre serveur.';
-
-  @override
-  String get setupGuidePatchBtn => 'Guide d\'installation';
-
-  @override
   String get setupGuideStep1Title => '1. Adresse du serveur';
 
   @override
@@ -754,7 +805,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get setupGuideStep2Body =>
-      'Dans Wavelog, allez dans Paramètres → API → Tokens API (v2) → Nouveau token. Sélectionnez le preset \"Wavelog Mobile\" et confirmez. Copiez le token généré (commence par wl2_).';
+      'Dans Wavelog, allez dans Paramètres → API → Tokens API (v2) → Nouveau token et sélectionnez les permissions (scopes) dont l\'application a besoin (l\'application les vérifie pour vous après le collage du token). Copiez le token généré (commence par wl2_) et collez-le dans l\'application.';
 
   @override
   String get setupGuideStep3Title => '3. Indicatif & Nom d\'affichage';
@@ -1015,12 +1066,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get deleteLogbook => 'Supprimer le carnet';
-
-  @override
-  String get setActiveLogbook => 'Définir actif';
-
-  @override
-  String get activeLogbook => 'Carnet actif';
 
   @override
   String get editStation => 'Modifier';
@@ -1400,6 +1445,13 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get potaAutoSpotHint =>
       'S\'auto-spotter automatiquement lors d\'un QSO à une station POTA ou SOTA (délai de 30 min)';
+
+  @override
+  String get spotRefreshLabel => 'Intervalle d\'actualisation des spots';
+
+  @override
+  String get spotRefreshHint =>
+      'Actualise automatiquement la liste des spots à cet intervalle';
 
   @override
   String autoSpotSent(String ref) {
@@ -1933,6 +1985,24 @@ class AppLocalizationsFr extends AppLocalizations {
   String get chatNoStation => 'Définissez une station active pour discuter';
 
   @override
+  String get chatToday => 'Aujourd\'hui';
+
+  @override
+  String get chatYesterday => 'Hier';
+
+  @override
+  String get chatFollow => 'Suivre';
+
+  @override
+  String get chatUnfollow => 'Ne plus suivre';
+
+  @override
+  String get chatFollowing => 'Suivi';
+
+  @override
+  String get chatAddReaction => 'Ajouter une réaction';
+
+  @override
   String get gifPreparing => 'Préparation de la vidéo...';
 
   @override
@@ -2160,4 +2230,67 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get communitySignOut => 'Se déconnecter & changer de compte';
+
+  @override
+  String get syncTitle => 'Synchronisation hors ligne';
+
+  @override
+  String get syncStatusOnline => 'En ligne';
+
+  @override
+  String get syncStatusOffline => 'Pas de connexion';
+
+  @override
+  String get syncOfflineModeNote =>
+      'Le mode hors ligne est activé — la synchronisation automatique est en pause. Vous pouvez toujours synchroniser manuellement.';
+
+  @override
+  String get syncAllDone => 'Tout est synchronisé';
+
+  @override
+  String syncRunning(int done, int total) {
+    return 'Synchronisation… $done / $total';
+  }
+
+  @override
+  String get syncWaiting => 'En attente de synchronisation';
+
+  @override
+  String get syncWaitingDeletes => 'Suppressions en attente';
+
+  @override
+  String get syncLastRun => 'Dernière tentative';
+
+  @override
+  String get syncLastSuccess => 'Dernière synchronisation complète';
+
+  @override
+  String get syncNever => 'Jamais';
+
+  @override
+  String get syncSyncedLast => 'Envoyés lors de la dernière passe';
+
+  @override
+  String get syncFailedLast => 'Échecs lors de la dernière passe';
+
+  @override
+  String get syncLastError => 'Dernière erreur';
+
+  @override
+  String get syncQueueTitle => 'QSO en attente';
+
+  @override
+  String get syncQueueEmpty => 'Aucun QSO en attente';
+
+  @override
+  String get syncNoConnection =>
+      'Pas de connexion — la synchronisation démarrera automatiquement au retour du réseau';
+
+  @override
+  String syncDone(int count) {
+    return '$count QSO synchronisé(s)';
+  }
+
+  @override
+  String get syncNothing => 'Rien à synchroniser';
 }

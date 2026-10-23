@@ -39,6 +39,52 @@ exports.onNewActivation = functions
     });
   });
 
+// ── 1b. Sohbet odasında yeni mesaj gelince takipçilere bildirim ─────────────
+// Data-only mesaj gönderiyoruz (notification alanı yok) — bu sayede mesaj
+// her zaman uygulama koduna uğruyor (arka planda/kapalıyken de) ve
+// gönderenin kendi mesajı için bildirim bastırılabiliyor, dokununca de
+// doğru odaya gidilebiliyor.
+const CHAT_ROOM_NAMES = {
+  general: "General",
+  tr: "Türkçe",
+  de: "Deutsch",
+  fr: "Français",
+  it: "Italiano",
+  pl: "Polski",
+  ja: "日本語",
+  ko: "한국어",
+  ru: "Русский",
+};
+
+exports.onNewChatMessage = functions
+  .firestore.document("chat_rooms/{roomId}/messages/{messageId}")
+  .onCreate(async (snap, context) => {
+    const data = snap.data();
+    if (!data) return;
+
+    const roomId = context.params.roomId;
+    // Object.hasOwn ile bak — bracket erişimi 'constructor' gibi doc id'ler
+    // için prototip zincirinden fonksiyon döndürebilir (yalın obje literal
+    // olsa da). Bilinmeyen bir odaya mesaj atılmışsa hiç bildirim gönderme.
+    if (!Object.hasOwn(CHAT_ROOM_NAMES, roomId)) return;
+    const roomName = CHAT_ROOM_NAMES[roomId];
+    const preview = (data.text ?? "").slice(0, 100);
+
+    await messaging.send({
+      topic: `chat_room_${roomId}`,
+      data: {
+        screen: "chat",
+        roomId,
+        roomName,
+        messageId: context.params.messageId,
+        callsign: data.callsign ?? "",
+        title: `${data.callsign} • ${roomName}`,
+        body: preview,
+      },
+      android: { priority: "high" },
+    });
+  });
+
 // ── 2. Yaklaşan aktivasyonlar için hatırlatma (her 15 dk) ────────────────────
 exports.notifyUpcomingActivations = functions
   .pubsub.schedule("every 15 minutes")

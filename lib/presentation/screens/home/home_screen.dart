@@ -12,6 +12,7 @@ import '../../../providers/statistics_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../widgets/common/error_view.dart';
 import '../../widgets/common/offline_banner.dart';
+import '../../widgets/common/qso_sync_progress_banner.dart';
 import '../../widgets/qso/qso_list_tile.dart';
 import '../../widgets/qso/qso_skeleton_list.dart';
 import '../../../router.dart';
@@ -95,7 +96,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final settings = ref.watch(settingsProvider);
-    final statistics = ref.watch(statisticsProvider);
+    // Sayaçlar aktif kapsamdan (logbook > istasyon) yerelde hesaplanır.
+    final statistics = ref.watch(scopedCountsProvider);
     final recentQsos = ref.watch(recentQsoProvider);
     // Yerel "bugün" sayısı — computeStats() her build'de tüm Hive
     // kutusunu tarıyordu; logbookSummaryProvider zaten bunu hesaplıyor.
@@ -144,6 +146,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       body: Column(
         children: [
           const OfflineBanner(),
+          const QsoSyncProgressBanner(),
           Expanded(child: _HomeBody(
             statistics: statistics,
             recentQsos: recentQsos,
@@ -214,10 +217,10 @@ class _HomeBody extends ConsumerWidget {
               color: kAccentElectric,
               backgroundColor: Theme.of(context).colorScheme.surface,
               onRefresh: onRefresh,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(12),
-                child: const _ContestCard(),
+              child: const SingleChildScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.all(12),
+                child: _ContestCard(),
               ),
             ),
           ),
@@ -543,13 +546,19 @@ class _StatsRow extends StatelessWidget {
     // Local Hive count is always accurate (updates immediately on add/delete).
     // Server todayQsos can lag due to caching, so never trust it over local.
     final todayCount = localTodayQsos;
-    return Row(
-      children: [
-        _StatCard(l10n.statsToday, todayCount.toString(), Icons.today),
-        _StatCard(l10n.statsMonth, stats.monthQsos.toString(), Icons.calendar_month),
-        _StatCard(l10n.statsYear, stats.yearQsos.toString(), Icons.calendar_today),
-        _StatCard(l10n.statsTotal, stats.totalQsos.toString(), Icons.storage),
-      ].map((w) => Expanded(child: w)).toList(),
+    // IntrinsicHeight forces all 4 cards to the tallest one's height, a large
+    // account's Total (6+ digits) shrinks via FittedBox below and would
+    // otherwise make that one card shorter than its Today/Month/Year
+    // siblings, an uneven row on exactly the accounts large enough to hit it.
+    return IntrinsicHeight(
+      child: Row(
+        children: [
+          _StatCard(l10n.statsToday, todayCount.toString(), Icons.today),
+          _StatCard(l10n.statsMonth, stats.monthQsos.toString(), Icons.calendar_month),
+          _StatCard(l10n.statsYear, stats.yearQsos.toString(), Icons.calendar_today),
+          _StatCard(l10n.statsTotal, stats.totalQsos.toString(), Icons.storage),
+        ].map((w) => Expanded(child: w)).toList(),
+      ),
     );
   }
 }
@@ -572,14 +581,20 @@ class _StatCard extends StatelessWidget {
           children: [
             Icon(icon, size: 20, color: theme.colorScheme.primary),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontFamily: 'monospace',
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                ),
               ),
             ),
             Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.secondary,
                 )),

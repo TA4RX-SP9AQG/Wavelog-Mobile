@@ -13,6 +13,7 @@ import android.os.Looper
 import android.provider.OpenableColumns
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -208,6 +209,15 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Android 15 (API 35) draws edge-to-edge by default for apps
+        // targeting SDK 35+ (we target 37). The androidx.activity
+        // enableEdgeToEdge() extension only works on ComponentActivity,
+        // but Flutter's FlutterActivity extends the plain android.app.
+        // Activity — so this uses the lower-level call it wraps directly,
+        // which is compatible with any Activity. Flutter's own
+        // SafeArea/MediaQuery.padding on the Dart side then handles the
+        // resulting system-bar insets.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         handleViewIntent(intent)
     }

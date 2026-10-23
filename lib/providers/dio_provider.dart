@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/utils/local_network.dart';
 import 'settings_provider.dart';
 
 final dioProvider = Provider<Dio>((ref) {
@@ -14,16 +15,37 @@ final dioProvider = Provider<Dio>((ref) {
   return buildWavelogDio(baseUrl, bearerToken: apiKey, allowInsecureSsl: allowInsecure);
 });
 
-/// Strips legacy path suffixes from the server URL so that v2 endpoint paths
-/// (which start with /index.php/...) are never doubled.
-/// e.g. "https://example.com/index.php" → "https://example.com"
+/// Strips legacy/API path suffixes from the server URL so that v2 endpoint
+/// paths (which start with /index.php/api/v2/...) are never doubled.
+/// Users often paste in a URL they copied from their browser or from an API
+/// endpoint they tested, e.g. "https://example.com/index.php/api/v2" or
+/// even "https://example.com/api/v2/qso" — all of these should resolve to
+/// the same base "https://example.com", since ApiEndpoints always re-adds
+/// the canonical /index.php/api/v2 prefix itself.
+///   "https://example.com/index.php"        → "https://example.com"
+///   "https://example.com/api/v2"            → "https://example.com"
+///   "https://example.com/index.php/api/v2"  → "https://example.com"
+///   "https://example.com/api/v2/qso?x=1"    → "https://example.com"
 String normalizeServerUrl(String url) {
-  var u = url.trimRight().replaceAll(RegExp(r'/+$'), '');
-  // Strip /index.php suffix left over from v1 configuration
-  if (u.endsWith('/index.php')) {
-    u = u.substring(0, u.length - '/index.php'.length);
-  }
-  return u;
+  var u = url.trim();
+  // Drop query string / fragment first so a pasted full endpoint URL
+  // (e.g. ".../api/v2/qso?station_id=1") doesn't leave stray characters.
+  u = u.split('?').first.split('#').first;
+  u = u.replaceAll(RegExp(r'/+$'), '');
+  // Wavelog's front controller is always "/index.php" (CodeIgniter
+  // routing), and everything after it is a route — an API path, a
+  // dashboard page, or whatever the user happened to copy from their
+  // browser's address bar. The install root is always everything BEFORE
+  // the first "/index.php", so truncate there instead of only recognizing
+  // the specific "/api/vN" suffix: a user pasting e.g.
+  // ".../index.php/dashboard" previously fell through unchanged (neither
+  // rule matched a non-API route), producing a broken doubled path once
+  // ApiEndpoints appended its own "/index.php/api/v2/...".
+  u = u.replaceFirst(RegExp(r'/index\.php(/.*)?$', caseSensitive: false), '');
+  // URL-rewritten installs (index.php hidden by server config): still
+  // catch a bare "/api/vN..." suffix with no "/index.php" in front of it.
+  u = u.replaceFirst(RegExp(r'/api/v\d+(/.*)?$', caseSensitive: false), '');
+  return u.replaceAll(RegExp(r'/+$'), '');
 }
 
 /// Wavelog sunucusuna uygun yapılandırılmış Dio örneği oluşturur.
@@ -54,6 +76,29 @@ Dio buildWavelogDio(String baseUrl,
         ..badCertificateCallback = (cert, host, port) => true,
     );
   }
+
+  // Android 17+ (targetSdk 37) blocks any connection to a private/LAN
+  // address (e.g. a self-hosted Wavelog server on the home network) unless
+  // ACCESS_LOCAL_NETWORK is granted, otherwise it silently times out at the
+  // socket level instead of failing fast. Checked (and requested if needed)
+  // before the request leaves the device, so a denial surfaces as a clear
+  // LocalNetworkPermissionException instead of a generic connect timeout.
+  dio.interceptors.add(InterceptorsWrapper(
+    onRequest: (options, handler) async {
+      if (isLikelyLocalNetworkHost(options.uri.host)) {
+        final granted = await ensureLocalNetworkPermission();
+        if (!granted) {
+          handler.reject(DioException(
+            requestOptions: options,
+            type: DioExceptionType.connectionError,
+            error: const LocalNetworkPermissionDeniedError(),
+          ));
+          return;
+        }
+      }
+      handler.next(options);
+    },
+  ));
 
   // Wavelog sometimes returns JSON with non-standard Content-Type headers,
   // so Dio leaves the response as a raw String. This interceptor decodes it.

@@ -50,10 +50,12 @@ class _MigrationScreenState extends ConsumerState<MigrationScreen> {
       _tokenError = null;
     });
 
-    final serverUrl = ref.read(settingsProvider).serverUrl;
+    final settings = ref.read(settingsProvider);
     try {
       final remote = WavelogRemoteDatasource(
-        dio: buildWavelogDio(serverUrl, bearerToken: token),
+        dio: buildWavelogDio(settings.serverUrl,
+            bearerToken: token,
+            allowInsecureSsl: settings.allowInsecureSsl),
       );
       await remote.getStations();
       // Success — patch installed and token valid
@@ -64,6 +66,22 @@ class _MigrationScreenState extends ConsumerState<MigrationScreen> {
       setState(() {
         _validating = false;
         _tokenError = l10n.migrationTokenInvalid;
+      });
+    } on ForbiddenException {
+      // 403 here would mean the token can't even list stations, treat it
+      // the same as a wrong token rather than falling through to the
+      // "patch not installed" dialog, which would be misleading.
+      setState(() {
+        _validating = false;
+        _tokenError = l10n.migrationTokenInvalid;
+      });
+    } on LocalNetworkPermissionException {
+      // A blocked LAN connection isn't a missing-patch problem either, same
+      // reasoning as ForbiddenException above, don't send a LAN user down
+      // the wrong troubleshooting path.
+      setState(() {
+        _validating = false;
+        _tokenError = l10n.errLocalNetworkPermission;
       });
     } catch (_) {
       // Other error — patch likely not installed

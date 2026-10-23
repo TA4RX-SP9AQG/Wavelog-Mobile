@@ -87,6 +87,55 @@ class AppLocalizationsKo extends AppLocalizations {
   String get testingConnection => '테스트 중...';
 
   @override
+  String get sslIssueTitle => 'SSL 인증서 문제';
+
+  @override
+  String get sslIssueBody =>
+      '이 서버의 SSL 인증서를 확인할 수 없습니다 — 자체 서명되었거나 만료되었을 수 있습니다. 검증 없이 계속하시겠습니까? (신뢰하는 서버에만 권장됩니다.)';
+
+  @override
+  String get sslIssueAllow => '검증 없이 계속';
+
+  @override
+  String get scopeTestSectionTitle => '권한 테스트';
+
+  @override
+  String get scopeTestRunning => '권한 테스트 중…';
+
+  @override
+  String get scopeTestAllPassed => '필요한 모든 권한이 있습니다';
+
+  @override
+  String get scopeTestSomeFailed => '일부 권한이 누락되었습니다';
+
+  @override
+  String get scopeTestAddHint => 'API 토큰을 만들 때 이 권한도 선택하세요';
+
+  @override
+  String get qsoSyncBigTitle => 'QSO가 엄청 많네요!!';
+
+  @override
+  String get qsoSyncBigBody => 'QSO를 동기화하는 중입니다. 1~2분 정도 걸릴 수 있어요.';
+
+  @override
+  String get qsoSyncSection => 'QSO 동기화';
+
+  @override
+  String get qsoSyncResetBtn => '동기화 재설정';
+
+  @override
+  String get qsoSyncResetHint => 'QSO 수정 후나 뭔가 잘못되어 보일 때 사용할 수 있습니다';
+
+  @override
+  String get qsoSyncResetStarted => '백그라운드에서 동기화가 다시 시작되었습니다';
+
+  @override
+  String get qsoSyncIntervalLabel => '확인 주기';
+
+  @override
+  String get qsoSyncIntervalHint => '백그라운드에서 QSO 내용을 다시 확인하는 주기';
+
+  @override
   String get connectionSuccess => '연결 성공!';
 
   @override
@@ -529,6 +578,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get errTimeout => '연결 시간 초과';
 
   @override
+  String get errLocalNetworkPermission =>
+      '로컬 네트워크 접근이 필요합니다, Android 설정에서 이 앱에 권한을 허용하세요';
+
+  @override
   String get errUnauthorized => '잘못된 API 키';
 
   @override
@@ -692,6 +745,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get licenseSection => '라이선스';
 
   @override
+  String get dxccDataSection => 'DXCC 데이터';
+
+  @override
+  String get dxccDataDescription =>
+      'DXCC 엔티티 및 콜사인 접두사 데이터 © 1994– Jim Reisert, AD1C (country-files.com), MIT 라이선스에 따라 사용됨.';
+
+  @override
   String get errorNoConnection => '연결 없음';
 
   @override
@@ -722,20 +782,6 @@ class AppLocalizationsKo extends AppLocalizations {
       'QSO를 기록하기 전에 앱을 Wavelog 서버에 연결하세요. 아래 단계를 따르세요.';
 
   @override
-  String get setupGuidePatchWarning =>
-      '이 앱은 서버에 Wavelog Mobile 패치가 설치되어 있어야 합니다.';
-
-  @override
-  String get setupGuidePatchStepTitle => '서버 패치 설치';
-
-  @override
-  String get setupGuidePatchStepBody =>
-      '앱은 Wavelog의 API v2를 사용하며 서버에 작은 패치가 필요합니다. 아직 설치하지 않았다면 설치 가이드를 열고 단계에 따르세요.';
-
-  @override
-  String get setupGuidePatchBtn => '설치 가이드';
-
-  @override
   String get setupGuideStep1Title => '1. 서버 주소';
 
   @override
@@ -747,7 +793,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get setupGuideStep2Body =>
-      'Wavelog에서 설정 → API → API 토큰 (v2) → 새 토큰으로 이동합니다. \"Wavelog Mobile\" 프리셋을 선택하고 확인합니다. 생성된 토큰(wl2_로 시작)을 복사하여 앱에 붙여넣으세요.';
+      'Wavelog에서 설정 → API → API 토큰 (v2) → 새 토큰으로 이동하여 앱에 필요한 스코프를 선택합니다 (토큰을 붙여넣으면 앱이 자동으로 확인해 줍니다). 생성된 토큰(wl2_로 시작)을 복사하여 앱에 붙여넣으세요.';
 
   @override
   String get setupGuideStep3Title => '3. 콜사인 및 표시 이름';
@@ -1006,12 +1052,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get deleteLogbook => '로그북 삭제';
-
-  @override
-  String get setActiveLogbook => '활성으로 설정';
-
-  @override
-  String get activeLogbook => '활성 로그북';
 
   @override
   String get editStation => '편집';
@@ -1380,6 +1420,12 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get potaAutoSpotHint =>
       'POTA 또는 SOTA 스테이션에서 QSO를 기록할 때 자동으로 셀프 스팟 (각 30분 쿨다운)';
+
+  @override
+  String get spotRefreshLabel => '스팟 새로고침 간격';
+
+  @override
+  String get spotRefreshHint => '이 간격으로 스팟 목록을 자동으로 새로고침합니다';
 
   @override
   String autoSpotSent(String ref) {
@@ -1907,6 +1953,24 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatNoStation => '채팅하려면 활성 스테이션을 설정하세요';
 
   @override
+  String get chatToday => '오늘';
+
+  @override
+  String get chatYesterday => '어제';
+
+  @override
+  String get chatFollow => '팔로우';
+
+  @override
+  String get chatUnfollow => '팔로우 취소';
+
+  @override
+  String get chatFollowing => '팔로우 중';
+
+  @override
+  String get chatAddReaction => '반응 추가';
+
+  @override
   String get gifPreparing => '동영상 준비 중...';
 
   @override
@@ -2131,4 +2195,66 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get communitySignOut => '로그아웃 및 계정 전환';
+
+  @override
+  String get syncTitle => '오프라인 동기화';
+
+  @override
+  String get syncStatusOnline => '온라인';
+
+  @override
+  String get syncStatusOffline => '연결 없음';
+
+  @override
+  String get syncOfflineModeNote =>
+      '오프라인 모드가 켜져 있어 자동 동기화가 일시 중지되었습니다. 수동 동기화는 가능합니다.';
+
+  @override
+  String get syncAllDone => '모두 동기화됨';
+
+  @override
+  String syncRunning(int done, int total) {
+    return '동기화 중… $done / $total';
+  }
+
+  @override
+  String get syncWaiting => '동기화 대기';
+
+  @override
+  String get syncWaitingDeletes => '삭제 대기';
+
+  @override
+  String get syncLastRun => '마지막 시도';
+
+  @override
+  String get syncLastSuccess => '마지막 전체 동기화';
+
+  @override
+  String get syncNever => '없음';
+
+  @override
+  String get syncSyncedLast => '지난 실행에서 전송됨';
+
+  @override
+  String get syncFailedLast => '지난 실행에서 실패';
+
+  @override
+  String get syncLastError => '마지막 오류';
+
+  @override
+  String get syncQueueTitle => '대기 중인 QSO';
+
+  @override
+  String get syncQueueEmpty => '대기 중인 QSO가 없습니다';
+
+  @override
+  String get syncNoConnection => '연결 없음 — 온라인이 되면 동기화가 자동으로 시작됩니다';
+
+  @override
+  String syncDone(int count) {
+    return 'QSO $count건 동기화됨';
+  }
+
+  @override
+  String get syncNothing => '동기화할 항목이 없습니다';
 }

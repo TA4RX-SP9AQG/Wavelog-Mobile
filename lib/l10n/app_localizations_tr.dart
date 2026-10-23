@@ -87,6 +87,60 @@ class AppLocalizationsTr extends AppLocalizations {
   String get testingConnection => 'Test ediliyor...';
 
   @override
+  String get sslIssueTitle => 'SSL Sertifika Sorunu';
+
+  @override
+  String get sslIssueBody =>
+      'Bu sunucunun SSL sertifikası doğrulanamadı — kendinden imzalı veya süresi dolmuş olabilir. Doğrulama yapılmadan devam edilsin mi? (Yalnızca güvendiğiniz sunucular için önerilir.)';
+
+  @override
+  String get sslIssueAllow => 'Doğrulamadan Devam Et';
+
+  @override
+  String get scopeTestSectionTitle => 'Yetki Testi';
+
+  @override
+  String get scopeTestRunning => 'Yetkiler test ediliyor…';
+
+  @override
+  String get scopeTestAllPassed => 'Gerekli tüm yetkiler mevcut';
+
+  @override
+  String get scopeTestSomeFailed => 'Bazı yetkiler eksik';
+
+  @override
+  String get scopeTestAddHint =>
+      'API token oluştururken bu yetkiyi de işaretleyin';
+
+  @override
+  String get qsoSyncBigTitle => 'Abo ne kadar fazla QSO!!';
+
+  @override
+  String get qsoSyncBigBody =>
+      'QSO\'lar senkronize ediliyor, bu işlem 1-2 dakika sürebilir.';
+
+  @override
+  String get qsoSyncSection => 'QSO Senkronizasyonu';
+
+  @override
+  String get qsoSyncResetBtn => 'Senkronizasyonu Sıfırla';
+
+  @override
+  String get qsoSyncResetHint =>
+      'QSO güncellemelerinde veya bir şeyler yanlış görünüyorsa kullanılabilir';
+
+  @override
+  String get qsoSyncResetStarted =>
+      'Senkronizasyon arka planda yeniden başlatıldı';
+
+  @override
+  String get qsoSyncIntervalLabel => 'Kontrol Aralığı';
+
+  @override
+  String get qsoSyncIntervalHint =>
+      'QSO içeriği arka planda ne sıklıkla yeniden kontrol edilsin';
+
+  @override
   String get connectionSuccess => 'Bağlantı başarılı!';
 
   @override
@@ -533,6 +587,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get errTimeout => 'Bağlantı zaman aşımına uğradı';
 
   @override
+  String get errLocalNetworkPermission =>
+      'Yerel ağ erişimi gerekiyor, Android Ayarlar\'da bu uygulama için izin verin';
+
+  @override
   String get errUnauthorized => 'Geçersiz API anahtarı';
 
   @override
@@ -698,6 +756,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get licenseSection => 'Lisans';
 
   @override
+  String get dxccDataSection => 'DXCC Verisi';
+
+  @override
+  String get dxccDataDescription =>
+      'DXCC varlık ve çağrı işareti öneki verileri © 1994– Jim Reisert, AD1C (country-files.com), MIT Lisansı kapsamında kullanılmaktadır.';
+
+  @override
   String get errorNoConnection => 'Bağlantı yok';
 
   @override
@@ -728,20 +793,6 @@ class AppLocalizationsTr extends AppLocalizations {
       'QSO kaydetmeye başlamadan önce uygulamayı Wavelog sunucunuza bağlayın. Aşağıdaki adımları izleyin.';
 
   @override
-  String get setupGuidePatchWarning =>
-      'Bu uygulama, sunucunuzda Wavelog Mobile yamasının kurulu olmasını gerektirir. Bu yamayı uygulamazsanız API v2 token oluştursanız dahi düzgün çalışmayacaktır.';
-
-  @override
-  String get setupGuidePatchStepTitle => 'Sunucu Yamasını Kurun';
-
-  @override
-  String get setupGuidePatchStepBody =>
-      'Uygulama, Wavelog\'un API v2 sistemini kullanır ve sunucunuzda küçük bir yama gerektirir. Henüz kurmadıysanız önce Kurulum Kılavuzu\'nu açıp kurulumu tamamlayın.';
-
-  @override
-  String get setupGuidePatchBtn => 'Kurulum Kılavuzu';
-
-  @override
   String get setupGuideStep1Title => '1. Sunucu Adresi';
 
   @override
@@ -753,7 +804,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get setupGuideStep2Body =>
-      'Wavelog\'da Ayarlar → API → API Token\'ları (v2) → Yeni Token\'a gidin. \"Wavelog Mobile\" ön ayarını seçip onaylayın. Oluşturulan token\'ı (wl2_ ile başlar) kopyalayıp uygulamaya yapıştırın.';
+      'Wavelog\'da Ayarlar → API → API Token\'ları (v2) → Yeni Token\'a gidin ve uygulamanın ihtiyaç duyduğu yetkileri (scope) seçin (token\'ı yapıştırdıktan sonra uygulama bunları sizin için kontrol eder). Oluşturulan token\'ı (wl2_ ile başlar) kopyalayıp uygulamaya yapıştırın.';
 
   @override
   String get setupGuideStep3Title => '3. Çağrı İşareti ve Görünen Ad';
@@ -1014,12 +1065,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get deleteLogbook => 'Logbook\'u Sil';
-
-  @override
-  String get setActiveLogbook => 'Aktif Yap';
-
-  @override
-  String get activeLogbook => 'Aktif Logbook';
 
   @override
   String get editStation => 'Düzenle';
@@ -1395,6 +1440,12 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get potaAutoSpotHint =>
       'POTA veya SOTA istasyonuna QSO girildiğinde otomatik self-spot atar (her biri için 30 dk cooldown)';
+
+  @override
+  String get spotRefreshLabel => 'Spot yenileme aralığı';
+
+  @override
+  String get spotRefreshHint => 'Spot listesini bu aralıkla otomatik yeniler';
 
   @override
   String autoSpotSent(String ref) {
@@ -1926,6 +1977,24 @@ class AppLocalizationsTr extends AppLocalizations {
   String get chatNoStation => 'Sohbet için aktif bir istasyon seçin';
 
   @override
+  String get chatToday => 'Bugün';
+
+  @override
+  String get chatYesterday => 'Dün';
+
+  @override
+  String get chatFollow => 'Takip Et';
+
+  @override
+  String get chatUnfollow => 'Takibi Bırak';
+
+  @override
+  String get chatFollowing => 'Takip ediliyor';
+
+  @override
+  String get chatAddReaction => 'Tepki ekle';
+
+  @override
   String get gifPreparing => 'Video hazırlanıyor...';
 
   @override
@@ -2152,4 +2221,67 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get communitySignOut => 'Çıkış yap & hesap değiştir';
+
+  @override
+  String get syncTitle => 'Çevrimdışı senkron';
+
+  @override
+  String get syncStatusOnline => 'Çevrimiçi';
+
+  @override
+  String get syncStatusOffline => 'Bağlantı yok';
+
+  @override
+  String get syncOfflineModeNote =>
+      'Çevrimdışı mod açık — otomatik senkron duraklatıldı. Yine de elle senkronlayabilirsiniz.';
+
+  @override
+  String get syncAllDone => 'Her şey senkronize';
+
+  @override
+  String syncRunning(int done, int total) {
+    return 'Senkronize ediliyor… $done / $total';
+  }
+
+  @override
+  String get syncWaiting => 'Senkron bekleyen';
+
+  @override
+  String get syncWaitingDeletes => 'Bekleyen silme';
+
+  @override
+  String get syncLastRun => 'Son deneme';
+
+  @override
+  String get syncLastSuccess => 'Son tam senkron';
+
+  @override
+  String get syncNever => 'Hiç';
+
+  @override
+  String get syncSyncedLast => 'Son turda gönderilen';
+
+  @override
+  String get syncFailedLast => 'Son turda başarısız';
+
+  @override
+  String get syncLastError => 'Son hata';
+
+  @override
+  String get syncQueueTitle => 'Bekleyen QSO\'lar';
+
+  @override
+  String get syncQueueEmpty => 'Bekleyen QSO yok';
+
+  @override
+  String get syncNoConnection =>
+      'Bağlantı yok — internet gelince senkron otomatik başlayacak';
+
+  @override
+  String syncDone(int count) {
+    return '$count QSO senkronize edildi';
+  }
+
+  @override
+  String get syncNothing => 'Senkronize edilecek bir şey yok';
 }

@@ -25,9 +25,14 @@ class QsoDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final qsoAsync = ref.watch(qsoProvider);
-
     final qso = qsoAsync.valueOrNull?.where((q) => q.localId == qsoId).firstOrNull;
-    if (qso != null) return _QsoDetailView(qso: qso);
+
+    if (qso != null) {
+      // Best-effort background enrichment (QSL/LoTW/eQSL/ClubLog confirmation
+      // fields the list sync doesn't carry) — see confirmationSyncProvider.
+      ref.watch(confirmationSyncProvider(qso.stationProfileId));
+      return _QsoDetailView(qso: qso);
+    }
 
     return qsoAsync.when(
       data: (_) => Scaffold(

@@ -28,8 +28,6 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
-        // flutter_local_notifications bunu gerektiriyor
-        coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
@@ -123,7 +121,6 @@ flutter {
 }
 
 dependencies {
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
     // WindowCompat.setDecorFitsSystemWindows (Android 15 / SDK 35
     // edge-to-edge requirement) — explicit rather than relying on
     // whatever version Flutter's own embedding happens to pull in

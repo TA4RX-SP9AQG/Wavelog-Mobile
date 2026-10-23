@@ -87,6 +87,55 @@ class AppLocalizationsJa extends AppLocalizations {
   String get testingConnection => 'テスト中...';
 
   @override
+  String get sslIssueTitle => 'SSL証明書の問題';
+
+  @override
+  String get sslIssueBody =>
+      'このサーバーのSSL証明書を検証できませんでした。自己署名または期限切れの可能性があります。検証をスキップして続行しますか?(信頼できるサーバーにのみ推奨されます)';
+
+  @override
+  String get sslIssueAllow => '検証せずに続行';
+
+  @override
+  String get scopeTestSectionTitle => '権限テスト';
+
+  @override
+  String get scopeTestRunning => '権限をテスト中…';
+
+  @override
+  String get scopeTestAllPassed => '必要な権限はすべて揃っています';
+
+  @override
+  String get scopeTestSomeFailed => '一部の権限が不足しています';
+
+  @override
+  String get scopeTestAddHint => 'APIトークン作成時にこの権限も選択してください';
+
+  @override
+  String get qsoSyncBigTitle => 'QSO多すぎ!!';
+
+  @override
+  String get qsoSyncBigBody => 'QSOを同期しています。1〜2分ほどかかることがあります。';
+
+  @override
+  String get qsoSyncSection => 'QSO同期';
+
+  @override
+  String get qsoSyncResetBtn => '同期をリセット';
+
+  @override
+  String get qsoSyncResetHint => 'QSOの編集後や、何かおかしいと感じたときに使えます';
+
+  @override
+  String get qsoSyncResetStarted => 'バックグラウンドで同期を再開しました';
+
+  @override
+  String get qsoSyncIntervalLabel => '確認間隔';
+
+  @override
+  String get qsoSyncIntervalHint => 'QSOの内容をバックグラウンドで再確認する頻度';
+
+  @override
   String get connectionSuccess => '接続成功！';
 
   @override
@@ -529,6 +578,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get errTimeout => '接続タイムアウト';
 
   @override
+  String get errLocalNetworkPermission =>
+      'ローカルネットワークへのアクセスが必要です、Androidの設定でこのアプリに許可してください';
+
+  @override
   String get errUnauthorized => '無効な APIキー';
 
   @override
@@ -692,6 +745,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get licenseSection => 'ライセンス';
 
   @override
+  String get dxccDataSection => 'DXCCデータ';
+
+  @override
+  String get dxccDataDescription =>
+      'DXCCエンティティおよびコールサインプレフィックスデータ © 1994– Jim Reisert, AD1C (country-files.com)、MITライセンスの下で使用。';
+
+  @override
   String get errorNoConnection => '接続なし';
 
   @override
@@ -722,20 +782,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'QSO を記録する前に、アプリを Wavelog サーバーに接続してください。以下の手順に従ってください。';
 
   @override
-  String get setupGuidePatchWarning =>
-      'このアプリはサーバーへの Wavelog Mobile パッチのインストールが必要です。';
-
-  @override
-  String get setupGuidePatchStepTitle => 'サーバーパッチをインストール';
-
-  @override
-  String get setupGuidePatchStepBody =>
-      'アプリは Wavelog の API v2 を使用しており、サーバーへの小さなパッチが必要です。まだインストールしていない場合は、インストールガイドを開いて手順に従ってください。';
-
-  @override
-  String get setupGuidePatchBtn => 'インストールガイド';
-
-  @override
   String get setupGuideStep1Title => '1. サーバーアドレス';
 
   @override
@@ -747,7 +793,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get setupGuideStep2Body =>
-      'Wavelog で、設定 → API → API トークン (v2) → 新しいトークン を選択します。「Wavelog Mobile」プリセットを選んで確認し、生成されたトークン（wl2_ で始まる）をコピーしてアプリに貼り付けてください。';
+      'Wavelog で、設定 → API → API トークン (v2) → 新しいトークン を開き、アプリに必要なスコープを選択します（トークンを貼り付けた後、アプリが自動で確認します）。生成されたトークン（wl2_ で始まる）をコピーしてアプリに貼り付けます。';
 
   @override
   String get setupGuideStep3Title => '3. コールサインと表示名';
@@ -1006,12 +1052,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get deleteLogbook => 'ログブック削除';
-
-  @override
-  String get setActiveLogbook => 'アクティブに設定';
-
-  @override
-  String get activeLogbook => 'アクティブログブック';
 
   @override
   String get editStation => '編集';
@@ -1380,6 +1420,12 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get potaAutoSpotHint =>
       'POTA または SOTA 局で QSO を記録する際に自動でセルフスポット（各 30 分のクールダウン）';
+
+  @override
+  String get spotRefreshLabel => 'スポット更新間隔';
+
+  @override
+  String get spotRefreshHint => 'この間隔でスポットリストを自動的に更新します';
 
   @override
   String autoSpotSent(String ref) {
@@ -1907,6 +1953,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get chatNoStation => 'チャットするにはアクティブな局を設定してください';
 
   @override
+  String get chatToday => '今日';
+
+  @override
+  String get chatYesterday => '昨日';
+
+  @override
+  String get chatFollow => 'フォロー';
+
+  @override
+  String get chatUnfollow => 'フォロー解除';
+
+  @override
+  String get chatFollowing => 'フォロー中';
+
+  @override
+  String get chatAddReaction => 'リアクションを追加';
+
+  @override
   String get gifPreparing => '動画を準備中...';
 
   @override
@@ -1925,6 +1989,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get fillFromGps => 'GPS から入力';
+
+  @override
+  String get tapForGridSquare => 'タップしてグリッドスクエアを表示';
 
   @override
   String get locationPermissionDenied => '位置情報の権限が拒否されました';
@@ -2131,4 +2198,65 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get communitySignOut => 'サインアウトしてアカウントを切り替える';
+
+  @override
+  String get syncTitle => 'オフライン同期';
+
+  @override
+  String get syncStatusOnline => 'オンライン';
+
+  @override
+  String get syncStatusOffline => '接続なし';
+
+  @override
+  String get syncOfflineModeNote => 'オフラインモードがオンです — 自動同期は一時停止中です。手動での同期は可能です。';
+
+  @override
+  String get syncAllDone => 'すべて同期済み';
+
+  @override
+  String syncRunning(int done, int total) {
+    return '同期中… $done / $total';
+  }
+
+  @override
+  String get syncWaiting => '同期待ち';
+
+  @override
+  String get syncWaitingDeletes => '削除待ち';
+
+  @override
+  String get syncLastRun => '最後の試行';
+
+  @override
+  String get syncLastSuccess => '最後の完全同期';
+
+  @override
+  String get syncNever => 'なし';
+
+  @override
+  String get syncSyncedLast => '前回送信した件数';
+
+  @override
+  String get syncFailedLast => '前回失敗した件数';
+
+  @override
+  String get syncLastError => '最後のエラー';
+
+  @override
+  String get syncQueueTitle => '同期待ちの QSO';
+
+  @override
+  String get syncQueueEmpty => '同期待ちの QSO はありません';
+
+  @override
+  String get syncNoConnection => '接続なし — オンラインに戻ると自動で同期を開始します';
+
+  @override
+  String syncDone(int count) {
+    return '$count 件の QSO を同期しました';
+  }
+
+  @override
+  String get syncNothing => '同期するものはありません';
 }

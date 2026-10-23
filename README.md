@@ -69,7 +69,9 @@ This branch is a Firebase-free build maintained for F-Droid distribution. The Co
 
 The app is available in **9 languages**: English, Turkish, German, Polish, Russian, French, Italian, Japanese and Korean.
 
-Community translations are welcome. To view existing translations, browse the [l10n folder](lib/l10n/) on GitHub. Weblate-hosted translation is planned for a future release.
+[![Translation status](https://translate.wavelogmobile.app/widget/wavelog-mobile/app/svg-badge.svg)](https://translate.wavelogmobile.app/projects/wavelog-mobile/)
+
+Community translations are welcome and hosted on [Weblate](https://translate.wavelogmobile.app/projects/wavelog-mobile/). Sign up (or sign in with GitHub), pick a language, and start translating. Changes are periodically merged into the `main-dev` branch automatically.
 
 ## Tech Stack
 

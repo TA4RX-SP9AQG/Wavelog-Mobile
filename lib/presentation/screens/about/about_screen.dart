@@ -82,9 +82,9 @@ class _AboutScreenState extends State<AboutScreen> {
                   onTap: () => _open('https://ta4rx.tr')),
               _InfoRow(Icons.email_outlined, 'erkin@ta4rx.tr',
                   onTap: () => _mail('erkin@ta4rx.tr')),
-              _InfoRow(Icons.code, 'github.com/MaviKulubeliAdam/Wavelog-Mobile',
-                  onTap: () => _open('https://github.com/MaviKulubeliAdam/Wavelog-Mobile')),
             ],
+            onOpenGithub: () =>
+                _open('https://github.com/TA4RX-SP9AQG/Wavelog-Mobile'),
           ),
 
           const SizedBox(height: 20),
@@ -114,6 +114,38 @@ class _AboutScreenState extends State<AboutScreen> {
                   Text(
                     l10n.mitDescription,
                     style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          _SectionTitle(l10n.dxccDataSection),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.mitLicense,
+                      style: tt.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.dxccDataDescription,
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    onTap: () => _open('https://www.country-files.com'),
+                    child: Text(
+                      'country-files.com',
+                      style: tt.bodySmall?.copyWith(
+                          color: cs.primary,
+                          decoration: TextDecoration.underline),
+                    ),
                   ),
                 ],
               ),
@@ -157,11 +189,13 @@ class _DevCard extends StatelessWidget {
   final String name;
   final String callsign;
   final List<Widget> rows;
+  final VoidCallback onOpenGithub;
   const _DevCard(
       {required this.avatar,
       required this.name,
       required this.callsign,
-      required this.rows});
+      required this.rows,
+      required this.onOpenGithub});
 
   @override
   Widget build(BuildContext context) {
@@ -201,6 +235,15 @@ class _DevCard extends StatelessWidget {
             const Divider(height: 1),
             const SizedBox(height: 8),
             ...rows,
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onOpenGithub,
+                icon: const Icon(Icons.code, size: 16),
+                label: const Text('GitHub'),
+              ),
+            ),
           ],
         ),
       ),
@@ -245,12 +288,12 @@ class _WavelogCard extends StatelessWidget {
               Container(
                 width: 52,
                 height: 52,
+                padding: const EdgeInsets.all(9),
                 decoration: BoxDecoration(
                   color: cs.secondaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.cloud_outlined,
-                    size: 30, color: cs.onSecondaryContainer),
+                child: Image.asset('assets/images/wavelog_mark.png'),
               ),
               const SizedBox(width: 14),
               Column(
@@ -294,18 +337,23 @@ class _WavelogCard extends StatelessWidget {
 
             Row(children: [
               Expanded(
+                flex: 6,
                 child: OutlinedButton.icon(
                   onPressed: onOpenSite,
                   icon: const Icon(Icons.language, size: 16),
-                  label: const Text('wavelog.org'),
+                  label: const Text('wavelog.org',
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.visible),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
+                flex: 5,
                 child: OutlinedButton.icon(
                   onPressed: onOpenGithub,
                   icon: const Icon(Icons.code, size: 16),
-                  label: const Text('GitHub'),
+                  label: const Text('GitHub', maxLines: 1),
                 ),
               ),
             ]),

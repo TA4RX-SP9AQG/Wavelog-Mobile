@@ -1,0 +1,8 @@
+* Redesigned UI with a new color palette and refreshed screens
+* Hardware/Bluetooth keyboard shortcuts for hands-free QSO logging
+* Paper QSL card tracking (mark sent/received, edit, stats)
+* Faster offline sync with live connectivity state and a dedicated sync page
+* More accurate DXCC/statistics counts and confirmation status
+* Local network permission handling fixed for Android 17
+* Edge-to-edge display support for Android 15
+* Various sync, logbook scoping and UI bug fixes

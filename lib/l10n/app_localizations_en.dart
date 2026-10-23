@@ -87,6 +87,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get testingConnection => 'Testing...';
 
   @override
+  String get sslIssueTitle => 'SSL Certificate Issue';
+
+  @override
+  String get sslIssueBody =>
+      'This server\'s SSL certificate could not be verified — it may be self-signed or expired. Continue without verification? (Only recommended for servers you trust.)';
+
+  @override
+  String get sslIssueAllow => 'Continue Without Verification';
+
+  @override
+  String get scopeTestSectionTitle => 'Scope Test';
+
+  @override
+  String get scopeTestRunning => 'Testing permissions…';
+
+  @override
+  String get scopeTestAllPassed => 'All required scopes are present';
+
+  @override
+  String get scopeTestSomeFailed => 'Some scopes are missing';
+
+  @override
+  String get scopeTestAddHint => 'Add this scope when creating your API token';
+
+  @override
+  String get qsoSyncBigTitle => 'Whoa, that is a lot of QSOs!!';
+
+  @override
+  String get qsoSyncBigBody =>
+      'Syncing your QSOs, this might take a minute or two.';
+
+  @override
+  String get qsoSyncSection => 'QSO Sync';
+
+  @override
+  String get qsoSyncResetBtn => 'Reset Sync';
+
+  @override
+  String get qsoSyncResetHint =>
+      'Useful after QSO edits or if something looks wrong';
+
+  @override
+  String get qsoSyncResetStarted => 'Sync restarted in the background';
+
+  @override
+  String get qsoSyncIntervalLabel => 'Check Interval';
+
+  @override
+  String get qsoSyncIntervalHint =>
+      'How often QSO content is re-checked in the background';
+
+  @override
   String get connectionSuccess => 'Connection successful!';
 
   @override
@@ -531,6 +583,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errTimeout => 'Connection timed out';
 
   @override
+  String get errLocalNetworkPermission =>
+      'Local network access needed, allow it for this app in Android Settings';
+
+  @override
   String get errUnauthorized => 'Invalid API key';
 
   @override
@@ -695,6 +751,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get licenseSection => 'License';
 
   @override
+  String get dxccDataSection => 'DXCC Data';
+
+  @override
+  String get dxccDataDescription =>
+      'DXCC entity and callsign prefix data © 1994– Jim Reisert, AD1C (country-files.com), used under the MIT License.';
+
+  @override
   String get errorNoConnection => 'No connection';
 
   @override
@@ -725,20 +788,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Before you can log QSOs, connect the app to your Wavelog server. Follow the steps below.';
 
   @override
-  String get setupGuidePatchWarning =>
-      'This app requires the Wavelog Mobile patch to be installed on your server. Even if you generate an API v2 token without it, the app will not work correctly.';
-
-  @override
-  String get setupGuidePatchStepTitle => 'Install Server Patch';
-
-  @override
-  String get setupGuidePatchStepBody =>
-      'The app uses Wavelog\'s API v2, which requires a small patch on your server. If you haven\'t installed it yet, open the Installation Guide and follow the steps for your setup (Classic or Docker).';
-
-  @override
-  String get setupGuidePatchBtn => 'Installation Guide';
-
-  @override
   String get setupGuideStep1Title => '1. Server Address';
 
   @override
@@ -750,7 +799,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupGuideStep2Body =>
-      'In Wavelog, go to Settings → API → API Tokens (v2) → New Token. Select the \"Wavelog Mobile\" preset and confirm. Copy the generated token (starts with wl2_) and paste it into the app.';
+      'In Wavelog, go to Settings → API → API Tokens (v2) → New Token and select the scopes the app needs (the app checks them for you after you paste the token). Copy the generated token (starts with wl2_) and paste it into the app.';
 
   @override
   String get setupGuideStep3Title => '3. Callsign & Display Name';
@@ -1011,12 +1060,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteLogbook => 'Delete Logbook';
-
-  @override
-  String get setActiveLogbook => 'Set Active';
-
-  @override
-  String get activeLogbook => 'Active Logbook';
 
   @override
   String get editStation => 'Edit';
@@ -1393,6 +1436,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get potaAutoSpotHint =>
       'Automatically self-spot when logging a QSO at a POTA or SOTA station (30 min cooldown each)';
+
+  @override
+  String get spotRefreshLabel => 'Spot refresh interval';
+
+  @override
+  String get spotRefreshHint =>
+      'Automatically reload the spot list at this interval';
 
   @override
   String autoSpotSent(String ref) {
@@ -1923,6 +1973,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatNoStation => 'Set an active station to chat';
 
   @override
+  String get chatToday => 'Today';
+
+  @override
+  String get chatYesterday => 'Yesterday';
+
+  @override
+  String get chatFollow => 'Follow';
+
+  @override
+  String get chatUnfollow => 'Unfollow';
+
+  @override
+  String get chatFollowing => 'Following room';
+
+  @override
+  String get chatAddReaction => 'Add reaction';
+
+  @override
   String get gifPreparing => 'Preparing video...';
 
   @override
@@ -1941,6 +2009,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fillFromGps => 'Fill from GPS';
+
+  @override
+  String get tapForGridSquare => 'Tap to show grid square';
 
   @override
   String get locationPermissionDenied => 'Location permission denied';
@@ -2150,4 +2221,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communitySignOut => 'Sign out & switch account';
+
+  @override
+  String get syncTitle => 'Offline sync';
+
+  @override
+  String get syncStatusOnline => 'Online';
+
+  @override
+  String get syncStatusOffline => 'No connection';
+
+  @override
+  String get syncOfflineModeNote =>
+      'Offline mode is on — automatic sync is paused. You can still sync manually.';
+
+  @override
+  String get syncAllDone => 'Everything is synced';
+
+  @override
+  String syncRunning(int done, int total) {
+    return 'Syncing… $done / $total';
+  }
+
+  @override
+  String get syncWaiting => 'Waiting to sync';
+
+  @override
+  String get syncWaitingDeletes => 'Deletions waiting';
+
+  @override
+  String get syncLastRun => 'Last attempt';
+
+  @override
+  String get syncLastSuccess => 'Last full sync';
+
+  @override
+  String get syncNever => 'Never';
+
+  @override
+  String get syncSyncedLast => 'Sent in last run';
+
+  @override
+  String get syncFailedLast => 'Failed in last run';
+
+  @override
+  String get syncLastError => 'Last error';
+
+  @override
+  String get syncQueueTitle => 'Waiting QSOs';
+
+  @override
+  String get syncQueueEmpty => 'No QSOs are waiting';
+
+  @override
+  String get syncNoConnection =>
+      'No connection — sync will start automatically when you\'re back online';
+
+  @override
+  String syncDone(int count) {
+    return '$count QSO(s) synced';
+  }
+
+  @override
+  String get syncNothing => 'Nothing to sync';
 }

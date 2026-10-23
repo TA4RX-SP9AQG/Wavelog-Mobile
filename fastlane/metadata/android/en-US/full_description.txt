@@ -19,3 +19,18 @@ Features:
 This F-Droid build does not include the Community/chat feature from
 the Play Store version, since that depends on Firebase and Google
 Play Services.
+
+Third-party services:
+
+Besides your own Wavelog server, the app contacts these fixed,
+hard-coded services for specific features:
+
+* www.contestcalendar.com - upcoming contest list (home screen, widget)
+* jo30.de, falling back to www.dxwatch.com - DX cluster spots
+* www.hamqsl.com - solar/propagation data
+* api.pota.app and api2.sota.org.uk - POTA/SOTA spot lookup and posting
+* spots.wwff.co - WWFF spot lookup
+* tile.openstreetmap.org - map tiles
+
+Callsign lookup goes through your own Wavelog server. QRZ.com is only
+opened as a browser link and is never contacted directly by the app.

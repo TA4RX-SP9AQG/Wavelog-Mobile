@@ -52,7 +52,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _save({bool navigate = true}) async {
     if (!_formKey.currentState!.validate()) return;
-    await ref.read(settingsProvider.notifier).updateServerUrl(_urlCtrl.text);
+    // Unlike server_setup_screen (first-time setup), this save path never
+    // normalized the URL before persisting it — a value pasted with a
+    // trailing path (e.g. copied from the browser while on some
+    // non-API Wavelog page) was stored as-is, then doubled up when
+    // ApiEndpoints appended its own "/index.php/api/v2/..." on every
+    // request, breaking every call made with the saved settings.
+    final cleanUrl = normalizeServerUrl(_urlCtrl.text.trim());
+    await ref.read(settingsProvider.notifier).updateServerUrl(cleanUrl);
+    if (mounted && cleanUrl != _urlCtrl.text) {
+      _urlCtrl.text = cleanUrl;
+    }
     await ref.read(settingsProvider.notifier).updateApiKey(_keyCtrl.text);
     // Force data providers to reload with the new token immediately.
     ref.invalidate(stationProvider);
@@ -91,9 +101,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final url = _urlCtrl.text.trim();
     final key = _keyCtrl.text.trim();
 
+    final allowInsecureSsl = ref.read(settingsProvider).allowInsecureSsl;
     final repo = ref.read(settingsRepositoryProvider);
     final remote = WavelogRemoteDatasource(
-      dio: buildWavelogDio(url, bearerToken: key),
+      dio: buildWavelogDio(url,
+          bearerToken: key, allowInsecureSsl: allowInsecureSsl),
     );
 
     ConnectionTestResult result;
@@ -146,7 +158,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _scopeChecks = checks;
     });
 
-    final testDio = buildWavelogDio(url, bearerToken: key);
+    final testDio = buildWavelogDio(url,
+        bearerToken: key, allowInsecureSsl: allowInsecureSsl);
     final endpoints = [
       (ApiEndpoints.station, null),
       (ApiEndpoints.logbook, null),
@@ -458,6 +471,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onChanged: (v) =>
                   ref.read(settingsProvider.notifier).setPotaAutoSpot(v),
             ),
+            ListTile(
+              leading: const Icon(Icons.timer_outlined),
+              title: Text(l10n.spotRefreshLabel),
+              subtitle: Text(l10n.spotRefreshHint),
+              trailing: DropdownButton<int>(
+                value: settings.spotRefreshSeconds,
+                underline: const SizedBox.shrink(),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('—')),
+                  DropdownMenuItem(value: 30, child: Text('30s')),
+                  DropdownMenuItem(value: 60, child: Text('1m')),
+                  DropdownMenuItem(value: 120, child: Text('2m')),
+                  DropdownMenuItem(value: 300, child: Text('5m')),
+                ],
+                onChanged: (v) => v != null
+                    ? ref
+                        .read(settingsProvider.notifier)
+                        .setSpotRefreshSeconds(v)
+                    : null,
+              ),
+            ),
 
             // Language picker
             DropdownButtonFormField<String?>(
@@ -481,6 +515,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
               onChanged: (v) =>
                   ref.read(settingsProvider.notifier).setLocale(v),
+            ),
+
+            const SizedBox(height: 24),
+
+            // QSO sync
+            _sectionHeader(l10n.qsoSyncSection),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.sync_outlined),
+              title: Text(l10n.qsoSyncIntervalLabel),
+              subtitle: Text(l10n.qsoSyncIntervalHint),
+              trailing: DropdownButton<int>(
+                value: settings.qsoSyncCheckIntervalMinutes,
+                underline: const SizedBox.shrink(),
+                items: const [
+                  DropdownMenuItem(value: 5, child: Text('5m')),
+                  DropdownMenuItem(value: 10, child: Text('10m')),
+                  DropdownMenuItem(value: 30, child: Text('30m')),
+                  DropdownMenuItem(value: 60, child: Text('60m')),
+                ],
+                onChanged: (v) => v != null
+                    ? ref
+                        .read(settingsProvider.notifier)
+                        .setQsoSyncCheckIntervalMinutes(v)
+                    : null,
+              ),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.restart_alt),
+              title: Text(l10n.qsoSyncResetBtn),
+              subtitle: Text(l10n.qsoSyncResetHint),
+              onTap: () async {
+                await ref.read(qsoProvider.notifier).forceFullResync();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.qsoSyncResetStarted)),
+                );
+              },
             ),
 
             const SizedBox(height: 24),

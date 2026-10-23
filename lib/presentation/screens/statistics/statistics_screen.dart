@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../core/dxcc/dxcc_prefix_matcher.dart';
 import '../../../core/utils/error_l10n.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/qso_scope.dart';
 import '../../../data/models/detailed_statistics_model.dart';
 import '../../../data/models/dxcc_entity_model.dart';
 import '../../../data/models/pota_stats_model.dart';
@@ -30,15 +33,6 @@ String _titleCase(String s) => s
 String _normalizeQsoCall(String raw) {
   if (raw.isEmpty) return '';
   return raw.toUpperCase().split('/').first.trim();
-}
-
-/// Finds the DXCC entity whose prefix is the longest match for [call].
-/// [sorted] must be sorted by prefix.length descending.
-DxccEntity? _matchDxccByCall(String call, List<DxccEntity> sorted) {
-  for (final e in sorted) {
-    if (call.startsWith(e.prefix.toUpperCase())) return e;
-  }
-  return null;
 }
 
 // Fallback continent derivation from CQ zone when the server omits the field.
@@ -77,9 +71,6 @@ class _DxccData {
   final int totalEntities;
   final int worked;
   final int confirmed;
-  final int lotwConfirmed;
-  final int eqslConfirmed;
-  final int qslConfirmed;
   final int remaining;
   final List<_DxccEntry> entries;
 
@@ -87,9 +78,6 @@ class _DxccData {
     required this.totalEntities,
     required this.worked,
     required this.confirmed,
-    required this.lotwConfirmed,
-    required this.eqslConfirmed,
-    required this.qslConfirmed,
     required this.remaining,
     required this.entries,
   });
@@ -102,17 +90,145 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
   // Used as fallback when local QSOs lack dxcc/country fields (v2 API).
   final serverStats = await ref.watch(statisticsProvider.future);
 
-  // v2 QSO list does not return QSL fields — use /api/v2/confirmation as source of truth.
+  // DXCC belongs to a callsign: only QSOs of stations sharing the active
+  // scope's callsign(s) count. The server summary is instance-wide, so it is
+  // only trusted when nothing is scoped.
+  final dxccIds = ref.watch(dxccStationIdsProvider);
+  final scoped = dxccIds != null;
+
+  // Backfill paper-QSL/LoTW/eQSL/ClubLog fields (ADIF-export-only, see
+  // confirmationSyncProvider) for every station in scope before reading the
+  // local cache below. Without this, qso.qslRcvd stays null for any QSO
+  // whose detail screen was never opened, so paper-QSL confirmations were
+  // silently undercounted here even though /api/v2/confirmation doesn't
+  // carry them either (it only tracks electronic confirmations). Skipped
+  // when unscoped (dxccIds == null): that means no active station/logbook,
+  // so there's no bounded station list to sync against.
+  //
+  // Batched 4 at a time rather than firing every station's ADIF export at
+  // once, for the same reason QsoNotifier batches its own fetch: a
+  // callsign with many stations (real reported case: 14) means that many
+  // concurrent multi-page pagination loops competing for the same
+  // connection pool, making any one page more likely to time out, which
+  // used to be enough to fail this whole wait and leave the DXCC tab
+  // stuck loading.
+  if (dxccIds != null) {
+    const batchSize = 4;
+    final ids = dxccIds.toList();
+    for (var i = 0; i < ids.length; i += batchSize) {
+      final batch = ids.skip(i).take(batchSize);
+      await Future.wait(
+        // One station stubbornly failing (exhausted its own retry) no
+        // longer takes the whole DXCC tab down with it, whatever
+        // confirmation data the other stations already have still renders.
+        batch.map((id) =>
+            ref.watch(confirmationSyncProvider(id).future).catchError((_) {})),
+      );
+    }
+  }
+
+  // v2 QSO list does not return QSL fields, use /api/v2/confirmation as source of truth.
   final confirmationMap = ref.watch(confirmationProvider).valueOrNull ?? {};
 
-  final box = Hive.box<QsoModel>('qso_cache');
+  final qsos = filterByStations(
+      Hive.box<QsoModel>('qso_cache').values.toList(), dxccIds);
 
-  // Build worked map from QSO cache: adif → confirmation status + continent
+  // Try to fetch the full DXCC entity catalog (pure v2, no patch needed,
+  // /api/v2/catalog?topic=dxcc). Wrapped in try/catch purely for network
+  // robustness (unreachable server, or a pre-3.2.0 Wavelog without this
+  // endpoint), not because of any patch requirement.
+  List<DxccEntity> entities = [];
+  try {
+    entities = (await ref.read(wavelogRemoteDatasourceProvider).getDxccList())
+        .where((e) => !e.deleted)
+        .toList();
+  } catch (_) {}
+
+  // Everything from here down is CPU-bound, not I/O: two passes over every
+  // QSO in scope (real reported case: ~100k on one station alone) plus a
+  // prefix-match per QSO against the DXCC catalog. Run on the UI isolate,
+  // that was measured to block it for 5+ seconds, long enough to trip
+  // Android's ANR ("Input dispatching timed out") on a real device. compute()
+  // runs it on a background isolate instead; only plain, isolate-transferable
+  // data crosses that boundary, QsoModel itself extends HiveObject, whose
+  // internal box reference isn't safely sendable, so each QSO is reduced to
+  // the handful of fields this computation actually reads first.
+  final qsoInputs = [
+    for (final q in qsos)
+      (
+        serverId: q.serverId,
+        callsign: q.callsign,
+        dxcc: q.dxcc,
+        country: q.country,
+        continent: q.continent,
+        lotwRcvd: q.lotwRcvd,
+        eqslRcvd: q.eqslRcvd,
+        qslRcvd: q.qslRcvd,
+      ),
+  ];
+
+  final computed = await compute(
+    _computeDxccEntries,
+    (qsos: qsoInputs, confirmationMap: confirmationMap, entities: entities),
+  );
+
+  final total = entities.isNotEmpty ? entities.length : _totalDxccEntities;
+
+  // Summary card always shows server-authoritative counts.
+  // Prefix-matched local counts power the per-entity breakdown but may differ slightly.
+  final workedCount    = !scoped && serverStats.dxccWorked > 0    ? serverStats.dxccWorked    : computed.localWorked;
+  final confirmedCount = !scoped && serverStats.dxccConfirmed > 0 ? serverStats.dxccConfirmed : computed.localConfirmed;
+  final entityTotal    = serverStats.dxccAvailable > 0 ? serverStats.dxccAvailable : total;
+
+  return _DxccData(
+    totalEntities: entityTotal,
+    worked:        workedCount,
+    confirmed:     confirmedCount,
+    remaining:     (entityTotal - workedCount).clamp(0, entityTotal),
+    entries:       computed.allEntries,
+  );
+});
+
+/// Compact, isolate-transferable snapshot of the QsoModel fields
+/// _computeDxccEntries actually reads.
+typedef _DxccQsoInput = ({
+  int? serverId,
+  String callsign,
+  String? dxcc,
+  String? country,
+  String? continent,
+  String? lotwRcvd,
+  String? eqslRcvd,
+  String? qslRcvd,
+});
+
+typedef _DxccComputeInput = ({
+  List<_DxccQsoInput> qsos,
+  Map<int, List<String>> confirmationMap,
+  List<DxccEntity> entities,
+});
+
+typedef _DxccComputeResult = ({
+  List<_DxccEntry> allEntries,
+  int localWorked,
+  int localConfirmed,
+});
+
+/// The CPU-bound half of _dxccStatsProvider, run on a background isolate via
+/// compute(). Must be a top-level (or static) function, not a closure, that
+/// is what lets the isolate machinery re-invoke it on the other side. See
+/// the call site for why this exists.
+Future<_DxccComputeResult> _computeDxccEntries(_DxccComputeInput input) async {
+  final qsos = input.qsos;
+  final confirmationMap = input.confirmationMap;
+  final entities = input.entities;
+
+  // Build worked map from QSO cache: adif -> confirmation status + continent
   final workedByAdif = <int, ({int count, bool lotw, bool eqsl, bool qsl, String cont})>{};
   // Fallback by country name (when dxcc field missing)
   final workedByName = <String, ({String cont, int count, bool lotw, bool eqsl, bool qsl})>{};
 
-  for (final qso in box.values) {
+  for (final qso in qsos) {
     final types = confirmationMap[qso.serverId] ?? [];
     final lotwY = qso.lotwRcvd?.toUpperCase() == 'Y' || types.contains('LoTW');
     final eqslY = qso.eqslRcvd?.toUpperCase() == 'Y' || types.contains('eQSL');
@@ -143,26 +259,18 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
     }
   }
 
-  // Try to fetch the full entity list from the Wavelog server (requires patch)
-  List<DxccEntity> entities = [];
-  try {
-    entities = (await ref.read(wavelogRemoteDatasourceProvider).getDxccList())
-        .where((e) => !e.deleted)
-        .toList();
-  } catch (_) {}
-
   // v2 API QSOs lack a `dxcc` field, so workedByAdif is empty after the first pass.
-  // Derive DXCC entity from callsign prefix (longest-match against entity prefix list).
+  // Derive DXCC entity from callsign prefix using the bundled cty.dat-derived
+  // prefix table (longest-match against every known prefix variant per
+  // entity, not just the single primary prefix the catalog returns, see
+  // DxccPrefixMatcher for why this matters).
   if (entities.isNotEmpty && workedByAdif.isEmpty) {
-    final sortedByPrefix = entities
-        .where((e) => e.prefix.isNotEmpty && e.adif > 0)
-        .toList()
-        ..sort((a, b) => b.prefix.length.compareTo(a.prefix.length));
+    final matcher = await DxccPrefixMatcher.build(entities);
 
-    for (final qso in box.values) {
+    for (final qso in qsos) {
       final call = _normalizeQsoCall(qso.callsign);
       if (call.isEmpty) continue;
-      final entity = _matchDxccByCall(call, sortedByPrefix);
+      final entity = matcher.match(call);
       if (entity == null) continue;
 
       final types = confirmationMap[qso.serverId] ?? [];
@@ -190,7 +298,11 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
         .where((e) => !e.deleted && e.adif != 0 && !e.name.startsWith('-'))
         .map((entity) {
       final w = workedByAdif[entity.adif];
-      final confirmed = w != null && (w.lotw || w.eqsl || w.qsl);
+      // ARRL DXCC only credits LoTW and physical paper QSL cards (mailed to
+      // ARRL HQ or verified by a Card Checker), eQSL is not DXCC-valid, so
+      // it must not flip an entity to "confirmed" here. See dxccConfirmed
+      // summary row below for the single unified count this feeds.
+      final confirmed = w != null && (w.lotw || w.qsl);
       final status = w == null
           ? _DxccStatus.notWorked
           : confirmed
@@ -209,10 +321,13 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
       );
     }).toList();
   } else {
-    // Fallback: only worked countries (no patch / server unreachable)
+    // Fallback: catalog fetch above failed (server unreachable, or a
+    // pre-3.2.0 Wavelog without this endpoint), show only worked
+    // countries, derived from local QSOs instead of the full catalog.
     allEntries = workedByName.entries.map((e) {
       final w = e.value;
-      final confirmed = w.lotw || w.eqsl || w.qsl;
+      // Same ARRL rule as above: eQSL alone does not count as DXCC-confirmed.
+      final confirmed = w.lotw || w.qsl;
       return _DxccEntry(
         adif:      0,
         country:   e.key,
@@ -225,40 +340,9 @@ final _dxccStatsProvider = FutureProvider<_DxccData>((ref) async {
 
   final localWorked    = allEntries.where((e) => e.status != _DxccStatus.notWorked).length;
   final localConfirmed = allEntries.where((e) => e.status == _DxccStatus.confirmed).length;
-  final total          = entities.isNotEmpty ? entities.length : _totalDxccEntities;
 
-  // Confirmation breakdown for summary card (still useful per-method)
-  int lotwC = 0, eqslC = 0, qslC = 0;
-  for (final w in workedByAdif.values) {
-    if (w.lotw) lotwC++;
-    if (w.eqsl) eqslC++;
-    if (w.qsl)  qslC++;
-  }
-  if (entities.isEmpty) {
-    for (final w in workedByName.values) {
-      if (w.lotw) lotwC++;
-      if (w.eqsl) eqslC++;
-      if (w.qsl)  qslC++;
-    }
-  }
-
-  // Summary card always shows server-authoritative counts.
-  // Prefix-matched local counts power the per-entity breakdown but may differ slightly.
-  final workedCount    = serverStats.dxccWorked > 0    ? serverStats.dxccWorked    : localWorked;
-  final confirmedCount = serverStats.dxccConfirmed > 0 ? serverStats.dxccConfirmed : localConfirmed;
-  final entityTotal    = serverStats.dxccAvailable > 0 ? serverStats.dxccAvailable : total;
-
-  return _DxccData(
-    totalEntities: entityTotal,
-    worked:        workedCount,
-    confirmed:     confirmedCount,
-    lotwConfirmed: lotwC,
-    eqslConfirmed: eqslC,
-    qslConfirmed:  qslC,
-    remaining:     (entityTotal - workedCount).clamp(0, entityTotal),
-    entries:       allEntries,
-  );
-});
+  return (allEntries: allEntries, localWorked: localWorked, localConfirmed: localConfirmed);
+}
 
 class StatisticsScreen extends ConsumerWidget {
   const StatisticsScreen({super.key});
@@ -295,6 +379,11 @@ class StatisticsScreen extends ConsumerWidget {
                 ref.invalidate(detailedStatisticsProvider);
                 ref.invalidate(solarDataProvider);
                 ref.invalidate(potaStatsProvider);
+                // Force a fresh electronic-confirmation fetch and a fresh
+                // paper-QSL/LoTW/eQSL ADIF backfill for every station,
+                // instead of reusing this session's cached sync result.
+                ref.invalidate(confirmationProvider);
+                ref.invalidate(confirmationSyncProvider);
                 ref.invalidate(_dxccStatsProvider);
               },
             ),
@@ -400,9 +489,8 @@ class _DxccTab extends ConsumerWidget {
                     ),
                     const Divider(height: 20),
                     _DxccSummaryRow(
-                      label: l10n.dxccConfirmed,
-                      value:
-                          '${data.lotwConfirmed} / ${data.eqslConfirmed} / ${data.qslConfirmed}',
+                      label: l10n.dxccLegendConfirmed,
+                      value: '${data.confirmed} / ${data.totalEntities}',
                       color: Colors.green,
                     ),
                     const Divider(height: 20),
@@ -630,37 +718,41 @@ class _StatisticsBody extends StatelessWidget {
           // ── Time-based totals ─────────────────────────────────────
           _SectionHeader(l10n.statsTotal),
           const SizedBox(height: 6),
-          Row(
-            children: [
-              _StatCard(l10n.statsToday, data.todayQsos.toString(), Icons.today),
-              _StatCard(l10n.statsMonth, data.monthQsos.toString(), Icons.calendar_month),
-              _StatCard(l10n.statsYear, data.yearQsos.toString(), Icons.calendar_today),
-              _StatCard(l10n.statsTotal, data.totalQsos.toString(), Icons.storage),
-            ].map((w) => Expanded(child: w)).toList(),
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                _StatCard(l10n.statsToday, data.todayQsos.toString(), Icons.today),
+                _StatCard(l10n.statsMonth, data.monthQsos.toString(), Icons.calendar_month),
+                _StatCard(l10n.statsYear, data.yearQsos.toString(), Icons.calendar_today),
+                _StatCard(l10n.statsTotal, data.totalQsos.toString(), Icons.storage),
+              ].map((w) => Expanded(child: w)).toList(),
+            ),
           ),
           const SizedBox(height: 16),
 
           // ── Highlights ────────────────────────────────────────────
-          Row(
-            children: [
-              Expanded(
-                child: _HighlightCard(
-                  icon: Icons.people_outline,
-                  value: data.uniqueCallsigns.toString(),
-                  label: l10n.uniqueCallsigns,
-                  color: Theme.of(context).colorScheme.tertiary,
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _HighlightCard(
+                    icon: Icons.people_outline,
+                    value: data.uniqueCallsigns.toString(),
+                    label: l10n.uniqueCallsigns,
+                    color: Theme.of(context).colorScheme.tertiary,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _HighlightCard(
-                  icon: Icons.local_fire_department_outlined,
-                  value: l10n.streakDays(data.currentStreakDays),
-                  label: l10n.currentStreak,
-                  color: Colors.orange,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _HighlightCard(
+                    icon: Icons.local_fire_department_outlined,
+                    value: l10n.streakDays(data.currentStreakDays),
+                    label: l10n.currentStreak,
+                    color: Colors.orange,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 20),
 
@@ -853,15 +945,23 @@ class _StatCard extends StatelessWidget {
           children: [
             Icon(icon, size: 18, color: theme.colorScheme.primary),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontFamily: 'monospace',
+            // A large account's total can run to 6+ digits, FittedBox
+            // shrinks it to fit the card's width instead of overflowing.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                ),
               ),
             ),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.secondary,
               ),
@@ -899,16 +999,27 @@ class _HighlightCard extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    value,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'monospace',
+                  // "{count} day(s)" runs noticeably longer than a bare
+                  // count, FittedBox keeps it to one line instead of
+                  // wrapping and making this card taller than its sibling.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
+                      ),
                     ),
                   ),
                   Text(
                     label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.secondary,
                     ),
@@ -1002,26 +1113,28 @@ class _PotaContent extends StatelessWidget {
         const SizedBox(height: 8),
 
         // ── Summary cards ────────────────────────────────────────────
-        Row(
-          children: [
-            Expanded(
-              child: _HighlightCard(
-                icon: Icons.contacts_outlined,
-                value: stats.totalQsos.toString(),
-                label: l10n.potaTotalQsos,
-                color: potaGreen,
+        IntrinsicHeight(
+          child: Row(
+            children: [
+              Expanded(
+                child: _HighlightCard(
+                  icon: Icons.contacts_outlined,
+                  value: stats.totalQsos.toString(),
+                  label: l10n.potaTotalQsos,
+                  color: potaGreen,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _HighlightCard(
-                icon: Icons.flag_outlined,
-                value: stats.activatedCount.toString(),
-                label: l10n.potaActivatedParks,
-                color: potaGreen,
+              const SizedBox(width: 8),
+              Expanded(
+                child: _HighlightCard(
+                  icon: Icons.flag_outlined,
+                  value: stats.activatedCount.toString(),
+                  label: l10n.potaActivatedParks,
+                  color: potaGreen,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 12),
 

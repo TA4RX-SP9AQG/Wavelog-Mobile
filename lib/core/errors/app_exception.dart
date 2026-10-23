@@ -13,6 +13,25 @@ class NetworkException extends AppException {
       : super(code: 'NETWORK_ERROR');
 }
 
+/// TLS handshake / certificate verification failure — distinct from a plain
+/// NetworkException so callers can offer "continue without verification"
+/// instead of a generic connection-failed message.
+class SslException extends AppException {
+  const SslException(
+      [super.message = 'SSL sertifikası doğrulanamadı'])
+      : super(code: 'SSL_ERROR');
+}
+
+/// The request targeted a private/LAN address and Android 17+'s
+/// ACCESS_LOCAL_NETWORK runtime permission hasn't been granted, distinct
+/// from NetworkException so the UI can point the user at the actual fix
+/// (grant the permission) instead of a generic "server unreachable" message.
+class LocalNetworkPermissionException extends AppException {
+  const LocalNetworkPermissionException(
+      [super.message = 'Yerel ağ izni verilmedi'])
+      : super(code: 'LOCAL_NETWORK_PERMISSION_ERROR');
+}
+
 class TimeoutException extends AppException {
   const TimeoutException([super.message = 'Bağlantı zaman aşımına uğradı'])
       : super(code: 'TIMEOUT');
@@ -21,6 +40,16 @@ class TimeoutException extends AppException {
 class UnauthorizedException extends AppException {
   const UnauthorizedException([super.message = 'Geçersiz API anahtarı'])
       : super(code: 'UNAUTHORIZED');
+}
+
+/// The API key is valid but lacks the scope the endpoint requires (HTTP
+/// 403), distinct from [UnauthorizedException] (401, the key itself is
+/// wrong/expired) so the UI can tell the user what's actually missing
+/// instead of "invalid API key".
+class ForbiddenException extends AppException {
+  ForbiddenException([String? serverMessage])
+      : super(serverMessage ?? 'Bu işlem için API anahtarınızda yeterli izin yok',
+            code: 'FORBIDDEN');
 }
 
 class ServerException extends AppException {

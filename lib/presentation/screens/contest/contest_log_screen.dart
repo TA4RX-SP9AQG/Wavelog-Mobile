@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/band_mode_data.dart';
 import '../../../core/utils/adif_generator.dart';
+import '../../../core/utils/keyboard_shortcuts.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../data/models/callsign_lookup_model.dart';
@@ -18,6 +19,7 @@ import '../../../providers/lookup_provider.dart';
 import '../../../providers/qso_provider.dart';
 import '../../../providers/remote_datasource_provider.dart';
 import '../../../providers/settings_provider.dart';
+import '../qso/add_qso_screen.dart';
 
 // ── Logged QSO entry (in-memory recent list) ──────────────────────────────────
 
@@ -73,6 +75,13 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
   final _gridsquareSentCtrl = TextEditingController(); // persists between QSOs
   final _gridsquareRcvdCtrl = TextEditingController();
   final _callsignFocus    = FocusNode();
+  // Hardware-keyboard Space-in-Callsign jump target (issue #48): which one
+  // depends on which exchange rows this contest's setup enabled, see
+  // _focusFirstExchangeField().
+  final _rstRcvdFocus = FocusNode();
+  final _serialRcvdFocus = FocusNode();
+  final _gridsquareRcvdFocus = FocusNode();
+  final _exchangeRcvdFocus = FocusNode();
 
   bool _isSaving = false;
   final List<_LoggedQso> _recentQsos = [];
@@ -128,6 +137,10 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
     _gridsquareSentCtrl.dispose();
     _gridsquareRcvdCtrl.dispose();
     _callsignFocus.dispose();
+    _rstRcvdFocus.dispose();
+    _serialRcvdFocus.dispose();
+    _gridsquareRcvdFocus.dispose();
+    _exchangeRcvdFocus.dispose();
     super.dispose();
   }
 
@@ -511,6 +524,61 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
     }
   }
 
+  // Hardware-keyboard Space-in-Callsign jump target (issue #48): which Rcvd
+  // field is "the" exchange field depends on which rows this contest's setup
+  // enabled, so this picks the first one actually shown, falling back to RST
+  // Rcvd (always shown) when none of serial/grid/exchange are in use. Called
+  // from the Callsign field's onChanged (after the space character has
+  // already been committed and stripped), not from a raw key event handler,
+  // so a plain synchronous requestFocus() is reliable here.
+  void _focusFirstExchangeField() {
+    if (_showSerial) {
+      _serialRcvdFocus.requestFocus();
+    } else if (_showGridsquare) {
+      _gridsquareRcvdFocus.requestFocus();
+    } else if (_showExchange) {
+      _exchangeRcvdFocus.requestFocus();
+    } else {
+      _rstRcvdFocus.requestFocus();
+    }
+  }
+
+  // Hardware-keyboard Escape (issue #48): wipes the current, not-yet-saved
+  // QSO's received-side fields, mirroring the "receive-side only" clear
+  // _logQso() already does on a successful save above — sent fields persist
+  // between QSOs by design and Escape doesn't change that.
+  void _clearCurrentQsoFields() {
+    setState(() {
+      _callsignCtrl.clear();
+      _rstSentCtrl.text = '59';
+      _rstRcvdCtrl.text = '59';
+      _serialRcvdCtrl.clear();
+      _exchangeRcvdCtrl.clear();
+      _gridsquareRcvdCtrl.clear();
+      _lookupDone = false;
+      _lookupSuccess = false;
+      _lookupResult = null;
+      _lastLookedUp = '';
+      _currentCallsign = '';
+    });
+    _callsignFocus.requestFocus();
+  }
+
+  // Hardware-keyboard "quick edit last QSO" shortcut (Ctrl+E / Up, issue
+  // #48). Uses scopedQsoProvider so "most recent" matches what's already
+  // shown elsewhere on screen. This screen has no in-place edit mode of its
+  // own, so this opens the full edit screen and refocuses Callsign on
+  // return, mirroring _openSetupSheet()'s return pattern below.
+  Future<void> _openMostRecentQsoForEdit() async {
+    final recent = ref.read(scopedQsoProvider).valueOrNull?.firstOrNull;
+    if (recent == null) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => AddQsoScreen(editQso: recent)),
+    );
+    if (mounted) _callsignFocus.requestFocus();
+  }
+
   // ── End session ───────────────────────────────────────────────────────────
 
   Future<void> _endSession() async {
@@ -592,6 +660,21 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
           child: Column(
             children: [
               // ── Callsign ───────────────────────────────────────────────
+              // Space jumps to the first exchange field here, and only here
+              // (issue #48): callsigns never legitimately contain a space, so
+              // treating one as a field-jump is safe in this one field.
+              //
+              // Reacting to the committed text (onChanged below) rather than
+              // intercepting the raw key event: a Focus.onKeyEvent handler
+              // that calls requestFocus() on a *different* field, from
+              // inside the key event a focused TextField is still
+              // processing, reliably suppresses the character but does not
+              // actually move Android's IME/InputConnection to the new field
+              // (confirmed live on a real Android 17 emulator — Flutter
+              // focus and the native input connection end up out of sync).
+              // Letting the space commit normally and then stripping it from
+              // the controller sidesteps that race entirely, and works the
+              // same for the software keyboard too.
               TextField(
                 controller: _callsignCtrl,
                 focusNode: _callsignFocus,
@@ -636,8 +719,31 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
                                 )
                               : null),
                 ),
-                onChanged: (_) => setState(() {}),
+                onChanged: (v) {
+                  if (v.endsWith(' ')) {
+                    final trimmed = v.substring(0, v.length - 1);
+                    _callsignCtrl.value = TextEditingValue(
+                      text: trimmed,
+                      selection: TextSelection.collapsed(offset: trimmed.length),
+                    );
+                    _focusFirstExchangeField();
+                    return;
+                  }
+                  setState(() {});
+                },
                 onSubmitted: (v) {
+                  final band = matchBandCommand(v, kCommonBands);
+                  if (band != null) {
+                    setState(() => _band = band);
+                    _callsignCtrl.clear();
+                    return;
+                  }
+                  final mode = matchModeCommand(v, kCommonModes);
+                  if (mode != null) {
+                    setState(() => _mode = mode);
+                    _callsignCtrl.clear();
+                    return;
+                  }
                   final cs = v.trim().toUpperCase();
                   if (cs.isNotEmpty && cs != _lastLookedUp) _doLookup(cs);
                 },
@@ -713,6 +819,7 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
                 Expanded(
                   child: TextField(
                     controller: _rstRcvdCtrl,
+                    focusNode: _rstRcvdFocus,
                     textInputAction: TextInputAction.next,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
@@ -745,6 +852,7 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
                   Expanded(
                     child: TextField(
                       controller: _serialRcvdCtrl,
+                      focusNode: _serialRcvdFocus,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       textInputAction: _showExchange
@@ -780,6 +888,7 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
                   Expanded(
                     child: TextField(
                       controller: _gridsquareRcvdCtrl,
+                      focusNode: _gridsquareRcvdFocus,
                       textCapitalization: TextCapitalization.characters,
                       textInputAction: _showExchange
                           ? TextInputAction.next
@@ -814,6 +923,7 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
                   Expanded(
                     child: TextField(
                       controller: _exchangeRcvdCtrl,
+                      focusNode: _exchangeRcvdFocus,
                       textCapitalization: TextCapitalization.characters,
                       textInputAction: TextInputAction.done,
                       decoration: InputDecoration(
@@ -914,19 +1024,49 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
           ),
         ],
       ),
-      body: isTablet
-          ? Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(flex: 5, child: formColumn),
-                const VerticalDivider(width: 1, thickness: 1),
-                Expanded(
-                  flex: 4,
-                  child: _ContestInfoPanel(callsign: _currentCallsign),
-                ),
-              ],
-            )
-          : formColumn,
+      // Hardware-keyboard shortcuts that must work regardless of which field
+      // currently has focus (issue #48). Space-in-Callsign is handled
+      // separately, scoped to just that one field (see the Focus wrapper
+      // around the Callsign TextField above), CallbackShortcuts has no way
+      // to express "only when field X is focused" for a key that must stay
+      // a normal character everywhere else.
+      body: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape):
+              _clearCurrentQsoFields,
+          const SingleActivator(LogicalKeyboardKey.keyE, control: true):
+              _openMostRecentQsoForEdit,
+          // Best-effort: plain Up Arrow is claimed by Flutter's own
+          // text-editing shortcuts whenever a text field has focus, so this
+          // only actually fires when focus happens to be elsewhere. Ctrl+E
+          // above is the reliable binding, this is the issue's offered
+          // secondary one.
+          const SingleActivator(LogicalKeyboardKey.arrowUp):
+              _openMostRecentQsoForEdit,
+          const SingleActivator(LogicalKeyboardKey.arrowUp, control: true):
+              () => setState(() => _band =
+                  cycleListValue(kCommonBands, _band, forward: true)),
+          const SingleActivator(LogicalKeyboardKey.arrowDown, control: true):
+              () => setState(() => _band =
+                  cycleListValue(kCommonBands, _band, forward: false)),
+          const SingleActivator(LogicalKeyboardKey.keyM, control: true):
+              () => setState(() => _mode =
+                  cycleListValue(kCommonModes, _mode, forward: true)),
+        },
+        child: isTablet
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(flex: 5, child: formColumn),
+                  const VerticalDivider(width: 1, thickness: 1),
+                  Expanded(
+                    flex: 4,
+                    child: _ContestInfoPanel(callsign: _currentCallsign),
+                  ),
+                ],
+              )
+            : formColumn,
+      ),
     );
   }
 }

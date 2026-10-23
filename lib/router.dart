@@ -38,6 +38,7 @@ import 'presentation/screens/station/station_logbook_detail_screen.dart';
 import 'presentation/screens/statistics/statistics_screen.dart';
 import 'presentation/screens/spot/spot_screen.dart';
 import 'presentation/screens/map/map_screen.dart';
+import 'presentation/screens/sync/sync_screen.dart';
 import 'providers/settings_provider.dart';
 
 final _rootNavigatorKey  = GlobalKey<NavigatorState>();
@@ -121,7 +122,11 @@ final appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       builder: (c, s) {
         final prefill = s.uri.queryParameters['callsign'];
-        return AddQsoScreen(prefillCallsign: prefill);
+        return AddQsoScreen(
+          prefillCallsign: prefill,
+          prefillFrequencyMhz: s.uri.queryParameters['freq'],
+          prefillMode: s.uri.queryParameters['mode'],
+        );
       },
     ),
     GoRoute(
@@ -179,6 +184,11 @@ final appRouter = GoRouter(
       path: '/map',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (c, s) => const MapScreen(),
+    ),
+    GoRoute(
+      path: '/sync',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (c, s) => const SyncScreen(),
     ),
     GoRoute(
       path: '/antenna',
@@ -459,28 +469,32 @@ class _AppDrawer extends ConsumerWidget {
                     ),
                     const Spacer(),
                     if (pendingCount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: cs.error.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                              color: cs.error.withValues(alpha: 0.4)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.cloud_off, size: 12, color: cs.error),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$pendingCount',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: cs.error,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ],
+                      InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => go('/sync'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: cs.error.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: cs.error.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.cloud_off, size: 12, color: cs.error),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$pendingCount',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: cs.error,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                   ],
@@ -525,6 +539,12 @@ class _AppDrawer extends ConsumerWidget {
                   icon: Icons.map_outlined,
                   label: l10n.drawerMap,
                   onTap: () => go('/map'),
+                ),
+                _DrawerItem(
+                  icon: Icons.sync,
+                  label: l10n.syncTitle,
+                  onTap: () => go('/sync'),
+                  badgeCount: pendingCount,
                 ),
                 _DrawerItem(
                   icon: Icons.explore_outlined,
@@ -585,13 +605,13 @@ class _DrawerHeaderInfoState extends State<_DrawerHeaderInfo> {
   late Timer _timer;
   String _utcTime = '';
   String? _grid;
+  bool _gridLoading = false;
 
   @override
   void initState() {
     super.initState();
     _tick();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
-    _fetchGrid();
   }
 
   void _tick() {
@@ -603,6 +623,8 @@ class _DrawerHeaderInfoState extends State<_DrawerHeaderInfo> {
   }
 
   Future<void> _fetchGrid() async {
+    if (_gridLoading) return;
+    setState(() => _gridLoading = true);
     try {
       var perm = await NativeLocation.checkPermission();
       if (perm == LocationPermission.denied) {
@@ -615,7 +637,10 @@ class _DrawerHeaderInfoState extends State<_DrawerHeaderInfo> {
       final pos = await NativeLocation.getCurrentPosition();
       final grid = latLngToGrid(pos.latitude, pos.longitude);
       if (mounted && grid != null) { setState(() => _grid = grid); }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _gridLoading = false);
+    }
   }
 
   @override
@@ -634,12 +659,27 @@ class _DrawerHeaderInfoState extends State<_DrawerHeaderInfo> {
         Icon(Icons.access_time_outlined, size: 12, color: textColor),
         const SizedBox(width: 4),
         Text('$_utcTime UTC', style: style),
-        if (_grid != null) ...[
-          const SizedBox(width: 10),
-          Icon(Icons.grid_on_outlined, size: 12, color: textColor),
-          const SizedBox(width: 4),
-          Text(_grid!, style: style),
-        ],
+        const SizedBox(width: 10),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _grid == null ? _fetchGrid : null,
+          child: Row(
+            children: [
+              _gridLoading
+                  ? SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: textColor,
+                      ),
+                    )
+                  : Icon(Icons.grid_on_outlined, size: 12, color: textColor),
+              const SizedBox(width: 4),
+              Text(_grid ?? context.l10n.tapForGridSquare, style: style),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -649,13 +689,23 @@ class _DrawerItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _DrawerItem({required this.icon, required this.label, required this.onTap});
+  final int badgeCount;
+  const _DrawerItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.badgeCount = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return ListTile(
-      leading: Icon(icon, color: cs.onSurfaceVariant, size: 22),
+      leading: Badge(
+        isLabelVisible: badgeCount > 0,
+        label: Text('$badgeCount'),
+        child: Icon(icon, color: cs.onSurfaceVariant, size: 22),
+      ),
       title: Text(label),
       dense: true,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

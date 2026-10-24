@@ -2397,4 +2397,8 @@ class AppLocalizationsIt extends AppLocalizations {
   String workedDupe(String band, String mode) {
     return 'Dupe: already worked today on $band $mode';
   }
+
+  @override
+  String get stationWebOnlySettingsHint =>
+      'QRZ.com, HRDLog.net, QO-100 (webADIF), OQRS and the default eQSL message are set in Wavelog\'s web interface: the API does not expose them to the app.';
 }

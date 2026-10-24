@@ -108,7 +108,10 @@ class StationModel {
       pota: (isV2Format ? json['pota'] : json['station_pota'])?.toString(),
       sig: (isV2Format ? json['sig'] : json['station_sig'])?.toString(),
       sigInfo: (isV2Format ? json['sig_info'] : json['station_sig_info'])?.toString(),
-      eqslQthNickname: json['eqslqthnickname']?.toString(),
+      // v2 API key; the column name is the legacy API's.
+      eqslQthNickname: (json['eqsl_qth_nickname'] ??
+              json['eqslqthnickname'])
+          ?.toString(),
       eqslDefaultQslMsg: json['eqsl_default_qslmsg']?.toString(),
       qrzApiKey: json['qrzapikey']?.toString() ?? json['qrz_api']?.toString(),
       hrdlogUsername: json['hrdlog_username']?.toString(),
@@ -116,8 +119,14 @@ class StationModel {
       webAdifApiKey: json['webadifapikey']?.toString(),
       qrzRealtime: _parseInt(json['qrzrealtime']) ?? -1,
       webAdifRealtime: _parseBool(json['webadifrealtime']),
-      clublogRealtime: _parseBool(json['clublogrealtime']),
-      clublogIgnore: _parseBool(json['clublogignore']),
+      // v2 API: one clublog_upload mode (live / on / disabled) for the two
+      // legacy columns.
+      clublogRealtime: json.containsKey('clublog_upload')
+          ? json['clublog_upload'] == 'live'
+          : _parseBool(json['clublogrealtime']),
+      clublogIgnore: json.containsKey('clublog_upload')
+          ? json['clublog_upload'] == 'disabled'
+          : _parseBool(json['clublogignore']),
       hrdlogRealtime: _parseInt(json['hrdlogrealtime']) ?? -1,
       oqrsEnabled: _parseBool(json['oqrs']),
       oqrsText: json['oqrs_text']?.toString(),

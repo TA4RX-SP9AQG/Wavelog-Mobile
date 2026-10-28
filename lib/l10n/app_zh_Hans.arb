@@ -38,5 +38,1103 @@
     "qsoSyncSection": "通联记录同步",
     "qsoSyncResetBtn": "重置同步",
     "qsoSyncResetHint": "适用于修改通联记录或同步异常时",
-    "qsoSyncResetStarted": "后台已重新启动同步"
+    "qsoSyncResetStarted": "后台已重新启动同步",
+    "qsoSyncIntervalLabel": "检查间隔",
+    "qsoSyncIntervalHint": "后台重新检查 QSO 内容的频率",
+    "connectionSuccess": "连接成功！",
+    "connectionFailed": "连接失败",
+    "apiKeyCopied": "API 密钥已复制",
+    "loginTitle": "登录",
+    "serverBtn": "服务器",
+    "addAccountBtn": "添加账号",
+    "signInBtn": "登录",
+    "deleteProfile": "删除",
+    "deleteProfileTitle": "删除账号",
+    "deleteProfileConfirm": "从本设备移除 {name}？",
+    "@deleteProfileConfirm": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "displayName": "显示名称",
+    "callsign": "呼号",
+    "apiKeyLabel": "API 密钥",
+    "validating": "正在验证…",
+    "profileSaved": "账号已保存",
+    "loginFailed": "登录失败",
+    "noStationFound": "未找到匹配的电台，将使用呼号",
+    "homeTitle": "首页",
+    "addQso": "添加 QSO",
+    "recentQsos": "最近 QSO",
+    "statsToday": "今天",
+    "statsMonth": "本月",
+    "statsYear": "本年",
+    "statsTotal": "总计",
+    "noRecentQsos": "暂无 QSO",
+    "syncNow": "立即同步",
+    "pendingSync": "{count} 条 QSO 待同步",
+    "@pendingSync": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineBanner": "离线 — QSO 已保存在本地",
+    "activeStation": "当前电台",
+    "logbookTitle": "通联日志",
+    "filterAll": "全部",
+    "filterAllModes": "全部模式",
+    "searchHint": "搜索呼号…",
+    "noQsos": "未找到 QSO",
+    "qsoDetailTitle": "QSO 详情",
+    "qsoNotFound": "未找到该 QSO",
+    "signal": "信号",
+    "rstSent": "发送 RST",
+    "rstReceived": "接收 RST",
+    "txPower": "发射功率",
+    "counterStation": "对方电台",
+    "country": "国家",
+    "continent": "大洲",
+    "dxcc": "DXCC",
+    "cqZone": "CQ 分区",
+    "ituZone": "ITU 分区",
+    "gridSquare": "网格",
+    "propMode": "传播方式",
+    "distance": "距离",
+    "qslStatus": "QSL 状态",
+    "paperQsl": "纸质",
+    "lotwQsl": "LoTW",
+    "eqslQsl": "eQSL",
+    "qrzQsl": "QRZ.com",
+    "clublog": "Club Log",
+    "hrdlog": "HRDLog",
+    "qslSent": "已发送",
+    "qslRcvd": "已收到",
+    "qslReceived": "已收到",
+    "qslMethod": "方式",
+    "awards": "奖状编号",
+    "iota": "IOTA",
+    "sota": "SOTA",
+    "wwff": "WWFF",
+    "pota": "POTA",
+    "myStation": "我的电台",
+    "myCallsign": "我的呼号",
+    "contest": "竞赛",
+    "serialSent": "发送序号",
+    "serialReceived": "接收序号",
+    "solarConditions": "太阳活动状况",
+    "aIndex": "A 指数",
+    "kIndex": "K 指数",
+    "sfi": "SFI",
+    "notesSection": "备注",
+    "rawAdif": "原始 ADIF",
+    "showAll": "显示全部",
+    "showLess": "收起",
+    "qrzProfile": "QRZ 资料",
+    "addQsoTitle": "添加 QSO",
+    "liveQso": "实时 QSO",
+    "historicalQso": "补记 QSO",
+    "callsignField": "呼号 *",
+    "lookupSearch": "QRZ 查询",
+    "liveDateTimeLabel": "日期/时间（UTC）— 实时",
+    "dateTimeLabel": "日期/时间（UTC）",
+    "bandField": "波段 *",
+    "modeField": "模式 *",
+    "frequencyField": "频率（MHz）",
+    "rstSentField": "发送 RST *",
+    "rstRcvdField": "接收 RST *",
+    "nameField": "姓名",
+    "qthField": "QTH",
+    "gridField": "网格",
+    "commentField": "备注",
+    "stationProfileField": "电台配置",
+    "saveQsoBtn": "保存 QSO",
+    "qsoSaved": "✓  {callsign} 已保存",
+    "@qsoSaved": {
+        "placeholders": {
+            "callsign": {
+                "type": "String"
+            }
+        }
+    },
+    "qsoSavedLocal": "✓  {callsign} 已保存到本地",
+    "@qsoSavedLocal": {
+        "placeholders": {
+            "callsign": {
+                "type": "String"
+            }
+        }
+    },
+    "noActiveStation": "未选择当前电台",
+    "lookupTitle": "呼号查询",
+    "lookupHint": "输入呼号…",
+    "lookupBtn": "搜索",
+    "recentSearches": "最近搜索",
+    "clearHistory": "清空历史",
+    "makeQso": "记录 QSO",
+    "notFound": "未找到",
+    "stationsTitle": "电台",
+    "stationActivated": "已将 {callsign} 设为当前电台",
+    "@stationActivated": {
+        "placeholders": {
+            "callsign": {
+                "type": "String"
+            }
+        }
+    },
+    "stationWebInfo": "请通过 Wavelog 网页端添加和编辑电台。",
+    "noStations": "暂无电台",
+    "noStationsHint": "请通过 Wavelog 网页端添加电台。",
+    "addStationOnWeb": "在 Wavelog 上添加电台",
+    "adifTitle": "ADIF 导入 / 导出",
+    "importTab": "导入",
+    "exportTab": "导出",
+    "selectAdifFile": "选择 ADIF 文件",
+    "selectFileBtn": "选择文件（.adi / .adif）",
+    "stationRequired": "电台配置 *",
+    "importing": "正在导入… {done}/{total}",
+    "@importing": {
+        "placeholders": {
+            "done": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "importBtn": "导入",
+    "fileReadError": "无法读取文件内容，请重试",
+    "invalidFileExtension": "请选择 .adi 或 .adif 扩展名的文件",
+    "exportFilters": "导出筛选",
+    "stationFilter": "电台",
+    "allStations": "全部电台",
+    "startDate": "开始",
+    "endDate": "结束",
+    "notSelected": "未选择",
+    "clearDates": "清除日期",
+    "exporting": "正在导出…",
+    "exportAndShare": "导出并分享",
+    "copyPath": "复制路径",
+    "reshare": "再次分享",
+    "pathCopied": "文件路径已复制",
+    "qsoExported": "已导出 {count} 条 QSO",
+    "@qsoExported": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "noStationForExport": "未找到可导出的电台",
+    "qsoImported": "已导入 {imported} / {total} 条 QSO",
+    "@qsoImported": {
+        "placeholders": {
+            "imported": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "selectSaveLocation": "选择保存位置",
+    "copySuffix": "（副本）",
+    "errNetwork": "无网络连接 — 请检查网络",
+    "errTimeout": "连接超时",
+    "errLocalNetworkPermission": "需要本地网络权限，请在 Android 设置中为本应用开启",
+    "errUnauthorized": "API 密钥无效",
+    "settingsTitle": "设置",
+    "connectionSection": "连接",
+    "sessionSection": "会话",
+    "loggedIn": "已登录",
+    "logoutBtn": "退出登录",
+    "logoutTitle": "退出登录",
+    "logoutConfirm": "确定要退出登录吗？",
+    "switchAccountBtn": "切换账号",
+    "activeStationSection": "当前电台",
+    "selectStationBtn": "选择电台",
+    "addStationWeb": "在网页端添加电台",
+    "defaultsSection": "默认值",
+    "defaultBand": "默认波段",
+    "defaultMode": "默认模式",
+    "appSection": "应用",
+    "darkTheme": "深色主题",
+    "darkThemeHint": "户外使用推荐",
+    "offlineMode": "离线模式",
+    "offlineModeHint": "先将 QSO 保存到本地，之后再同步",
+    "allowInsecureSsl": "允许未验证的 SSL 证书",
+    "allowInsecureSslHint": "信任自签名或私有 CA 证书（适用于自建服务器）。不建议在公共网络上使用。",
+    "languageLabel": "语言",
+    "infoSection": "信息",
+    "aboutAppBtn": "关于",
+    "aboutAppHint": "版本、开发者、许可协议",
+    "dataSection": "数据",
+    "clearCacheBtn": "清除 QSO 缓存",
+    "clearCacheHint": "删除本地 QSO 缓存",
+    "clearCacheTitle": "清除缓存",
+    "clearCacheConfirm": "本地 QSO 缓存将被删除，此操作无法撤销。",
+    "clearCacheAction": "清除",
+    "cacheCleared": "缓存已清除",
+    "langSystem": "跟随系统",
+    "langEnglish": "English",
+    "langTurkish": "Türkçe",
+    "langPolish": "Polski",
+    "langGerman": "Deutsch",
+    "langFrench": "Français",
+    "langItalian": "Italiano",
+    "langJapanese": "日本語",
+    "langKorean": "한국어",
+    "langRussian": "Русский",
+    "aboutTitle": "关于",
+    "appDescription": "面向 Wavelog 的开源 Android 日志应用",
+    "versionLabel": "版本 {version}（构建 {build}）",
+    "@versionLabel": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            },
+            "build": {
+                "type": "String"
+            }
+        }
+    },
+    "mobileDeveloperSection": "移动端应用开发者",
+    "wavelogProjectSection": "Wavelog 项目",
+    "wavelogDescription": "基于网页的业余无线电日志系统",
+    "coreDevelopers": "核心开发者",
+    "mitLicense": "MIT 许可证",
+    "mitDescription": "本应用与 Wavelog 项目均以 MIT 许可证发布。开源软件，不提供任何担保。",
+    "licenseSection": "许可证",
+    "dxccDataSection": "DXCC 数据",
+    "dxccDataDescription": "DXCC 实体与呼号前缀数据 © 1994– Jim Reisert, AD1C（country-files.com），依据 MIT 许可证使用。",
+    "errorNoConnection": "无网络连接",
+    "errorUnauthorized": "未授权 — 请检查 API 密钥",
+    "errorServer": "服务器错误",
+    "patchRequiredTitle": "需要安装服务器补丁",
+    "patchRequiredMessage": "编辑与删除功能需要先在服务器上安装 Wavelog Mobile API 补丁。\n\n安装说明请访问 sp9aqg.pl/install.html。",
+    "patchRequiredBanner": "编辑与删除功能需要先在服务器上安装 Wavelog Mobile API 补丁。",
+    "patchViewGuide": "查看指南",
+    "setupGuideTitle": "设置指南",
+    "setupGuideIntro": "记录 QSO 之前，请先将应用连接到你的 Wavelog 服务器，按以下步骤操作。",
+    "setupGuideStep1Title": "1. 服务器地址",
+    "setupGuideStep1Body": "填写你在浏览器中打开 Wavelog 所用的地址，例如 https://yourdomain.com，末尾不要带斜杠。",
+    "setupGuideStep2Title": "2. API v2 令牌",
+    "setupGuideStep2Body": "在 Wavelog 中依次进入 设置 → API → API 令牌（v2）→ 新建令牌，勾选应用所需的权限域（粘贴令牌后应用会自动检测）。复制生成的令牌（以 wl2_ 开头）并粘贴到应用中。",
+    "setupGuideStep3Title": "3. 呼号与显示名称",
+    "setupGuideStep3Body": "呼号：你自己的业余无线电呼号，用于匹配你的电台。显示名称：任意名称，便于在本设备上识别该登录。",
+    "setupGuideContinueBtn": "开始设置",
+    "migrationTokenHint": "wl2_…",
+    "migrationTokenLabel": "API v2 令牌",
+    "migrationValidateBtn": "验证并继续",
+    "migrationValidating": "正在验证…",
+    "migrationTokenEmpty": "请粘贴你的 wl2_ 令牌。",
+    "migrationTokenInvalid": "令牌无效 — 请检查后重试。",
+    "patchNotInstalledTitle": "未检测到补丁",
+    "patchNotInstalledBody": "服务器上似乎未安装 Wavelog Mobile 补丁。\n\n没有该补丁，API v2 令牌（wl2_…）无法使用。请先完成第 1 步。",
+    "patchInstallFirst": "安装补丁",
+    "appSubtitle": "业余无线电日志应用",
+    "switchToLightTheme": "切换到浅色主题",
+    "switchToDarkTheme": "切换到深色主题",
+    "deleteQsoTitle": "删除 QSO",
+    "deleteQsoConfirm": "永久删除 {date} 与 {callsign} 的 QSO？",
+    "@deleteQsoConfirm": {
+        "placeholders": {
+            "callsign": {
+                "type": "String"
+            },
+            "date": {
+                "type": "String"
+            }
+        }
+    },
+    "editTooltip": "编辑",
+    "shareAdifTooltip": "分享 ADIF",
+    "localNotSynced": "本地记录 — 尚未同步",
+    "satellite": "卫星",
+    "satelliteMode": "卫星模式",
+    "antenna": "天线",
+    "nameLabel": "姓名",
+    "stateProvince": "省/州",
+    "county": "县",
+    "city": "城市",
+    "continentAF": "非洲",
+    "continentAN": "南极洲",
+    "continentAS": "亚洲",
+    "continentEU": "欧洲",
+    "continentNA": "北美洲",
+    "continentOC": "大洋洲",
+    "continentSA": "南美洲",
+    "qrzProfileLoading": "正在加载 QRZ 资料…",
+    "viewOnQrz": "在 QRZ.com 查看（{callsign}）",
+    "@viewOnQrz": {
+        "placeholders": {
+            "callsign": {
+                "type": "String"
+            }
+        }
+    },
+    "qslMethods": "QSL 方式",
+    "bureau": "卡片局",
+    "qslManagerPrefix": "管理者：{manager}",
+    "@qslManagerPrefix": {
+        "placeholders": {
+            "manager": {
+                "type": "String"
+            }
+        }
+    },
+    "callsignCopied": "呼号已复制",
+    "uploadedStatus": "已上传",
+    "notUploadedStatus": "未上传",
+    "matchedStatus": "已匹配",
+    "toDeleteStatus": "待删除",
+    "yes": "是",
+    "requested": "已申请",
+    "no": "否",
+    "invalid": "无效",
+    "viaDirect": "直邮",
+    "viaElectronic": "电子方式",
+    "viaMail": "邮寄",
+    "otherAdifFields": "其他 ADIF 字段（{count}）",
+    "@otherAdifFields": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "editQsoTitle": "编辑 QSO",
+    "qsoUpdated": "QSO 已更新",
+    "qsoUpdatedLocal": "QSO 已在本地更新",
+    "counterStationHint": "输入呼号后，QRZ\n资料和历史 QSO\n将显示在这里。",
+    "previousQsosCount": "历史 QSO（{count}）",
+    "@previousQsosCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "morePreviousQsos": "+{count} 更多…",
+    "@morePreviousQsos": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "previousQsosWithCallsign": "与 {callsign} 的历史 QSO",
+    "@previousQsosWithCallsign": {
+        "placeholders": {
+            "callsign": {
+                "type": "String"
+            }
+        }
+    },
+    "totalQsos": "共 {count} 条",
+    "@totalQsos": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "workedBefore": "曾通联过",
+    "lastQsoLabel": "上次 QSO",
+    "themeLabel": "主题",
+    "darkThemeActive": "深色主题已启用",
+    "lightThemeActive": "浅色主题已启用",
+    "lightThemeLabel": "浅色",
+    "darkThemeLabel": "深色",
+    "commentNotes": "备注 / 说明",
+    "commentLabel": "备注",
+    "exchangeReceived": "接收交换信息",
+    "exchangeSent": "发送交换信息",
+    "contestIdLabel": "竞赛",
+    "sigLabel": "SIG",
+    "stationSetup": "电台设置",
+    "logbooks": "通联日志",
+    "locations": "地点",
+    "newLogbook": "新建通联日志",
+    "logbookName": "日志名称",
+    "renameLogbook": "重命名",
+    "deleteLogbook": "删除通联日志",
+    "editStation": "编辑",
+    "cloneStation": "克隆",
+    "deleteStation": "删除",
+    "deleteStationConfirm": "删除电台",
+    "deleteStationWarning": "该电台的所有 QSO 将被永久删除。是否继续？",
+    "stationDeleted": "电台已删除",
+    "stationUpdated": "电台已更新",
+    "stationCloned": "电台已克隆",
+    "linkLocation": "关联地点",
+    "unlinkLocation": "取消关联",
+    "linkedLocations": "已关联地点",
+    "newStationName": "新电台名称",
+    "deleteLogbookConfirm": "删除通联日志",
+    "deleteLogbookWarning": "该通联日志将被删除，已关联的地点会保留。是否继续？",
+    "logbookDeleted": "通联日志已删除",
+    "hrdlogCode": "HRDLog 代码",
+    "webAdifApiKey": "WebADIF API 密钥",
+    "webAdifApiUrl": "WebADIF API 地址",
+    "basicInfo": "基本信息",
+    "locationSectionTitle": "位置",
+    "awardReferences": "奖状编号",
+    "integrationsSectionTitle": "第三方集成",
+    "stationSettingsSection": "电台设置",
+    "editStationTitle": "编辑电台",
+    "newStationTitle": "新建电台",
+    "saveChangesBtn": "保存修改",
+    "createStationBtn": "创建电台",
+    "stationCreated": "电台已创建",
+    "stationCreateFailed": "失败，同名配置可能已存在。",
+    "stationProfileNameLabel": "电台配置名称 *",
+    "stationProfileNameHint": "家庭电台",
+    "cityQth": "城市 / QTH",
+    "powerWatts": "功率（W）",
+    "dxccCountry": "DXCC / 国家",
+    "selectLabel": "请选择…",
+    "dxccSearch": "搜索 DXCC / 国家",
+    "deletedDxcc": "已删除的 DXCC",
+    "eqslQthNicknameLabel": "eQSL QTH 昵称",
+    "eqslDefaultMsgLabel": "eQSL 默认留言",
+    "pending": "待处理",
+    "uploadDisabled": "已禁用",
+    "uploadEnabled": "已启用",
+    "uploadRealtime": "实时",
+    "qrzApiKeyLabel": "QRZ.com 日志 API 密钥",
+    "qrzUploadLabel": "QRZ.com 上传",
+    "clublogIgnoreTitle": "忽略 Clublog",
+    "clublogIgnoreSubtitle": "该电台不再上传至 Clublog",
+    "clublogRealtimeTitle": "Clublog 实时上传",
+    "clublogRealtimeSubtitle": "实时将 QSO 上传至 Clublog",
+    "hrdlogUsernameLabel": "HRDLog.net 用户名",
+    "hrdlogApiKeyLabel": "HRDLog.net API 密钥",
+    "hrdlogUploadLabel": "HRDLog.net 上传",
+    "qo100ApiKeyLabel": "QO-100 DX Club API 密钥",
+    "qo100RealtimeTitle": "QO-100 DX Club 实时上传",
+    "qo100RealtimeSubtitle": "实时将 QSO 上传至 QO-100 DX Club",
+    "oqrsSectionTitle": "OQRS（在线 QSL）",
+    "oqrsEnabledTitle": "启用 OQRS",
+    "oqrsEnabledSubtitle": "启用在线 QSL 申请系统",
+    "oqrsTextLabel": "OQRS 说明文字",
+    "oqrsEmailLabel": "OQRS 邮箱",
+    "setAsActiveStationTitle": "设为当前电台",
+    "setAsActiveStationSubtitle": "在 Wavelog 中将该电台标记为当前电台",
+    "linkToActiveLogbookTitle": "关联到当前日志",
+    "linkToActiveLogbookSubtitle": "创建时自动关联到当前通联日志",
+    "active": "当前",
+    "loadDetailsFailed": "加载详情失败",
+    "cannotDeleteActiveStation": "无法删除当前电台。",
+    "navStats": "统计",
+    "statisticsTitle": "统计",
+    "uniqueCallsigns": "不同呼号数",
+    "currentStreak": "当前连续天数",
+    "streakDays": "{count} 天",
+    "@streakDays": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "bandDistribution": "波段分布",
+    "modeDistribution": "模式分布",
+    "perStation": "按电台",
+    "basedOnCache": "波段 / 模式 / 电台统计基于缓存的 QSO。",
+    "statsTab": "统计",
+    "propagationTab": "传播",
+    "bandConditions": "波段状况",
+    "dayTime": "白天",
+    "nightTime": "夜间",
+    "conditionGood": "良好",
+    "conditionFair": "一般",
+    "conditionPoor": "较差",
+    "lastUpdated": "更新于：{time}",
+    "@lastUpdated": {
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "noSolarData": "无法加载太阳活动数据",
+    "potaStats": "POTA 统计",
+    "potaTotalQsos": "POTA QSO",
+    "potaActivatedParks": "已激活公园",
+    "potaAllParks": "全部公园",
+    "potaActivatedBadge": "已激活",
+    "potaAttemptBadge": "尝试",
+    "potaNoStation": "未配置 POTA 电台",
+    "potaNoQsos": "缓存中没有 POTA QSO",
+    "navSpot": "通告",
+    "spotTitle": "通告",
+    "spotAdd": "发布通告",
+    "spotSend": "发送通告",
+    "spotSent": "通告已发送！",
+    "spotNoResults": "未找到通告",
+    "spotLoadError": "无法加载通告",
+    "spotActivator": "激活者呼号",
+    "spotSpotter": "发布者呼号",
+    "spotFrequency": "频率（kHz）",
+    "spotReference": "公园编号",
+    "spotComments": "评论",
+    "spotCommentsHint": "QRZ、CQ POTA…",
+    "spotInvalidRef": "格式无效（例如 PL-0001）",
+    "sortNewest": "最新在前",
+    "sortOldest": "最早在前",
+    "filterBand": "波段",
+    "filterMode": "模式",
+    "filterCountry": "国家",
+    "filterAssociation": "协会",
+    "spotAddComingSoon": "发布通告 — 即将推出",
+    "filterClear": "清除筛选",
+    "mode": "模式",
+    "required": "必填",
+    "invalidNumber": "数字无效",
+    "potaAutoSpot": "自动通告",
+    "potaAutoSpotHint": "在 POTA 或 SOTA 电台记录 QSO 时自动发布自身通告（各 30 分钟冷却）",
+    "spotRefreshLabel": "通告刷新间隔",
+    "spotRefreshHint": "按此间隔自动刷新通告列表",
+    "autoSpotSent": "自动通告已发送：{ref}",
+    "@autoSpotSent": {
+        "placeholders": {
+            "ref": {
+                "type": "String"
+            }
+        }
+    },
+    "autoSpotWillFire": "该 QSO 将触发通告",
+    "autoSpotCooldown": "通告已发送 · {min} 分钟后可再次发送",
+    "@autoSpotCooldown": {
+        "placeholders": {
+            "min": {
+                "type": "int"
+            }
+        }
+    },
+    "autoSpotCooldownSoon": "通告已发送 · 即将可再次发送",
+    "autoSpotKeyChanged": "{fields} 已变更 · 将触发新通告",
+    "@autoSpotKeyChanged": {
+        "placeholders": {
+            "fields": {
+                "type": "String"
+            }
+        }
+    },
+    "autoSpotFieldFreq": "频率",
+    "autoSpotFieldMode": "模式",
+    "autoSpotFieldRef": "公园",
+    "logbookSummaryTitle": "最近 QSO",
+    "todayQsoCount": "今天：{count} 条 QSO",
+    "@todayQsoCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "colDateTime": "日期/时间",
+    "colRstSent": "RST(发)",
+    "colRstRcvd": "RST(收)",
+    "submodeLabel": "子模式",
+    "selectedCount": "已选 {count} 条",
+    "@selectedCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "selectAll": "全选",
+    "exportSelected": "导出",
+    "deleteSelected": "删除",
+    "deleteSelectedConfirm": "删除 {count} 条 QSO？",
+    "@deleteSelectedConfirm": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "mapTitle": "地图",
+    "mapNoData": "未找到含网格信息的 QSO",
+    "mapStationCount": "{count} 个电台",
+    "@mapStationCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "dxccProgress": "DXCC 进度",
+    "workedCountries": "已通联国家",
+    "dxccWorked": "已通联",
+    "dxccUniqueEntities": "{count} 个独立实体",
+    "@dxccUniqueEntities": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "dxccConfirmed": "已确认（LoTW / eQSL / QSL）",
+    "dxccRemaining": "剩余",
+    "dxccLegendConfirmed": "已确认",
+    "dxccLegendPending": "待确认",
+    "dxccLegendNotWorked": "未通联",
+    "spotSummitNotFound": "未找到山峰",
+    "spotParkNotFound": "未找到公园",
+    "qsoTypeTitle": "记录 QSO",
+    "normalQso": "普通 QSO",
+    "normalQsoDesc": "常规通联记录",
+    "contestQso": "竞赛 QSO",
+    "contestQsoDesc": "带交换信息的快速竞赛记录",
+    "contestLog": "竞赛记录",
+    "contestSetup": "竞赛设置",
+    "contestNameHint": "例如 CQ-WW-CW",
+    "ourExchange": "我方交换信息",
+    "serialStart": "起始序号",
+    "showExchangeFields": "交换字段",
+    "startContest": "开始记录",
+    "endContest": "结束场次",
+    "endContestConfirm": "结束本次竞赛场次？（序号计数器和设置将被重置）",
+    "serialSentLabel": "发序号",
+    "serialRcvdLabel": "收序号",
+    "exchangeSentLabel": "发交换",
+    "exchangeRcvdLabel": "收交换",
+    "gridSentLabel": "发网格",
+    "gridRcvdLabel": "收网格",
+    "logQso": "记录 QSO",
+    "qsoLogged": "QSO 已记录",
+    "contestRecentQsos": "最近",
+    "contestSessions": "竞赛场次",
+    "newSession": "新建场次",
+    "noContestSessions": "暂无竞赛场次",
+    "noContestSessionsHint": "在网页端创建场次，或点击 + 在此开始。",
+    "contestSessionActive": "进行中",
+    "contestSessionEnded": "已结束",
+    "qsoCount": "{count} 条 QSO",
+    "@qsoCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "contestSessionDates": "{start} – {end}",
+    "@contestSessionDates": {
+        "placeholders": {
+            "start": {
+                "type": "String"
+            },
+            "end": {
+                "type": "String"
+            }
+        }
+    },
+    "createContestSession": "创建竞赛场次",
+    "sessionName": "场次名称（可选）",
+    "sessionNameHint": "例如 家庭电台 — CW",
+    "selectContest": "选择竞赛 *",
+    "searchContest": "搜索竞赛…",
+    "serverContests": "来自服务器",
+    "builtinContests": "常见竞赛",
+    "startDateTime": "开始日期/时间 *",
+    "endDateTime": "结束日期/时间 *",
+    "durationShortcut4h": "+4h",
+    "durationShortcut12h": "+12h",
+    "durationShortcut24h": "+24h",
+    "durationShortcut48h": "+48h",
+    "exchangeType": "交换类型",
+    "exchangeTypeSerial": "序号",
+    "exchangeTypeExchange": "文本交换",
+    "exchangeTypeBoth": "序号 + 文本交换",
+    "createSession": "创建场次",
+    "sessionCreated": "竞赛场次已创建",
+    "sessionUpdated": "竞赛场次已更新",
+    "editContestSession": "编辑竞赛场次",
+    "saveChanges": "保存修改",
+    "deleteSession": "删除场次",
+    "deleteSessionConfirm": "删除该竞赛场次？本次记录的 QSO 将保留在通联日志中。",
+    "openSession": "开启记录",
+    "patchRequiredContest": "竞赛场次管理需要安装最新版 Wavelog Mobile 补丁。",
+    "contestCalendarTitle": "竞赛日历",
+    "contestCalendarNoContests": "未找到竞赛。",
+    "contestCalendarToday": "今天",
+    "contestCalendarThisWeek": "本周",
+    "contestCalendarUpcoming": "即将开始",
+    "contestCalendarRecentlyPast": "近期结束",
+    "contestCalendarLoadError": "无法加载竞赛日历",
+    "contestCalendarRefresh": "刷新",
+    "contestCalendarRetry": "重试",
+    "upcomingContestsTitle": "即将开始的竞赛",
+    "viewAll": "查看全部",
+    "noUpcomingContests": "未找到即将开始的竞赛。",
+    "contestTodayBadge": "今天",
+    "navStyleLabel": "导航样式",
+    "navStyleModern": "现代 — 悬浮按钮 + 侧边栏",
+    "navStyleClassic": "经典 — 6 标签栏",
+    "drawerMap": "地图",
+    "drawerContestCalendar": "竞赛日历",
+    "drawerContestSessions": "竞赛场次",
+    "drawerAdif": "ADIF",
+    "drawerMenu": "菜单",
+    "antennaCompassTitle": "天线方向",
+    "targetGrid": "目标网格",
+    "calculate": "计算",
+    "shortPath": "短路径",
+    "longPath": "长路径",
+    "azimuth": "方位角",
+    "myHeading": "航向",
+    "invalidGrid": "网格无效",
+    "gpsLocating": "正在通过 GPS 定位…请稍候",
+    "gpsUnavailable": "无法获取 GPS 位置",
+    "drawerAntenna": "天线方向",
+    "achievementsTitle": "成就",
+    "achievementsEmpty": "记录第一个 QSO 即可开始获得徽章！",
+    "shareAchievement": "分享",
+    "achievementUnlocked": "成就已解锁！",
+    "progressLabel": "{done} / {target}",
+    "@progressLabel": {
+        "placeholders": {
+            "done": {
+                "type": "int"
+            },
+            "target": {
+                "type": "int"
+            }
+        }
+    },
+    "drawerAchievements": "成就",
+    "drawerCommunity": "社区",
+    "communityTitle": "社区",
+    "communityNoActivations": "暂无计划中的激活",
+    "communityBeFirst": "来第一个发布公告吧！",
+    "communityAnnounce": "发布激活公告",
+    "communityFollow": "关注",
+    "communityUnfollow": "取消关注",
+    "communityFollowers": "{count} 位关注者",
+    "@communityFollowers": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "communityTypeGeneral": "综合",
+    "communityCallsign": "呼号",
+    "communityReference": "编号",
+    "communitySotaRef": "SOTA 编号（TA/AN-001）",
+    "communityPotaRef": "POTA 编号（TA-0001）",
+    "communityScheduledTime": "计划时间",
+    "communityNote": "备注（可选）",
+    "communityNoteHint": "简要说明本次激活…",
+    "communityAnnounceButton": "发布",
+    "communityAnnounced": "激活公告已发布！",
+    "communityRateLimit": "你刚刚发布过内容，请等待几分钟。",
+    "communityCallsignRequired": "呼号为必填项",
+    "communityReferenceRequired": "编号为必填项",
+    "communityBandRequired": "请至少选择一个波段",
+    "communityActivations": "激活活动",
+    "communityChat": "聊天",
+    "communityEditActivation": "编辑激活公告",
+    "communityDeleteActivation": "删除激活公告",
+    "communityDeleteActivationConfirm": "删除该激活公告？此操作无法撤销。",
+    "communityUpdated": "激活公告已更新",
+    "chatRooms": "聊天室",
+    "chatGeneral": "综合",
+    "chatGeneralSubtitle": "通用语言：英语",
+    "chatMessageHint": "输入消息…",
+    "chatSend": "发送",
+    "chatEdit": "编辑",
+    "chatDelete": "删除",
+    "chatDeleteConfirm": "删除这条消息？",
+    "chatEdited": "已编辑",
+    "chatNoStation": "请先设置当前电台再聊天",
+    "chatToday": "今天",
+    "chatYesterday": "昨天",
+    "chatFollow": "关注",
+    "chatUnfollow": "取消关注",
+    "chatFollowing": "已关注该聊天室",
+    "chatAddReaction": "添加表情回应",
+    "gifPreparing": "正在准备视频…",
+    "gifCapturing": "正在采集画面… {percent}%",
+    "@gifCapturing": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "gifEncoding": "正在编码视频…",
+    "comingSoon": "即将推出",
+    "noCompassSensor": "无指南针传感器",
+    "fillFromGps": "从 GPS 填充",
+    "locationPermissionDenied": "定位权限被拒绝",
+    "gpsError": "GPS 错误：{error}",
+    "@gpsError": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "errParse": "解析服务器响应失败",
+    "errLocalStorage": "本地存储错误",
+    "errServer": "服务器错误",
+    "wpxPrefix": "WPX 前缀",
+    "nowBtn": "现在",
+    "contestOtherCustom": "其他 / 自定义",
+    "sigInfo": "SIG 信息",
+    "migrationTitle": "需要 API v2",
+    "migrationBody": "Wavelog Mobile 现已使用 Wavelog 的新 API 系统，旧的 API 密钥已失效。按以下步骤即可在几分钟内完成迁移。",
+    "migrationStep1Title": "安装服务器补丁",
+    "migrationStep1Body": "需要在你的 Wavelog 服务器上安装一个小更新文件。点击下方的「安装指南」按钮查看分步说明。",
+    "migrationInstallGuideBtn": "安装指南",
+    "migrationStep2Title": "创建新的 API 令牌",
+    "migrationStep2Body": "在 Wavelog 网页端：\n  1. 打开右上角的设置菜单\n  2. 进入“API”→“API 令牌”\n  3. 点击“新建令牌”\n  4. 选择“Wavelog Mobile”预设\n  5. 确认并复制显示的代码\n  （令牌以“wl2_”开头）",
+    "migrationStep3Title": "更新你的配置",
+    "migrationStep3Body": "点击下方按钮。服务器地址会保留，只需把复制的新令牌粘贴到输入框。",
+    "migrationUpdateTokenBtn": "更新令牌",
+    "migrationHelpBtn": "帮助与安装指南",
+    "celebTitle": "Wavelog v3.2.0",
+    "celebSubtitle": "不再需要服务器补丁！",
+    "celebBody": "现在所有功能均可直接通过 Wavelog 官方 API v2 使用，你可以移除之前上传到服务器的旧补丁。\n\n本应用现在需要 Wavelog v3.2.0 或更高版本。",
+    "celebCreateToken": "创建 API 令牌",
+    "celebSkip": "跳过",
+    "celebScopesTitle": "API v2 令牌权限域",
+    "celebScopesBody": "在 Wavelog 界面中依次进入 个人资料 → API 令牌 → 新建令牌 创建新令牌时，请勾选以下权限域：",
+    "celebDone": "知道了",
+    "scopeQsoRead": "读取 QSO 记录",
+    "scopeQsoWrite": "添加 / 更新 QSO",
+    "scopeQsoDelete": "删除 QSO",
+    "scopeStationRead": "读取电台配置",
+    "scopeStationWrite": "创建 / 更新电台",
+    "scopeStationDelete": "删除电台",
+    "scopeLogbookRead": "读取通联日志",
+    "scopeLogbookWrite": "创建 / 更新通联日志",
+    "scopeLogbookDelete": "删除通联日志",
+    "scopeContestRead": "读取竞赛场次",
+    "scopeContestWrite": "创建 / 更新竞赛场次",
+    "scopeContestDelete": "删除竞赛场次",
+    "scopeCatalogRead": "DXCC、行政区划与竞赛列表",
+    "scopeLookupRead": "呼号查询",
+    "scopeStatisticsRead": "读取统计数据",
+    "scopeConfirmationRead": "读取 LoTW / eQSL / QRZ.com 确认信息",
+    "scopeTestStation": "电台",
+    "scopeTestLogbook": "通联日志",
+    "scopeTestQso": "QSO",
+    "scopeTestContest": "竞赛",
+    "scopeTestConfirmation": "确认信息",
+    "scopeTestStatistics": "统计",
+    "scopeTestLookup": "查询",
+    "scopeRadioWrite": "上报 CAT 电台的频率和模式",
+    "scopeTestRadio": "电台",
+    "apiScopeGuideBtn": "API 权限域指南",
+    "apiScopeGuideTitle": "API 令牌权限域指南",
+    "apiScopeGuideIntro": "在 Wavelog（设置 → API 令牌）中创建新 API 令牌时，请勾选以下全部权限域以启用应用的完整功能。",
+    "apiTokenNoticeTitle": "创建新的 API 令牌",
+    "apiTokenNoticeBody": "Wavelog v2 API 需要具有特定权限域的新令牌。请前往 Wavelog → 设置 → API 令牌，创建包含全部所需权限域的新令牌。点击下方的「API 权限域指南」按钮查看完整列表。",
+    "apiTokenNoticeDontShow": "不再显示",
+    "apiTokenNoticeIgnore": "忽略",
+    "apiTokenNoticeScopeGuide": "API 权限域指南",
+    "communitySignInTitle": "验证你的呼号",
+    "communitySignInSubtitle": "使用 Google 登录，将你的 Google 账号与呼号关联，以确保只有你能以该呼号发布内容。",
+    "communitySignInButton": "使用 Google 登录",
+    "communitySignInNoStation": "使用社区功能前，请先在设置中选择当前电台。",
+    "communityCallsignTaken": "该呼号已关联到其他 Google 账号。",
+    "communitySignOut": "退出并切换账号",
+    "syncTitle": "离线同步",
+    "syncStatusOnline": "在线",
+    "syncStatusOffline": "无网络连接",
+    "syncOfflineModeNote": "离线模式已开启，自动同步已暂停，仍可手动同步。",
+    "syncAllDone": "全部已同步",
+    "syncRunning": "正在同步… {done} / {total}",
+    "@syncRunning": {
+        "placeholders": {
+            "done": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "syncWaiting": "等待同步",
+    "syncWaitingDeletes": "等待删除",
+    "syncLastRun": "上次尝试",
+    "syncLastSuccess": "上次完整同步",
+    "syncNever": "从未",
+    "syncSyncedLast": "上次已发送",
+    "syncFailedLast": "上次失败",
+    "syncLastError": "最近错误",
+    "syncQueueTitle": "待同步 QSO",
+    "syncQueueEmpty": "没有待同步的 QSO",
+    "syncNoConnection": "无网络连接 — 恢复联网后会自动开始同步",
+    "syncDone": "已同步 {count} 条 QSO",
+    "@syncDone": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "syncNothing": "无需同步",
+    "openAddQsoOnStart": "启动即打开添加 QSO",
+    "openAddQsoOnStartHint": "应用启动后直接打开 QSO 表单；返回键回到首页",
+    "rigSection": "电台（CAT）",
+    "rigScreenTitle": "电台连接（CAT）",
+    "rigTileSubtitle": "通过 USB 线连接的电台实时读取频率",
+    "rigProtocolLabel": "协议",
+    "rigProtocolIcom": "Icom CI-V",
+    "rigProtocolXiegu": "协谷 G90（CI-V）",
+    "rigProtocolKenwood": "建伍 / Elecraft / 八重洲（FA;）",
+    "rigProtocolYaesuLegacy": "八重洲 FT-817/818/857/897",
+    "rigBaudLabel": "波特率",
+    "rigCivAddressLabel": "CI-V 地址",
+    "rigCivAddressHint": "例如 94 对应 IC-7300，A4 对应 IC-705，98 对应 IC-7610，88 对应协谷 G90",
+    "rigAutoConnect": "自动连接",
+    "rigAutoConnectHint": "电台 USB 线插入时，或应用启动时已插入。在 Android 弹窗中勾选“始终”可跳过下次询问。",
+    "rigDevicesLabel": "USB 设备",
+    "rigNoDevices": "未找到 USB 串口设备。请使用 USB OTG 线连接电台。",
+    "rigRefresh": "刷新",
+    "rigConnect": "连接",
+    "rigDisconnect": "断开",
+    "rigStatusConnected": "已连接：{device}",
+    "@rigStatusConnected": {
+        "placeholders": {
+            "device": {
+                "type": "String"
+            }
+        }
+    },
+    "rigStatusConnecting": "正在连接…",
+    "rigStatusDisconnected": "未连接",
+    "rigWaitingForData": "正在等待电台响应…请检查协议、波特率和 CI-V 地址。",
+    "rigErrorPermission": "USB 权限被拒绝",
+    "rigErrorDetached": "电台已断开",
+    "rigErrorConnection": "连接错误（{code}）",
+    "@rigErrorConnection": {
+        "placeholders": {
+            "code": {
+                "type": "String"
+            }
+        }
+    },
+    "workedNewCountry": "新国家",
+    "workedNewBand": "新波段（{band}）",
+    "@workedNewBand": {
+        "placeholders": {
+            "band": {
+                "type": "String"
+            }
+        }
+    },
+    "workedNewMode": "新模式（{mode}）",
+    "@workedNewMode": {
+        "placeholders": {
+            "mode": {
+                "type": "String"
+            }
+        }
+    },
+    "workedDupe": "重复：今天已在 {band} {mode} 通联过",
+    "@workedDupe": {
+        "placeholders": {
+            "band": {
+                "type": "String"
+            },
+            "mode": {
+                "type": "String"
+            }
+        }
+    },
+    "stationWebOnlySettingsHint": "QRZ.com、HRDLog.net、QO-100（webADIF）、OQRS 以及 eQSL 默认留言需在 Wavelog 网页端设置，API 未向应用开放这些项。",
+    "@stationWebOnlySettingsHint": {
+        "description": "Note under the station's integrations: settings the v2 API does not expose"
+    },
+    "qsoReferencesSection": "POTA / SOTA / WWFF",
+    "@qsoReferencesSection": {
+        "description": "QSO form section for the other station's park, summit or WWFF area"
+    },
+    "potaRefHint": "US-1234，可用回车或逗号添加多个",
+    "@potaRefHint": {
+        "description": "Hint of the QSO form POTA park field"
+    },
+    "potaUnknownParkTitle": "未知公园",
+    "@potaUnknownParkTitle": {
+        "description": "Title of the dialog shown before saving a QSO with a POTA park pota.app does not know"
+    },
+    "potaUnknownParkBody": "pota.app 中没有公园 {refs}。仍要保存该 QSO？",
+    "@potaUnknownParkBody": {
+        "placeholders": {
+            "refs": {
+                "type": "String"
+            }
+        }
+    },
+    "spotNewPark": "新公园",
+    "@spotNewPark": {
+        "description": "Badge on a POTA spot whose park is not in the log yet"
+    },
+    "potaActivationProgress": "{park}：今日（UTC）已通联 {count}/{needed} 条 QSO",
+    "@potaActivationProgress": {
+        "placeholders": {
+            "park": {
+                "type": "String"
+            },
+            "count": {
+                "type": "int"
+            },
+            "needed": {
+                "type": "int"
+            }
+        }
+    },
+    "potaActivationDone": "{park}：已激活（今日 {count} 条 QSO）",
+    "@potaActivationDone": {
+        "placeholders": {
+            "park": {
+                "type": "String"
+            },
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "keepScreenOnWhileLogging": "记录时保持屏幕常亮",
+    "keepScreenOnWhileLoggingHint": "添加 QSO 或竞赛记录打开时屏幕保持常亮",
+    "contestDupe": "重复：本次竞赛已在 {band}（{time} UTC）通联过",
+    "@contestDupe": {
+        "placeholders": {
+            "band": {
+                "type": "String"
+            },
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "contestWorkedOn": "本次竞赛已通联的波段：{bands}",
+    "@contestWorkedOn": {
+        "placeholders": {
+            "bands": {
+                "type": "String"
+            }
+        }
+    },
+    "mapLayers": "地图图层",
+    "mapBaseAuto": "自动（浅色 / 深色）",
+    "mapBaseLight": "浅色",
+    "mapBaseDark": "深色",
+    "mapBaseTopo": "地形图",
+    "mapGreatCircles": "从我电台出发的大圆航线",
+    "mapGreyline": "灰线",
+    "mapGreylineHint": "当前夜半球与昼夜分界线",
+    "mapNorthUp": "北在上"
 }

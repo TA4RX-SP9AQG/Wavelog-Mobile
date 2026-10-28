@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.core.view.WindowCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -152,8 +153,16 @@ class MainActivity : FlutterActivity() {
         val uri = intent.data ?: return false
         val name = getDisplayName(uri)
         val ext  = name.substringAfterLast('.', "").lowercase()
-        if (ext != "adi" && ext != "adif") return false
         return try {
+            // "Open with" offers the app for any file (see the manifest), so
+            // a file without the extension counts only if its start has the
+            // ADIF header end. Anything else, e.g. a Cabrillo log, gets a
+            // message instead of a silent start.
+            if (ext != "adi" && ext != "adif" && !startsAsAdif(uri)) {
+                Toast.makeText(this, getString(R.string.open_not_adif, name),
+                    Toast.LENGTH_LONG).show()
+                return false
+            }
             val text = contentResolver.openInputStream(uri)
                 ?.bufferedReader()
                 ?.use { it.readText() }
@@ -164,6 +173,15 @@ class MainActivity : FlutterActivity() {
         } catch (_: Exception) {
             false
         }
+    }
+
+    private fun startsAsAdif(uri: Uri): Boolean {
+        val head = contentResolver.openInputStream(uri)?.use { input ->
+            val buf = ByteArray(16 * 1024)
+            val n = input.read(buf)
+            if (n > 0) String(buf, 0, n, Charsets.ISO_8859_1) else ""
+        } ?: return false
+        return head.contains("<eoh>", ignoreCase = true)
     }
 
     private fun getDisplayName(uri: Uri): String {

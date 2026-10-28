@@ -59,26 +59,29 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
 
-            <!-- Open .adif / .adi files — Birlikte Aç -->
-            <intent-filter android:label="İçe Aktar">
+            <!-- Open .adif / .adi files ("Open with"). Without a host the path
+                 pattern does not narrow content:// URIs, so other files can
+                 arrive too; handleViewIntent in MainActivity says when one
+                 is not ADIF. -->
+            <intent-filter android:label="@string/open_with_import_adif">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="content" android:mimeType="*/*"
                       android:pathPattern=".*\\.adif" />
             </intent-filter>
-            <intent-filter android:label="İçe Aktar">
+            <intent-filter android:label="@string/open_with_import_adif">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="content" android:mimeType="*/*"
                       android:pathPattern=".*\\.adi" />
             </intent-filter>
-            <intent-filter android:label="İçe Aktar">
+            <intent-filter android:label="@string/open_with_import_adif">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="file" android:mimeType="*/*"
                       android:pathPattern=".*\\.adif" />
             </intent-filter>
-            <intent-filter android:label="İçe Aktar">
+            <intent-filter android:label="@string/open_with_import_adif">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="file" android:mimeType="*/*"

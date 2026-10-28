@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="open_with_import_adif">Importa ADIF</string>
+    <string name="open_not_adif">%1$s non è un file ADIF. Si possono importare solo log ADIF (.adi, .adif).</string>
+</resources>

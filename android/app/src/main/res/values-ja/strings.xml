@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="open_with_import_adif">ADIFをインポート</string>
+    <string name="open_not_adif">%1$s は ADIF ファイルではありません。インポートできるのは ADIF ログ (.adi, .adif) のみです。</string>
+</resources>

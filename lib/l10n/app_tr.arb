@@ -913,5 +913,15 @@
             }
         }
     },
-    "keepScreenOnWhileLogging": "Günlük kaydı sırasında ekranı açık tut"
+    "keepScreenOnWhileLogging": "Günlük kaydı sırasında ekranı açık tut",
+    "keepScreenOnWhileLoggingHint": "QSO Ekle veya yarışma logu açıkken ekran kapanmaz",
+    "mapLayers": "Harita katmanları",
+    "mapBaseAuto": "Otomatik (açık / koyu)",
+    "mapBaseLight": "Açık",
+    "mapBaseDark": "Koyu",
+    "mapBaseTopo": "Topografik",
+    "mapGreatCircles": "İstasyonumdan büyük daire çizgileri",
+    "mapGreyline": "Gri çizgi (greyline)",
+    "mapGreylineHint": "Gece tarafı ve gündüz/gece sınırı, şu an",
+    "mapNorthUp": "Kuzey yukarı"
 }

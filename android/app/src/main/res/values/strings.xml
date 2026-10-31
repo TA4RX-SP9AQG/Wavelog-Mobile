@@ -2,4 +2,6 @@
 <resources>
     <string name="app_name">Wavelog Mobile</string>
     <string name="contest_widget_description">Shows upcoming amateur radio contests</string>
+    <string name="open_with_import_adif">Import ADIF</string>
+    <string name="open_not_adif">%1$s is not an ADIF file. Only ADIF logs (.adi, .adif) can be imported.</string>
 </resources>

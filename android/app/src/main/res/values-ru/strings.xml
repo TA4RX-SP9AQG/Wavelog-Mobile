@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="open_with_import_adif">Импорт ADIF</string>
+    <string name="open_not_adif">%1$s — не файл ADIF. Импортировать можно только журналы ADIF (.adi, .adif).</string>
+</resources>

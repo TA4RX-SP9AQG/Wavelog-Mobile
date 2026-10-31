@@ -723,6 +723,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get langRussian => 'Russe';
 
   @override
+  String get langChinese => '简体中文';
+
+  @override
   String get aboutTitle => 'À propos';
 
   @override

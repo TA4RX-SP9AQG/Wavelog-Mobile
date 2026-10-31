@@ -74,7 +74,7 @@ Community features include:
 
 ## Localisation
 
-The app is available in **9 languages**: English, Turkish, German, Polish, Russian, French, Italian, Japanese and Korean.
+The app is available in **10 languages**: English, Turkish, German, Polish, Russian, French, Italian, Japanese, Korean and Simplified Chinese.
 
 [![Translation status](https://translate.wavelogmobile.app/widget/wavelog-mobile/app/svg-badge.svg)](https://translate.wavelogmobile.app/projects/wavelog-mobile/)
 

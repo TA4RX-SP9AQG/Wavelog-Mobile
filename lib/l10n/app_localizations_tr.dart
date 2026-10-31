@@ -723,6 +723,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get langRussian => 'Rusça';
 
   @override
+  String get langChinese => '简体中文';
+
+  @override
   String get aboutTitle => 'Uygulama Hakkında';
 
   @override

@@ -710,6 +710,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get langRussian => 'Русский';
 
   @override
+  String get langChinese => '简体中文';
+
+  @override
   String get aboutTitle => '关于';
 
   @override
@@ -3137,6 +3140,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get langRussian => 'Русский';
+
+  @override
+  String get langChinese => '简体中文';
 
   @override
   String get aboutTitle => '关于';

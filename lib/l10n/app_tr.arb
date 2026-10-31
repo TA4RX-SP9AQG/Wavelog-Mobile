@@ -228,6 +228,7 @@
     "langJapanese": "日本語",
     "langKorean": "한국어",
     "langRussian": "Rusça",
+    "langChinese": "简体中文",
     "aboutTitle": "Uygulama Hakkında",
     "appDescription": "Wavelog için açık kaynak Android uygulaması",
     "versionLabel": "Versiyon {version}  (Build {build})",

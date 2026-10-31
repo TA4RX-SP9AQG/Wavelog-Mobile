@@ -289,6 +289,7 @@
     "langJapanese": "日本語",
     "langKorean": "한국어",
     "langRussian": "Русский",
+    "langChinese": "简体中文",
     "aboutTitle": "关于",
     "appDescription": "面向 Wavelog 的开源 Android 日志应用",
     "versionLabel": "版本 {version}（构建 {build}）",

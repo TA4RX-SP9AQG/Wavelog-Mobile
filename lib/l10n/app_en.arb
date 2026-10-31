@@ -488,6 +488,7 @@
   "langKorean": "한국어",
   "@langKorean": {},
   "langRussian": "Русский",
+  "langChinese": "简体中文",
   "@langRussian": {},
 
   "aboutTitle": "About",

@@ -1483,6 +1483,12 @@ abstract class AppLocalizations {
   /// **'Русский'**
   String get langRussian;
 
+  /// No description provided for @langChinese.
+  ///
+  /// In en, this message translates to:
+  /// **'简体中文'**
+  String get langChinese;
+
   /// No description provided for @aboutTitle.
   ///
   /// In en, this message translates to:

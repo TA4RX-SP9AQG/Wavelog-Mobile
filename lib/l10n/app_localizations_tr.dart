@@ -2176,8 +2176,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get scopeTestLookup => 'Arama';
 
   @override
-  String get scopeRadioWrite =>
-      'CAT telsizin frekansını ve modunu bildir';
+  String get scopeRadioWrite => 'CAT telsizin frekansını ve modunu bildir';
 
   @override
   String get scopeTestRadio => 'Telsiz';
@@ -2433,11 +2432,12 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get keepScreenOnWhileLogging => 'Keep the screen on while logging';
+  String get keepScreenOnWhileLogging =>
+      'Günlük kaydı sırasında ekranı açık tut';
 
   @override
   String get keepScreenOnWhileLoggingHint =>
-      'The screen stays on while Add QSO or the contest log is open';
+      'QSO Ekle veya yarışma logu açıkken ekran kapanmaz';
 
   @override
   String contestDupe(String band, String time) {
@@ -2450,29 +2450,29 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get mapLayers => 'Map layers';
+  String get mapLayers => 'Harita katmanları';
 
   @override
-  String get mapBaseAuto => 'Automatic (light / dark)';
+  String get mapBaseAuto => 'Otomatik (açık / koyu)';
 
   @override
-  String get mapBaseLight => 'Light';
+  String get mapBaseLight => 'Açık';
 
   @override
-  String get mapBaseDark => 'Dark';
+  String get mapBaseDark => 'Koyu';
 
   @override
-  String get mapBaseTopo => 'Topographic';
+  String get mapBaseTopo => 'Topografik';
 
   @override
-  String get mapGreatCircles => 'Great-circle lines from my station';
+  String get mapGreatCircles => 'İstasyonumdan büyük daire çizgileri';
 
   @override
-  String get mapGreyline => 'Greyline';
+  String get mapGreyline => 'Gri çizgi (greyline)';
 
   @override
-  String get mapGreylineHint => 'Night side and the day/night boundary, now';
+  String get mapGreylineHint => 'Gece tarafı ve gündüz/gece sınırı, şu an';
 
   @override
-  String get mapNorthUp => 'North up';
+  String get mapNorthUp => 'Kuzey yukarı';
 }

@@ -12,6 +12,7 @@ import '../../../data/datasources/remote/sota_datasource.dart';
 import '../../../data/models/pota_spot_model.dart';
 import '../../../data/models/sota_spot_model.dart';
 import '../../../data/models/wwff_spot_model.dart';
+import '../../../providers/connectivity_provider.dart';
 import '../../../providers/pota_stats_provider.dart';
 import '../../../providers/dx_spot_provider.dart';
 import '../../../providers/pota_spot_provider.dart';
@@ -82,6 +83,14 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
     final refreshSeconds =
         ref.watch(settingsProvider.select((s) => s.spotRefreshSeconds));
     _syncAutoRefreshTimer(refreshSeconds, selected);
+    // Back online: replace the list kept while offline. The system reports
+    // a network a moment before it carries traffic, so wait briefly.
+    ref.listen<bool>(isOnlineProvider, (wasOnline, isOnline) {
+      if (wasOnline != false || !isOnline) return;
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) _refreshSelected(ref.read(_selectedActivityProvider));
+      });
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -1151,7 +1160,7 @@ class _DxClusterContent extends ConsumerWidget {
     final filter = ref.watch(dxSpotFilterProvider);
     final allSpots = ref.watch(dxSpotsProvider).valueOrNull ?? [];
     final newKeys = ref.watch(dxNewSpotKeysProvider);
-    final offlineSince = ref.watch(dxOfflineSinceProvider);
+    final staleSince = ref.watch(dxStaleSinceProvider);
 
     void update(DxSpotFilter f) =>
         ref.read(dxSpotFilterProvider.notifier).state = f;
@@ -1179,9 +1188,9 @@ class _DxClusterContent extends ConsumerWidget {
           ],
         ),
         const Divider(height: 1),
-        if (offlineSince != null)
+        if (staleSince != null)
           _StaleSpotsBanner(l10n.spotOfflineSince(
-              TimeOfDay.fromDateTime(offlineSince).format(context))),
+              TimeOfDay.fromDateTime(staleSince).format(context))),
         Expanded(
           child: _SpotListSection(
             spots: spots.whenData((list) => list

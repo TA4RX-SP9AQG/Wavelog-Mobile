@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wavelog_mobile/data/datasources/remote/dx_cluster_datasource.dart';
 import 'package:wavelog_mobile/data/models/dx_spot_model.dart';
+import 'package:wavelog_mobile/providers/connectivity_provider.dart';
 import 'package:wavelog_mobile/providers/dx_spot_provider.dart';
 
 /// Returns the next scripted answer on each call; null stands for a failed
@@ -27,9 +28,13 @@ DxSpotModel spot(String call, {required int minutesAgo}) => DxSpotModel(
       time: DateTime.now().toUtc().subtract(Duration(minutes: minutesAgo)),
     );
 
+/// What the system reports about the network in these tests.
+final _online = StateProvider<bool>((_) => true);
+
 ProviderContainer _container(List<List<DxSpotModel>?> answers) {
   final c = ProviderContainer(overrides: [
     dxDatasourceProvider.overrideWithValue(_ScriptedDatasource(answers)),
+    isOnlineProvider.overrideWith((ref) => ref.watch(_online)),
   ]);
   addTearDown(c.dispose);
   return c;
@@ -69,18 +74,31 @@ void main() {
     final c = _container([first, null, [spot('B2', minutesAgo: 0)]]);
 
     await c.read(dxSpotsProvider.future);
-    expect(c.read(dxOfflineSinceProvider), isNull);
+    expect(c.read(dxStaleSinceProvider), isNull);
 
     expect(await _refresh(c), ['A1']);
-    expect(c.read(dxOfflineSinceProvider), isNotNull);
+    expect(c.read(dxStaleSinceProvider), isNotNull);
 
     expect(await _refresh(c), ['B2']);
-    expect(c.read(dxOfflineSinceProvider), isNull);
+    expect(c.read(dxStaleSinceProvider), isNull);
+  });
+
+  test('the system reporting no network marks the list stale at once',
+      () async {
+    final c = _container([[spot('A1', minutesAgo: 5)]]);
+    await c.read(dxSpotsProvider.future);
+    expect(c.read(dxStaleSinceProvider), isNull);
+
+    c.read(_online.notifier).state = false;
+    expect(c.read(dxStaleSinceProvider), isNotNull);
+
+    c.read(_online.notifier).state = true;
+    expect(c.read(dxStaleSinceProvider), isNull);
   });
 
   test('a failure with nothing fetched yet is reported', () async {
     final c = _container([null]);
     await expectLater(c.read(dxSpotsProvider.future), throwsException);
-    expect(c.read(dxOfflineSinceProvider), isNull);
+    expect(c.read(dxStaleSinceProvider), isNull);
   });
 }

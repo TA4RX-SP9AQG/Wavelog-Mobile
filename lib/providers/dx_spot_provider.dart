@@ -1,13 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/datasources/remote/dx_cluster_datasource.dart';
 import '../data/models/dx_spot_model.dart';
+import 'connectivity_provider.dart';
 
 final dxDatasourceProvider =
     Provider<DxClusterDatasource>((_) => DxClusterDatasource());
 
 /// The spots of the latest successful fetch. When a refresh fails (e.g. no
 /// connection) it keeps showing them, minus the ones that aged out, and
-/// [dxOfflineSinceProvider] says since when; with nothing to show yet the
+/// [dxStaleSinceProvider] says since when; with nothing to show yet the
 /// error goes through.
 final dxSpotsProvider = FutureProvider<List<DxSpotModel>>((ref) async {
   final history = ref.read(_dxHistoryProvider);
@@ -30,9 +31,9 @@ String dxSpotKey(DxSpotModel s) =>
 class _DxHistory {
   List<DxSpotModel>? _spots;
   Set<String> _keys = const {};
-  DateTime? _updatedAt;
+  DateTime? updatedAt;
   Set<String> newKeys = const {};
-  DateTime? offlineSince;
+  bool refreshFailed = false;
 
   void update(List<DxSpotModel> spots) {
     final keys = spots.map(dxSpotKey).toSet();
@@ -43,8 +44,8 @@ class _DxHistory {
     }
     _spots = spots;
     _keys = keys;
-    _updatedAt = DateTime.now();
-    offlineSince = null;
+    updatedAt = DateTime.now();
+    refreshFailed = false;
   }
 
   /// The last spots still within [DxClusterDatasource.maxAge], or null if
@@ -52,7 +53,7 @@ class _DxHistory {
   List<DxSpotModel>? failed() {
     final spots = _spots;
     if (spots == null) return null;
-    offlineSince = _updatedAt;
+    refreshFailed = true;
     final cutoff =
         DateTime.now().toUtc().subtract(DxClusterDatasource.maxAge);
     return spots.where((s) => s.time.isAfter(cutoff)).toList();
@@ -67,11 +68,14 @@ final dxNewSpotKeysProvider = Provider<Set<String>>((ref) {
   return ref.read(_dxHistoryProvider).newKeys;
 });
 
-/// When the shown spots were fetched, if the latest refresh failed; null
-/// while the list is current.
-final dxOfflineSinceProvider = Provider<DateTime?>((ref) {
+/// When the shown spots were fetched, if they may be out of date: the
+/// system reports no network, or the latest refresh failed (e.g. Wi-Fi
+/// without internet). Null while the list is current.
+final dxStaleSinceProvider = Provider<DateTime?>((ref) {
   ref.watch(dxSpotsProvider);
-  return ref.read(_dxHistoryProvider).offlineSince;
+  final offline = !ref.watch(isOnlineProvider);
+  final history = ref.read(_dxHistoryProvider);
+  return offline || history.refreshFailed ? history.updatedAt : null;
 });
 
 class DxSpotFilter {

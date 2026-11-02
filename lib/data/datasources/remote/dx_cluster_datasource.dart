@@ -4,22 +4,25 @@ import '../../models/dx_spot_model.dart';
 
 class DxClusterDatasource {
   static const _minInterval = Duration(seconds: 60);
+  // Same window as Wavelog's default dxcluster_maxage (60 min)
+  static const _maxAge = Duration(minutes: 60);
 
-  // Primary: DXClusterAPI v2 (jo30.de)
-  final Dio _primaryDio = Dio(BaseOptions(
-    baseUrl: 'https://jo30.de/dxcluster-per-rest-json',
-    connectTimeout: const Duration(seconds: 12),
-    receiveTimeout: const Duration(seconds: 12),
-    headers: {'User-Agent': 'WavelogMobile/1.0'},
-  ));
+  // Primary: Wavelog DXCache, the source Wavelog's own DX cluster view uses
+  final Dio _primaryDio;
 
   // Fallback: DXWatch public API
-  final Dio _fallbackDio = Dio(BaseOptions(
-    baseUrl: 'https://www.dxwatch.com',
-    connectTimeout: const Duration(seconds: 12),
-    receiveTimeout: const Duration(seconds: 12),
-    headers: {'User-Agent': 'WavelogMobile/1.0'},
-  ));
+  final Dio _fallbackDio;
+
+  DxClusterDatasource({Dio? primaryDio, Dio? fallbackDio})
+      : _primaryDio = primaryDio ?? _dio('https://dxc.wavelog.org/dxcache'),
+        _fallbackDio = fallbackDio ?? _dio('https://www.dxwatch.com');
+
+  static Dio _dio(String baseUrl) => Dio(BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 12),
+        receiveTimeout: const Duration(seconds: 12),
+        headers: {'User-Agent': 'WavelogMobile/1.0'},
+      ));
 
   List<DxSpotModel>? _cache;
   DateTime? _lastFetch;
@@ -36,7 +39,7 @@ class DxClusterDatasource {
 
     // Try primary first
     try {
-      result = await _fetchPrimary(limit);
+      result = await _fetchPrimary();
     } catch (e) {
       debugPrint('DX Cluster primary failed, trying fallback: $e');
     }
@@ -57,28 +60,20 @@ class DxClusterDatasource {
     return result;
   }
 
-  Future<List<DxSpotModel>> _fetchPrimary(int limit) async {
-    final response = await _primaryDio.get<dynamic>(
-      '/api/v2/spots',
-      queryParameters: {'limit': limit, 'maxAge': 300},
-    );
+  // DXCache returns all bands from the last few hours; age is filtered here
+  Future<List<DxSpotModel>> _fetchPrimary() async {
+    final response = await _primaryDio.get<dynamic>('/spots/');
 
     final body = response.data;
-    List<dynamic>? rawList;
-    if (body is Map<String, dynamic>) {
-      rawList = body['data'] as List<dynamic>? ??
-          body['spots'] as List<dynamic>?;
-    } else if (body is List) {
-      rawList = body;
-    }
+    if (body is! List) throw Exception('Unexpected primary response format');
 
-    if (rawList == null) throw Exception('Unexpected primary response format');
-
-    return rawList
+    final cutoff = DateTime.now().toUtc().subtract(_maxAge);
+    return body
         .whereType<Map<String, dynamic>>()
         .map(DxSpotModel.fromJson)
-        .where((s) => s.dxCall.isNotEmpty)
-        .toList();
+        .where((s) => s.dxCall.isNotEmpty && s.time.isAfter(cutoff))
+        .toList()
+      ..sort((a, b) => b.time.compareTo(a.time));
   }
 
   Future<List<DxSpotModel>> _fetchFallback(int limit) async {

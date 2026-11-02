@@ -1436,6 +1436,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get spotRefreshHint => '이 간격으로 스팟 목록을 자동으로 새로고침합니다';
 
   @override
+  String spotNextRefresh(int seconds) {
+    return 'Refresh in $seconds s';
+  }
+
+  @override
   String autoSpotSent(String ref) {
     return '자동 스팟 전송됨: $ref';
   }

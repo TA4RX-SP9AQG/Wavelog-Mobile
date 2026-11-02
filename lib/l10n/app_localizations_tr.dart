@@ -1456,6 +1456,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get spotRefreshHint => 'Spot listesini bu aralıkla otomatik yeniler';
 
   @override
+  String spotNextRefresh(int seconds) {
+    return 'Refresh in $seconds s';
+  }
+
+  @override
   String autoSpotSent(String ref) {
     return 'Otomatik spot gönderildi: $ref';
   }

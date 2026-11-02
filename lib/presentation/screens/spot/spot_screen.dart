@@ -36,6 +36,8 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
   Timer? _autoRefreshTimer;
   int _timerSeconds = 0;
   ActivityType _timerActivity = ActivityType.dx;
+  /// When the auto-refresh timer fires next; null while it is off.
+  final _nextAutoRefresh = ValueNotifier<DateTime?>(null);
 
   void _refreshSelected(ActivityType selected) {
     switch (selected) {
@@ -57,9 +59,13 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
     _timerSeconds = seconds;
     _timerActivity = selected;
     _autoRefreshTimer?.cancel();
+    final period = Duration(seconds: seconds);
+    _nextAutoRefresh.value = seconds > 0 ? DateTime.now().add(period) : null;
     if (seconds <= 0) return;
-    _autoRefreshTimer = Timer.periodic(Duration(seconds: seconds), (_) {
-      if (mounted) _refreshSelected(_timerActivity);
+    _autoRefreshTimer = Timer.periodic(period, (_) {
+      if (!mounted) return;
+      _nextAutoRefresh.value = DateTime.now().add(period);
+      _refreshSelected(_timerActivity);
     });
   }
 
@@ -73,6 +79,7 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _nextAutoRefresh.dispose();
     super.dispose();
   }
 
@@ -97,11 +104,13 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
         leading: const DrawerMenuButton(),
         title: Text(l10n.spotTitle),
         actions: [
-          if (selected.available)
+          if (selected.available) ...[
+            _AutoRefreshCountdown(_nextAutoRefresh),
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: () => _refreshSelected(selected),
             ),
+          ],
         ],
       ),
       body: Column(
@@ -1217,6 +1226,54 @@ class _DxClusterContent extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// "Refresh in 25 s" next to the refresh button while auto-refresh is on.
+class _AutoRefreshCountdown extends StatefulWidget {
+  final ValueNotifier<DateTime?> nextRefresh;
+
+  const _AutoRefreshCountdown(this.nextRefresh);
+
+  @override
+  State<_AutoRefreshCountdown> createState() => _AutoRefreshCountdownState();
+}
+
+class _AutoRefreshCountdownState extends State<_AutoRefreshCountdown> {
+  late final Timer _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(
+        const Duration(seconds: 1), (_) => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _tick.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<DateTime?>(
+      valueListenable: widget.nextRefresh,
+      builder: (context, next, _) {
+        if (next == null) return const SizedBox.shrink();
+        final seconds = next.difference(DateTime.now()).inSeconds;
+        return Center(
+          child: Text(
+            context.l10n.spotNextRefresh(seconds < 0 ? 0 : seconds),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6)),
+          ),
+        );
+      },
     );
   }
 }

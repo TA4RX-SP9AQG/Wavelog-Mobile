@@ -2863,6 +2863,12 @@ abstract class AppLocalizations {
   /// **'Automatically reload the spot list at this interval'**
   String get spotRefreshHint;
 
+  /// Countdown to the next automatic spot refresh, next to the refresh button
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh in {seconds} s'**
+  String spotNextRefresh(int seconds);
+
   /// No description provided for @autoSpotSent.
   ///
   /// In en, this message translates to:

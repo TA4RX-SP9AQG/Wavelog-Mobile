@@ -1430,6 +1430,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get spotRefreshHint => '按此间隔自动刷新通告列表';
 
   @override
+  String spotNextRefresh(int seconds) {
+    return 'Refresh in $seconds s';
+  }
+
+  @override
   String autoSpotSent(String ref) {
     return '自动通告已发送：$ref';
   }

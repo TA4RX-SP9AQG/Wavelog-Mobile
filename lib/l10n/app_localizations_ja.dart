@@ -1436,6 +1436,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get spotRefreshHint => 'この間隔でスポットリストを自動的に更新します';
 
   @override
+  String spotNextRefresh(int seconds) {
+    return 'Refresh in $seconds s';
+  }
+
+  @override
   String autoSpotSent(String ref) {
     return '自動スポット送信: $ref';
   }

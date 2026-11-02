@@ -996,6 +996,11 @@
   "@spotRefreshLabel": {},
   "spotRefreshHint": "Automatically reload the spot list at this interval",
   "@spotRefreshHint": {},
+  "spotNextRefresh": "Refresh in {seconds} s",
+  "@spotNextRefresh": {
+    "description": "Countdown to the next automatic spot refresh, next to the refresh button",
+    "placeholders": { "seconds": { "type": "int" } }
+  },
   "autoSpotSent": "Auto-spot sent: {ref}",
   "@autoSpotSent": {
     "placeholders": { "ref": { "type": "String" } }

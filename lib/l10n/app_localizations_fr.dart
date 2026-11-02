@@ -1462,6 +1462,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Actualise automatiquement la liste des spots à cet intervalle';
 
   @override
+  String spotNextRefresh(int seconds) {
+    return 'Refresh in $seconds s';
+  }
+
+  @override
   String autoSpotSent(String ref) {
     return 'Auto-spot envoyé : $ref';
   }

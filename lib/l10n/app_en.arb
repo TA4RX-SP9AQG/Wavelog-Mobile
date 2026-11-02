@@ -947,6 +947,11 @@
   "@spotNoResults": {},
   "spotLoadError": "Could not load spots",
   "@spotLoadError": {},
+  "spotOfflineSince": "No connection — spots from {time}",
+  "@spotOfflineSince": {
+    "description": "Banner over DX spots kept from the last successful refresh",
+    "placeholders": { "time": { "type": "String" } }
+  },
   "spotActivator": "Activator Callsign",
   "@spotActivator": {},
   "spotSpotter": "Spotter Callsign",

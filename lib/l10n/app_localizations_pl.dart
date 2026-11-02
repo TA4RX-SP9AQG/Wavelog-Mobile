@@ -1386,6 +1386,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String get spotLoadError => 'Nie można załadować spotów';
 
   @override
+  String spotOfflineSince(String time) {
+    return 'Brak połączenia — spoty z $time';
+  }
+
+  @override
   String get spotActivator => 'Znak aktywatora';
 
   @override

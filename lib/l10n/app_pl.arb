@@ -463,6 +463,7 @@
   "spotSent": "Spot wysłany!",
   "spotNoResults": "Brak spotów",
   "spotLoadError": "Nie można załadować spotów",
+  "spotOfflineSince": "Brak połączenia — spoty z {time}",
   "spotActivator": "Znak aktywatora",
   "spotSpotter": "Znak spottera",
   "spotFrequency": "Częstotliwość (kHz)",

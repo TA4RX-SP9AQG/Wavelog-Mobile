@@ -1380,6 +1380,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spotLoadError => 'Could not load spots';
 
   @override
+  String spotOfflineSince(String time) {
+    return 'No connection — spots from $time';
+  }
+
+  @override
   String get spotActivator => 'Activator Callsign';
 
   @override

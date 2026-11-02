@@ -1359,6 +1359,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get spotLoadError => '无法加载通告';
 
   @override
+  String spotOfflineSince(String time) {
+    return 'No connection — spots from $time';
+  }
+
+  @override
   String get spotActivator => '激活者呼号';
 
   @override

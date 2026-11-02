@@ -1364,6 +1364,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get spotLoadError => '스팟을 불러올 수 없습니다';
 
   @override
+  String spotOfflineSince(String time) {
+    return 'No connection — spots from $time';
+  }
+
+  @override
   String get spotActivator => '운용국 콜사인';
 
   @override

@@ -5,7 +5,7 @@ import '../../models/dx_spot_model.dart';
 class DxClusterDatasource {
   static const _minInterval = Duration(seconds: 60);
   // Same window as Wavelog's default dxcluster_maxage (60 min)
-  static const _maxAge = Duration(minutes: 60);
+  static const maxAge = Duration(minutes: 60);
 
   // Primary: Wavelog DXCache, the source Wavelog's own DX cluster view uses
   final Dio _primaryDio;
@@ -49,8 +49,8 @@ class DxClusterDatasource {
       try {
         result = await _fetchFallback(limit);
       } catch (e) {
+        // The provider keeps showing the last list and says it is stale
         debugPrint('DX Cluster fallback failed: $e');
-        if (_cache != null) return _cache!;
         rethrow;
       }
     }
@@ -67,7 +67,7 @@ class DxClusterDatasource {
     final body = response.data;
     if (body is! List) throw Exception('Unexpected primary response format');
 
-    final cutoff = DateTime.now().toUtc().subtract(_maxAge);
+    final cutoff = DateTime.now().toUtc().subtract(maxAge);
     return body
         .whereType<Map<String, dynamic>>()
         .map(DxSpotModel.fromJson)

@@ -2725,6 +2725,12 @@ abstract class AppLocalizations {
   /// **'Could not load spots'**
   String get spotLoadError;
 
+  /// Banner over DX spots kept from the last successful refresh
+  ///
+  /// In en, this message translates to:
+  /// **'No connection — spots from {time}'**
+  String spotOfflineSince(String time);
+
   /// No description provided for @spotActivator.
   ///
   /// In en, this message translates to:

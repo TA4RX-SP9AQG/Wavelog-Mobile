@@ -63,6 +63,13 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Spots are cached across visits; show the current ones on entry.
+    _refreshSelected(ref.read(_selectedActivityProvider));
+  }
+
+  @override
   void dispose() {
     _autoRefreshTimer?.cancel();
     super.dispose();
@@ -92,8 +99,10 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
         children: [
           _ActivitySelector(
             selected: selected,
-            onChanged: (t) =>
-                ref.read(_selectedActivityProvider.notifier).state = t,
+            onChanged: (t) {
+              ref.read(_selectedActivityProvider.notifier).state = t;
+              _refreshSelected(t);
+            },
           ),
           const Divider(height: 1),
           Expanded(
@@ -417,6 +426,9 @@ class _SpotView {
   /// in the log.
   final String? badge;
 
+  /// Arrived with the latest update; the tile is highlighted.
+  final bool isNew;
+
   const _SpotView({
     required this.activator,
     required this.mode,
@@ -431,6 +443,7 @@ class _SpotView {
     this.modeForLog,
     this.refForLog,
     this.badge,
+    this.isNew = false,
   });
 }
 
@@ -454,6 +467,9 @@ class _SpotTile extends StatelessWidget {
 
     return ListTile(
       onTap: onTap,
+      tileColor: spot.isNew
+          ? theme.colorScheme.primary.withValues(alpha: 0.15)
+          : null,
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       leading: CircleAvatar(
@@ -1134,6 +1150,8 @@ class _DxClusterContent extends ConsumerWidget {
     final spots = ref.watch(filteredDxSpotsProvider);
     final filter = ref.watch(dxSpotFilterProvider);
     final allSpots = ref.watch(dxSpotsProvider).valueOrNull ?? [];
+    final newKeys = ref.watch(dxNewSpotKeysProvider);
+    final offlineSince = ref.watch(dxOfflineSinceProvider);
 
     void update(DxSpotFilter f) =>
         ref.read(dxSpotFilterProvider.notifier).state = f;
@@ -1161,6 +1179,9 @@ class _DxClusterContent extends ConsumerWidget {
           ],
         ),
         const Divider(height: 1),
+        if (offlineSince != null)
+          _StaleSpotsBanner(l10n.spotOfflineSince(
+              TimeOfDay.fromDateTime(offlineSince).format(context))),
         Expanded(
           child: _SpotListSection(
             spots: spots.whenData((list) => list
@@ -1177,6 +1198,7 @@ class _DxClusterContent extends ConsumerWidget {
                               .toStringAsFixed(3))
                           : null,
                       modeForLog: _validMode(s.mode),
+                      isNew: newKeys.contains(dxSpotKey(s)),
                     ))
                 .toList()),
             onRefresh: () => ref.invalidate(dxSpotsProvider),
@@ -1186,6 +1208,32 @@ class _DxClusterContent extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Shown over spots kept from the last successful refresh.
+class _StaleSpotsBanner extends StatelessWidget {
+  final String text;
+
+  const _StaleSpotsBanner(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: Colors.orange.shade800,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+      child: Row(
+        children: [
+          const Icon(Icons.wifi_off, color: Colors.white, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(color: Colors.white, fontSize: 12)),
+          ),
+        ],
+      ),
     );
   }
 }

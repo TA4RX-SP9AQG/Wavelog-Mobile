@@ -61,10 +61,16 @@ class _DxHistory {
 
 final _dxHistoryProvider = Provider<_DxHistory>((_) => _DxHistory());
 
-/// Keys ([dxSpotKey]) of the spots that appeared in the latest update.
+/// Keys ([dxSpotKey]) of the spots the user has opened; they are no longer
+/// highlighted as new.
+final dxOpenedSpotKeysProvider = StateProvider<Set<String>>((_) => const {});
+
+/// Keys ([dxSpotKey]) of the spots that appeared in the latest update and
+/// have not been opened yet.
 final dxNewSpotKeysProvider = Provider<Set<String>>((ref) {
   ref.watch(dxSpotsProvider);
-  return ref.read(_dxHistoryProvider).newKeys;
+  final opened = ref.watch(dxOpenedSpotKeysProvider);
+  return ref.read(_dxHistoryProvider).newKeys.difference(opened);
 });
 
 /// When the shown spots were fetched, if they may be out of date: the

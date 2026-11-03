@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/band_colors.dart';
 import '../../../core/constants/band_mode_data.dart';
 import '../../../core/enums/activity_type.dart';
 import '../../../core/utils/error_l10n.dart';
@@ -102,27 +103,25 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: const DrawerMenuButton(),
-        title: Text(l10n.spotTitle),
+        titleSpacing: 0,
+        title: _ActivitySelector(
+          selected: selected,
+          onChanged: (t) {
+            ref.read(_selectedActivityProvider.notifier).state = t;
+            _refreshSelected(t);
+          },
+        ),
         actions: [
-          if (selected.available) ...[
-            _AutoRefreshCountdown(_nextAutoRefresh),
-            IconButton(
-              icon: const Icon(Icons.refresh),
+          if (selected.available)
+            _RefreshButton(
+              nextRefresh: _nextAutoRefresh,
+              periodSeconds: refreshSeconds,
               onPressed: () => _refreshSelected(selected),
             ),
-          ],
         ],
       ),
       body: Column(
         children: [
-          _ActivitySelector(
-            selected: selected,
-            onChanged: (t) {
-              ref.read(_selectedActivityProvider.notifier).state = t;
-              _refreshSelected(t);
-            },
-          ),
-          const Divider(height: 1),
           Expanded(
             child: switch (selected) {
               ActivityType.pota => const _PotaSpotContent(),
@@ -207,6 +206,7 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
 // Activity Selector
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// The activities as small pills in the app bar, in place of a title.
 class _ActivitySelector extends StatelessWidget {
   final ActivityType selected;
   final ValueChanged<ActivityType> onChanged;
@@ -219,74 +219,35 @@ class _ActivitySelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
 
-    return SizedBox(
-      height: 72,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
         children: ActivityType.values.map((type) {
           final isSelected = type == selected;
           final isAvailable = type.available;
-
           return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: isAvailable ? () => onChanged(type) : null,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? theme.colorScheme.primaryContainer
-                      : isAvailable
-                          ? theme.colorScheme.surfaceContainerHighest
-                          : theme.colorScheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected
-                        ? theme.colorScheme.primary
-                        : Colors.transparent,
-                    width: 1.5,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(type.icon,
-                        style: TextStyle(
-                            fontSize: 18,
-                            color: isAvailable ? null : Colors.grey)),
-                    const SizedBox(width: 6),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          type.label,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isSelected
-                                ? theme.colorScheme.onPrimaryContainer
-                                : isAvailable
-                                    ? theme.colorScheme.onSurface
-                                    : theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.35),
-                          ),
-                        ),
-                        if (!isAvailable)
-                          Text(
-                            'Coming soon',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.35),
-                              fontSize: 9,
-                            ),
-                          ),
-                      ],
+            padding: const EdgeInsets.only(right: 4),
+            child: Material(
+              color: isSelected ? cs.primaryContainer : Colors.transparent,
+              shape: const StadiumBorder(),
+              child: InkWell(
+                customBorder: const StadiumBorder(),
+                onTap: isAvailable ? () => onChanged(type) : null,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: Text(
+                    type.label,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isSelected
+                          ? cs.onPrimaryContainer
+                          : cs.onSurface
+                              .withValues(alpha: isAvailable ? 0.75 : 0.3),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -465,122 +426,150 @@ class _SpotView {
   });
 }
 
+/// Two lines: band, callsign, mode and frequency; then the reference or
+/// comment, the spotter and the age.
 class _SpotTile extends StatelessWidget {
   final _SpotView spot;
-  final Color avatarBg;
-  final Color avatarFg;
   final VoidCallback? onTap;
 
   const _SpotTile({
     required this.spot,
-    required this.avatarBg,
-    required this.avatarFg,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dimmed = theme.colorScheme.onSurface.withValues(alpha: 0.5);
+    final dimmed = theme.colorScheme.onSurface.withValues(alpha: 0.55);
+    final small = theme.textTheme.bodySmall;
+    final detail = [
+      if (spot.refLine != null) spot.refLine!,
+      if (spot.comments.isNotEmpty) spot.comments,
+    ].join(' · ');
 
-    return ListTile(
-      onTap: onTap,
-      tileColor: spot.isNew
+    // A Material of its own, so the highlight stays inside the list when
+    // it scrolls under the filters.
+    return Material(
+      color: spot.isNew
           ? theme.colorScheme.primary.withValues(alpha: 0.15)
-          : null,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      leading: CircleAvatar(
-        radius: 20,
-        backgroundColor: avatarBg,
-        child: Text(
-          spot.band ?? '?',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: avatarFg,
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                width: 3,
+                color: spot.isNew
+                    ? theme.colorScheme.primary
+                    : Colors.transparent,
+              ),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(9, 6, 12, 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _BandTag(spot.band),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(spot.activator,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                  if (spot.mode.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    _ModeChip(spot.mode),
+                  ],
+                  if (spot.badge != null) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade700,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(spot.badge!,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                  const Spacer(),
+                  Text(
+                    spot.freqDisplay,
+                    style: small?.copyWith(
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  const SizedBox(width: _BandTag.width + 8),
+                  if (spot.refIcon != null && spot.refLine != null) ...[
+                    Icon(spot.refIcon, size: 12, color: dimmed),
+                    const SizedBox(width: 4),
+                  ],
+                  Expanded(
+                    child: Text(
+                      detail,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: small?.copyWith(
+                        color: dimmed,
+                        fontStyle: spot.refLine == null
+                            ? FontStyle.italic
+                            : FontStyle.normal,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('${spot.spotter} · ${_formatAge(spot.time)}',
+                      style: small?.copyWith(color: dimmed)),
+                ],
+              ),
+            ],
           ),
         ),
       ),
-      title: Row(
-        children: [
-          Text(spot.activator,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 15)),
-          const SizedBox(width: 8),
-          _ModeChip(spot.mode),
-          if (spot.badge != null) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: Colors.green.shade700,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(spot.badge!,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600)),
-            ),
-          ],
-          const Spacer(),
-          Text(
-            spot.freqDisplay,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontFamily: 'monospace',
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+    );
+  }
+}
+
+/// The band in its map colour, fixed width so the callsigns line up.
+class _BandTag extends StatelessWidget {
+  static const double width = 44;
+
+  final String? band;
+
+  const _BandTag(this.band);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: bandColor(band),
+        borderRadius: BorderRadius.circular(6),
       ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (spot.refLine != null) ...[
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Icon(spot.refIcon, size: 12),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    spot.refLine!,
-                    style: theme.textTheme.bodySmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ],
-          if (spot.comments.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(
-              spot.comments,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                fontStyle: FontStyle.italic,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              Icon(Icons.person_outline, size: 12, color: dimmed),
-              const SizedBox(width: 4),
-              Text(spot.spotter,
-                  style:
-                      theme.textTheme.bodySmall?.copyWith(color: dimmed)),
-              const Spacer(),
-              Text(_formatAge(spot.time),
-                  style:
-                      theme.textTheme.bodySmall?.copyWith(color: dimmed)),
-            ],
-          ),
-        ],
+      child: Text(
+        band ?? '?',
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+        ),
       ),
     );
   }
@@ -590,15 +579,11 @@ class _SpotTile extends StatelessWidget {
 class _SpotListSection extends StatelessWidget {
   final AsyncValue<List<_SpotView>> spots;
   final VoidCallback onRefresh;
-  final Color avatarBg;
-  final Color avatarFg;
   final bool showErrorDetails;
 
   const _SpotListSection({
     required this.spots,
     required this.onRefresh,
-    required this.avatarBg,
-    required this.avatarFg,
     this.showErrorDetails = false,
   });
 
@@ -632,8 +617,6 @@ class _SpotListSection extends StatelessWidget {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, i) => _SpotTile(
               spot: list[i],
-              avatarBg: avatarBg,
-              avatarFg: avatarFg,
               onTap: () => _goLogSpot(context, list[i]),
             ),
           ),
@@ -737,10 +720,21 @@ class _SpotFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final hasFilters = filters.any((f) => f.active);
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
+    // Compact chips: the bar sits above the list and should take little room.
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        chipTheme: theme.chipTheme.copyWith(
+          labelStyle: theme.textTheme.labelMedium,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Row(
         children: [
           FilterChip(
             label: Text(newestFirst ? l10n.sortNewest : l10n.sortOldest),
@@ -779,6 +773,7 @@ class _SpotFilterBar extends StatelessWidget {
             ),
           ],
         ],
+        ),
       ),
     );
   }
@@ -933,7 +928,6 @@ class _PotaSpotContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final cs = Theme.of(context).colorScheme;
     final spots = ref.watch(filteredPotaSpotsProvider);
     final filter = ref.watch(potaSpotFilterProvider);
     final allSpots = ref.watch(potaSpotsProvider).valueOrNull ?? [];
@@ -999,8 +993,6 @@ class _PotaSpotContent extends ConsumerWidget {
                     ))
                 .toList()),
             onRefresh: () => ref.invalidate(potaSpotsProvider),
-            avatarBg: cs.primaryContainer,
-            avatarFg: cs.onPrimaryContainer,
           ),
         ),
       ],
@@ -1014,7 +1006,6 @@ class _SotaSpotContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final cs = Theme.of(context).colorScheme;
     final spots = ref.watch(filteredSotaSpotsProvider);
     final filter = ref.watch(sotaSpotFilterProvider);
     final allSpots = ref.watch(sotaSpotsProvider).valueOrNull ?? [];
@@ -1074,8 +1065,6 @@ class _SotaSpotContent extends ConsumerWidget {
                     ))
                 .toList()),
             onRefresh: () => ref.invalidate(sotaSpotsProvider),
-            avatarBg: cs.tertiaryContainer,
-            avatarFg: cs.onTertiaryContainer,
           ),
         ),
       ],
@@ -1089,7 +1078,6 @@ class _WwffSpotContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final cs = Theme.of(context).colorScheme;
     final spots = ref.watch(filteredWwffSpotsProvider);
     final filter = ref.watch(wwffSpotFilterProvider);
     final allSpots = ref.watch(wwffSpotsProvider).valueOrNull ?? [];
@@ -1149,8 +1137,6 @@ class _WwffSpotContent extends ConsumerWidget {
                     ))
                 .toList()),
             onRefresh: () => ref.invalidate(wwffSpotsProvider),
-            avatarBg: cs.secondaryContainer,
-            avatarFg: cs.onSecondaryContainer,
           ),
         ),
       ],
@@ -1164,7 +1150,6 @@ class _DxClusterContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final cs = Theme.of(context).colorScheme;
     final spots = ref.watch(filteredDxSpotsProvider);
     final filter = ref.watch(dxSpotFilterProvider);
     final allSpots = ref.watch(dxSpotsProvider).valueOrNull ?? [];
@@ -1220,8 +1205,6 @@ class _DxClusterContent extends ConsumerWidget {
                     ))
                 .toList()),
             onRefresh: () => ref.invalidate(dxSpotsProvider),
-            avatarBg: cs.primaryContainer,
-            avatarFg: cs.onPrimaryContainer,
             showErrorDetails: true,
           ),
         ),
@@ -1230,17 +1213,24 @@ class _DxClusterContent extends ConsumerWidget {
   }
 }
 
-/// "Refresh in 25 s" next to the refresh button while auto-refresh is on.
-class _AutoRefreshCountdown extends StatefulWidget {
+/// The refresh button; while auto-refresh is on, a ring around it empties
+/// towards the next refresh and a long press says how many seconds are left.
+class _RefreshButton extends StatefulWidget {
   final ValueNotifier<DateTime?> nextRefresh;
+  final int periodSeconds;
+  final VoidCallback onPressed;
 
-  const _AutoRefreshCountdown(this.nextRefresh);
+  const _RefreshButton({
+    required this.nextRefresh,
+    required this.periodSeconds,
+    required this.onPressed,
+  });
 
   @override
-  State<_AutoRefreshCountdown> createState() => _AutoRefreshCountdownState();
+  State<_RefreshButton> createState() => _RefreshButtonState();
 }
 
-class _AutoRefreshCountdownState extends State<_AutoRefreshCountdown> {
+class _RefreshButtonState extends State<_RefreshButton> {
   late final Timer _tick;
 
   @override
@@ -1261,16 +1251,32 @@ class _AutoRefreshCountdownState extends State<_AutoRefreshCountdown> {
     return ValueListenableBuilder<DateTime?>(
       valueListenable: widget.nextRefresh,
       builder: (context, next, _) {
-        if (next == null) return const SizedBox.shrink();
-        final seconds = next.difference(DateTime.now()).inSeconds;
-        return Center(
-          child: Text(
-            context.l10n.spotNextRefresh(seconds < 0 ? 0 : seconds),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6)),
+        final button = IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: widget.onPressed,
+        );
+        if (next == null || widget.periodSeconds <= 0) return button;
+        final left = next.difference(DateTime.now()).inSeconds
+            .clamp(0, widget.periodSeconds);
+        return Tooltip(
+          message: context.l10n.spotNextRefresh(left),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 34,
+                height: 34,
+                child: CircularProgressIndicator(
+                  value: left / widget.periodSeconds,
+                  strokeWidth: 2,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.7),
+                ),
+              ),
+              button,
+            ],
           ),
         );
       },

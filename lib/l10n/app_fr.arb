@@ -244,6 +244,7 @@
   "langJapanese": "日本語",
   "langKorean": "한국어",
   "langRussian": "Russe",
+  "langChinese": "简体中文",
   "aboutTitle": "À propos",
   "appDescription": "Application Android open source pour Wavelog",
   "versionLabel": "Version {version}  (Build {build})",

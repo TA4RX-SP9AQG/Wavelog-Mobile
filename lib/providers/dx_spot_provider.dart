@@ -10,25 +10,26 @@ final dxSpotsProvider = FutureProvider<List<DxSpotModel>>((ref) async {
 });
 
 class DxSpotFilter {
-  final String? band;
+  /// The bands shown; empty shows all.
+  final Set<String> bands;
   final String? mode;
   final bool newestFirst;
 
   const DxSpotFilter({
-    this.band,
+    this.bands = const {},
     this.mode,
     this.newestFirst = true,
   });
 
-  bool get hasFilters => band != null || mode != null;
+  bool get hasFilters => bands.isNotEmpty || mode != null;
 
   DxSpotFilter copyWith({
-    Object? band = _s,
+    Set<String>? bands,
     Object? mode = _s,
     bool? newestFirst,
   }) =>
       DxSpotFilter(
-        band: band == _s ? this.band : band as String?,
+        bands: bands ?? this.bands,
         mode: mode == _s ? this.mode : mode as String?,
         newestFirst: newestFirst ?? this.newestFirst,
       );
@@ -46,7 +47,9 @@ final filteredDxSpotsProvider =
 
   return raw.whenData((spots) {
     var result = spots.where((s) {
-      if (filter.band != null && s.band != filter.band) return false;
+      if (filter.bands.isNotEmpty && !filter.bands.contains(s.band)) {
+        return false;
+      }
       if (filter.mode != null && s.mode != filter.mode) return false;
       return true;
     }).toList();

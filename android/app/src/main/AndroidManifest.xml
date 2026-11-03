@@ -7,6 +7,8 @@
          lib/core/utils/local_network.dart. -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
+    <!-- Radio CAT over a USB OTG cable, see RigSerialPlugin.kt -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
@@ -40,6 +42,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Radio CAT: offer to open the app (and grant USB access, with
+                 "always" remembered) when a USB serial radio is plugged in,
+                 see RigSerialPlugin.kt and res/xml/usb_device_filter.xml. -->
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/usb_device_filter" />
+
             <!-- For file picker -->
             <intent-filter>
                 <action android:name="android.intent.action.GET_CONTENT" />
@@ -47,26 +59,29 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
 
-            <!-- Open .adif / .adi files — Birlikte Aç -->
-            <intent-filter android:label="İçe Aktar">
+            <!-- Open .adif / .adi files ("Open with"). Without a host the path
+                 pattern does not narrow content:// URIs, so other files can
+                 arrive too; handleViewIntent in MainActivity says when one
+                 is not ADIF. -->
+            <intent-filter android:label="@string/open_with_import_adif">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="content" android:mimeType="*/*"
                       android:pathPattern=".*\\.adif" />
             </intent-filter>
-            <intent-filter android:label="İçe Aktar">
+            <intent-filter android:label="@string/open_with_import_adif">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="content" android:mimeType="*/*"
                       android:pathPattern=".*\\.adi" />
             </intent-filter>
-            <intent-filter android:label="İçe Aktar">
+            <intent-filter android:label="@string/open_with_import_adif">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="file" android:mimeType="*/*"
                       android:pathPattern=".*\\.adif" />
             </intent-filter>
-            <intent-filter android:label="İçe Aktar">
+            <intent-filter android:label="@string/open_with_import_adif">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="file" android:mimeType="*/*"

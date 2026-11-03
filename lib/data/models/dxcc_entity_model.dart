@@ -6,6 +6,9 @@ class DxccEntity {
   final int cqZone;
   final int ituZone;
   final bool deleted;
+  /// The entity's centre, from the catalog; null when the server has none.
+  final double? lat;
+  final double? lon;
 
   const DxccEntity({
     required this.adif,
@@ -15,6 +18,8 @@ class DxccEntity {
     required this.cqZone,
     required this.ituZone,
     this.deleted = false,
+    this.lat,
+    this.lon,
   });
 
   factory DxccEntity.fromJson(Map<String, dynamic> j) => DxccEntity(
@@ -25,7 +30,12 @@ class DxccEntity {
         cqZone:    _i(j['cqz']),
         ituZone:   _i(j['ituz']),
         deleted:   j['deleted'] == true,
+        lat:       _d(j['lat']),
+        lon:       _d(j['long']),
       );
+
+  static double? _d(dynamic v) =>
+      v is num ? v.toDouble() : double.tryParse(v?.toString() ?? '');
 
   static int _i(dynamic v) {
     if (v == null) return 0;

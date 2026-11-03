@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/utils/pota_activity.dart';
 import '../../models/qso_model.dart';
 
 class QsoCacheDatasource {
@@ -322,13 +323,7 @@ class QsoCacheDatasource {
     final byPark = <String, int>{};
     for (final q in _box.values) {
       if (!potaStationIds.contains(q.stationProfileId)) continue;
-      final raw = q.myPota?.trim();
-      final ref = (raw != null && raw.isNotEmpty)
-          ? raw
-          : stationPotaRefs[q.stationProfileId];
-      if (ref == null || ref.isEmpty) continue;
-      // MY_POTA_REF can be comma-separated for multi-park activations
-      for (final r in ref.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty)) {
+      for (final r in activatedParksOf(q, stationPotaRefs)) {
         byPark[r] = (byPark[r] ?? 0) + 1;
       }
     }

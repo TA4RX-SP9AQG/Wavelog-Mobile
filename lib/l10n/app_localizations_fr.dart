@@ -723,6 +723,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get langRussian => 'Russe';
 
   @override
+  String get langChinese => '简体中文';
+
+  @override
   String get aboutTitle => 'À propos';
 
   @override
@@ -2185,6 +2188,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get scopeTestLookup => 'Recherche';
 
   @override
+  String get scopeRadioWrite => 'Report the CAT radio\'s frequency and mode';
+
+  @override
+  String get scopeTestRadio => 'Radio';
+
+  @override
   String get apiScopeGuideBtn => 'Guide des portées API';
 
   @override
@@ -2293,4 +2302,188 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get syncNothing => 'Rien à synchroniser';
+
+  @override
+  String get openAddQsoOnStart => 'Start on Add QSO';
+
+  @override
+  String get openAddQsoOnStartHint =>
+      'Open the QSO form right after the app starts; Back leads to Home';
+
+  @override
+  String get rigSection => 'Radio (CAT)';
+
+  @override
+  String get rigScreenTitle => 'Radio connection (CAT)';
+
+  @override
+  String get rigTileSubtitle =>
+      'Read the frequency live from a radio connected by USB cable';
+
+  @override
+  String get rigProtocolLabel => 'Protocol';
+
+  @override
+  String get rigProtocolIcom => 'Icom CI-V';
+
+  @override
+  String get rigProtocolXiegu => 'Xiegu G90 (CI-V)';
+
+  @override
+  String get rigProtocolKenwood => 'Kenwood / Elecraft / Yaesu (FA;)';
+
+  @override
+  String get rigProtocolYaesuLegacy => 'Yaesu FT-817/818/857/897';
+
+  @override
+  String get rigBaudLabel => 'Baud rate';
+
+  @override
+  String get rigCivAddressLabel => 'CI-V address';
+
+  @override
+  String get rigCivAddressHint =>
+      'e.g. 94 IC-7300, A4 IC-705, 98 IC-7610, 88 Xiegu G90';
+
+  @override
+  String get rigAutoConnect => 'Connect automatically';
+
+  @override
+  String get rigAutoConnectHint =>
+      'When the radio\'s USB cable is plugged in, or the app starts with it plugged in. Tick \"Always\" in Android\'s prompt to skip it next time.';
+
+  @override
+  String get rigDevicesLabel => 'USB devices';
+
+  @override
+  String get rigNoDevices =>
+      'No USB serial device found. Connect the radio with a USB OTG cable.';
+
+  @override
+  String get rigRefresh => 'Refresh';
+
+  @override
+  String get rigConnect => 'Connect';
+
+  @override
+  String get rigDisconnect => 'Disconnect';
+
+  @override
+  String rigStatusConnected(String device) {
+    return 'Connected: $device';
+  }
+
+  @override
+  String get rigStatusConnecting => 'Connecting…';
+
+  @override
+  String get rigStatusDisconnected => 'Not connected';
+
+  @override
+  String get rigWaitingForData =>
+      'Waiting for the radio… Check the protocol, baud rate and CI-V address.';
+
+  @override
+  String get rigErrorPermission => 'USB permission denied';
+
+  @override
+  String get rigErrorDetached => 'Radio disconnected';
+
+  @override
+  String rigErrorConnection(String code) {
+    return 'Connection error ($code)';
+  }
+
+  @override
+  String get workedNewCountry => 'New country';
+
+  @override
+  String workedNewBand(String band) {
+    return 'New band ($band)';
+  }
+
+  @override
+  String workedNewMode(String mode) {
+    return 'New mode ($mode)';
+  }
+
+  @override
+  String workedDupe(String band, String mode) {
+    return 'Dupe: already worked today on $band $mode';
+  }
+
+  @override
+  String get stationWebOnlySettingsHint =>
+      'QRZ.com, HRDLog.net, QO-100 (webADIF), OQRS and the default eQSL message are set in Wavelog\'s web interface: the API does not expose them to the app.';
+
+  @override
+  String get qsoReferencesSection => 'POTA / SOTA / WWFF';
+
+  @override
+  String get potaRefHint => 'US-1234, add more with Enter or a comma';
+
+  @override
+  String get potaUnknownParkTitle => 'Unknown park';
+
+  @override
+  String potaUnknownParkBody(String refs) {
+    return 'pota.app has no park $refs. Save the QSO anyway?';
+  }
+
+  @override
+  String get spotNewPark => 'New park';
+
+  @override
+  String potaActivationProgress(String park, int count, int needed) {
+    return '$park: $count/$needed QSOs today (UTC)';
+  }
+
+  @override
+  String potaActivationDone(String park, int count) {
+    return '$park: activated ($count QSOs today)';
+  }
+
+  @override
+  String get keepScreenOnWhileLogging => 'Keep the screen on while logging';
+
+  @override
+  String get keepScreenOnWhileLoggingHint =>
+      'The screen stays on while Add QSO or the contest log is open';
+
+  @override
+  String contestDupe(String band, String time) {
+    return 'DUPE: already in this contest on $band ($time UTC)';
+  }
+
+  @override
+  String contestWorkedOn(String bands) {
+    return 'In this contest on: $bands';
+  }
+
+  @override
+  String get mapLayers => 'Map layers';
+
+  @override
+  String get mapBaseAuto => 'Automatic (light / dark)';
+
+  @override
+  String get mapBaseLight => 'Light';
+
+  @override
+  String get mapBaseDark => 'Dark';
+
+  @override
+  String get mapBaseTopo => 'Topographic';
+
+  @override
+  String get mapGreatCircles => 'Great-circle lines from my station';
+
+  @override
+  String get mapGreyline => 'Greyline';
+
+  @override
+  String get mapGreylineHint => 'Night side and the day/night boundary, now';
+
+  @override
+  String get mapNorthUp => 'North up';
 }

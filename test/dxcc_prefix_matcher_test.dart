@@ -247,5 +247,18 @@ void main() {
         expect(matcher.match('TM4GGR')?.name, 'France');
       });
     });
+
+    test('finds an entity by its ADIF number, with the catalog centre',
+        () async {
+      final crete = DxccEntity.fromJson(const {
+        'adif': 40, 'name': 'Crete', 'prefix': 'SV9', 'cqz': 20, 'ituz': 28,
+        'lat': 35.4, 'long': '25.2',
+      });
+      final matcher = await DxccPrefixMatcher.build([crete, _serbia]);
+      expect(matcher.byAdif(40)?.lat, 35.4);
+      expect(matcher.byAdif(40)?.lon, 25.2);
+      expect(matcher.byAdif(296)?.lat, isNull);
+      expect(matcher.byAdif(1), isNull);
+    });
   });
 }

@@ -153,6 +153,9 @@ final appRouter = GoRouter(
           prefillCallsign: prefill,
           prefillFrequencyMhz: s.uri.queryParameters['freq'],
           prefillMode: s.uri.queryParameters['mode'],
+          prefillPotaRef: s.uri.queryParameters['pota'],
+          prefillSotaRef: s.uri.queryParameters['sota'],
+          prefillWwffRef: s.uri.queryParameters['wwff'],
         );
       },
     ),

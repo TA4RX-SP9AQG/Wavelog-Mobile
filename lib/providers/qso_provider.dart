@@ -269,7 +269,8 @@ Future<void> refresh() async {
   }
 
   // Returns true if saved to server, false if saved locally only (network failure)
-  Future<bool> addQso(QsoModel qso, {bool forceLocal = false}) async {
+  Future<bool> addQso(QsoModel qso,
+      {bool forceLocal = false, int? contestSessionId}) async {
     final repo = ref.read(qsoRepositoryProvider);
     bool savedToServer = !forceLocal;
 
@@ -278,7 +279,8 @@ Future<void> refresh() async {
     final qsoWithId = qso.copyWith(localId: localId);
 
     try {
-      await repo.addQso(qsoWithId, forceLocal: forceLocal);
+      await repo.addQso(qsoWithId,
+          forceLocal: forceLocal, contestSessionId: contestSessionId);
     } on NetworkException {
       // Repository already saved locally, treat as success, not an error
       savedToServer = false;

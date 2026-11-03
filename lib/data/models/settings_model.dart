@@ -25,6 +25,14 @@ class SettingsModel {
   /// change, only the interval is configurable.
   final int qsoSyncCheckIntervalMinutes;
 
+  /// Open the Add QSO screen right after start-up (on top of Home, so Back
+  /// still leads there) instead of stopping at Home.
+  final bool openAddQsoOnStart;
+
+  /// Keep the screen on while the Add QSO or contest log screen is open,
+  /// instead of the system screen timeout.
+  final bool keepScreenOnWhileLogging;
+
   const SettingsModel({
     this.serverUrl = '',
     this.apiKey = '',
@@ -43,6 +51,8 @@ class SettingsModel {
     this.allowInsecureSsl = false,
     this.spotRefreshSeconds = 0,
     this.qsoSyncCheckIntervalMinutes = 30,
+    this.openAddQsoOnStart = false,
+    this.keepScreenOnWhileLogging = true,
   });
 
   bool get hasValidConfig => serverUrl.isNotEmpty;
@@ -77,6 +87,8 @@ class SettingsModel {
     bool? allowInsecureSsl,
     int? spotRefreshSeconds,
     int? qsoSyncCheckIntervalMinutes,
+    bool? openAddQsoOnStart,
+    bool? keepScreenOnWhileLogging,
   }) {
     return SettingsModel(
       serverUrl: serverUrl ?? this.serverUrl,
@@ -106,6 +118,9 @@ class SettingsModel {
       spotRefreshSeconds: spotRefreshSeconds ?? this.spotRefreshSeconds,
       qsoSyncCheckIntervalMinutes:
           qsoSyncCheckIntervalMinutes ?? this.qsoSyncCheckIntervalMinutes,
+      openAddQsoOnStart: openAddQsoOnStart ?? this.openAddQsoOnStart,
+      keepScreenOnWhileLogging:
+          keepScreenOnWhileLogging ?? this.keepScreenOnWhileLogging,
     );
   }
 }

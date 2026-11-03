@@ -2,6 +2,8 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // usb-serial-for-android (radio CAT over USB) is only published here
+        maven { url 'https://jitpack.io' }
     }
 }
 

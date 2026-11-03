@@ -47,11 +47,23 @@ import '../../data/models/dxcc_entity_model.dart';
 /// (https://www.country-files.com), MIT License — see
 /// `assets/dxcc/NOTICE.md`.
 class DxccPrefixMatcher {
-  DxccPrefixMatcher._(this._expanded);
+  DxccPrefixMatcher._(List<(String, DxccEntity)> expanded) {
+    for (final (prefix, entity) in expanded) {
+      _byPrefix.putIfAbsent(prefix, () => entity);
+      _byAdif.putIfAbsent(entity.adif, () => entity);
+      if (prefix.length > _maxLen) _maxLen = prefix.length;
+    }
+  }
 
-  /// (prefix variant, owning entity), sorted by prefix length descending
-  /// for longest-prefix-match.
-  final List<(String, DxccEntity)> _expanded;
+  /// Prefix variant -> owning entity. Built from the length-sorted list, so
+  /// a variant claimed by two entities keeps the first, as a linear scan of
+  /// that list would.
+  final _byPrefix = <String, DxccEntity>{};
+  final _byAdif = <int, DxccEntity>{};
+  var _maxLen = 0;
+
+  /// The catalog entity with ADIF number [adif].
+  DxccEntity? byAdif(int adif) => _byAdif[adif];
 
   static const _assetPath = 'assets/dxcc/dxcc_prefix_table.json';
 
@@ -153,10 +165,13 @@ class DxccPrefixMatcher {
 
   /// Finds the DXCC entity whose prefix variant is the longest match for
   /// [call]. [call] must already be uppercased/normalized (see
-  /// `_normalizeQsoCall` in statistics_screen.dart).
+  /// `_normalizeQsoCall` in statistics_screen.dart). Tries [call]'s own
+  /// prefixes longest-first, so it costs a few map lookups per call rather
+  /// than a scan of every variant (it runs once per QSO in the log).
   DxccEntity? match(String call) {
-    for (final (prefix, entity) in _expanded) {
-      if (call.startsWith(prefix)) return entity;
+    for (var n = call.length < _maxLen ? call.length : _maxLen; n > 0; n--) {
+      final entity = _byPrefix[call.substring(0, n)];
+      if (entity != null) return entity;
     }
     return null;
   }

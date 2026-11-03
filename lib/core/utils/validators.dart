@@ -1,3 +1,6 @@
+import '../constants/band_mode_data.dart';
+import 'keyboard_shortcuts.dart';
+
 // Desteklenen formatlar:
 //   Standart       : SP9AQG, W1AW, K1A
 //   Prefix/çağrı   : SV5/SP9AQG, W1/SP9AQG
@@ -22,6 +25,16 @@ String? validateCallsign(String? value) {
   if (value == null || value.trim().isEmpty) return 'Çağrı işareti gerekli';
   if (!_callsignRegex.hasMatch(value.trim())) return 'Geçersiz çağrı işareti formatı';
   return null;
+}
+
+/// True once [value] looks like a complete callsign, worth an automatic
+/// lookup while the operator types. The band/mode quick commands (issue #48)
+/// are excluded: "20M" matches the callsign pattern too.
+bool isAutoLookupCallsign(String value) {
+  final v = value.trim();
+  return _callsignRegex.hasMatch(v) &&
+      matchBandCommand(v, kCommonBands) == null &&
+      matchModeCommand(v, kCommonModes) == null;
 }
 
 String? validateGridSquare(String? value) {

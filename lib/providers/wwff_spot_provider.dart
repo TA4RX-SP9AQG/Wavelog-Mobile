@@ -19,7 +19,9 @@ final filteredWwffSpotsProvider =
 
   return raw.whenData((spots) {
     var result = spots.where((s) {
-      if (filter.band != null && s.band != filter.band) return false;
+      if (filter.bands.isNotEmpty && !filter.bands.contains(s.band)) {
+        return false;
+      }
       if (filter.mode != null && s.mode != filter.mode) return false;
       if (filter.country != null && s.countryPrefix != filter.country) {
         return false;

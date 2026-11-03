@@ -9,11 +9,14 @@ import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/constants/band_mode_data.dart';
+import '../../../core/rig/cat_protocol.dart';
 import '../../../core/utils/error_l10n.dart';
 import '../../../core/utils/keyboard_shortcuts.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/utils/pota_activity.dart';
+import '../../../core/utils/worked_before.dart';
 import '../../../data/models/callsign_lookup_model.dart';
 import '../../../data/models/qso_model.dart';
 import '../../../data/models/station_model.dart';
@@ -24,8 +27,13 @@ import '../../../providers/connectivity_provider.dart';
 import '../../../providers/lookup_provider.dart';
 import '../../../providers/qso_provider.dart';
 import '../../../providers/remote_datasource_provider.dart';
+import '../../../providers/rig_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/station_provider.dart';
+import '../../../providers/worked_before_provider.dart';
+import '../../widgets/keep_screen_on.dart';
+import '../../widgets/pota/pota_park_autocomplete.dart';
+import '../../widgets/rig/rig_link_button.dart';
 
 class AddQsoScreen extends ConsumerStatefulWidget {
   final String? prefillCallsign;
@@ -41,12 +49,21 @@ class AddQsoScreen extends ConsumerStatefulWidget {
   /// which case this stays null and the user picks it manually.
   final String? prefillMode;
 
+  /// Spot-tap prefill — the activator's POTA park, SOTA summit or WWFF
+  /// area, logged as the QSO's POTA_REF / SOTA_REF / WWFF_REF.
+  final String? prefillPotaRef;
+  final String? prefillSotaRef;
+  final String? prefillWwffRef;
+
   const AddQsoScreen({
     super.key,
     this.prefillCallsign,
     this.editQso,
     this.prefillFrequencyMhz,
     this.prefillMode,
+    this.prefillPotaRef,
+    this.prefillSotaRef,
+    this.prefillWwffRef,
   });
 
   @override
@@ -84,6 +101,15 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
   // the operator actually has to type per contact, the closest equivalent
   // this screen has to a contest logger's "exchange" field.
   late FocusNode _rstRcvdFocus;
+  final _freqFocus = FocusNode();
+  final _rstSentFocus = FocusNode();
+  final _potaInputFocus = FocusNode();
+  final _sotaRefFocus = FocusNode();
+  final _wwffRefFocus = FocusNode();
+  // When the last hardware Enter went down: tells a hardware-keyboard Enter
+  // on the callsign (save, issue #48) from an on-screen keyboard one (walk
+  // to the report), see _onCallsignSubmitted.
+  DateTime? _hardwareEnterAt;
 
   DateTime _dateTimeOn = DateTime.now().toUtc();
   String _band = '20m';
@@ -98,6 +124,7 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
 
   String? _dxccCountry;
   String? _dxccFlag;
+  String? _dxccId; // DXCC entity id from the lookup, for _WorkedBeforeBadges
 
   // Auto-spot banner
   AutoSpotStatus? _autoSpotStatus;
@@ -106,11 +133,18 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
   // Tablet right-panel callsign — debounced to avoid per-keystroke API calls
   String _currentCallsign = '';
   Timer? _callsignPanelTimer;
+  // Bumped by every lookup; a reply for an older one is dropped, since
+  // lookups now start while the callsign is still being typed.
+  int _lookupSeq = 0;
   Timer? _freqSaveDebounce;
+
+  final _screenOn = KeepScreenOn();
 
   @override
   void initState() {
     super.initState();
+    _screenOn.start(ref);
+    HardwareKeyboard.instance.addHandler(_noteHardwareEnter);
     final settings = ref.read(settingsProvider);
     _band = '20m';
     _mode = settings.defaultMode;
@@ -178,8 +212,10 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
       _gridCtrl = TextEditingController();
       _commentCtrl = TextEditingController();
       _potaInputCtrl = TextEditingController();
-      _sotaRefCtrl = TextEditingController();
-      _wwffRefCtrl = TextEditingController();
+      _sotaRefCtrl = TextEditingController(text: widget.prefillSotaRef ?? '');
+      _wwffRefCtrl = TextEditingController(text: widget.prefillWwffRef ?? '');
+      final potaRef = widget.prefillPotaRef?.trim();
+      if (potaRef != null && potaRef.isNotEmpty) _potaRefs = [potaRef];
     }
 
     _callsignFocus = FocusNode();
@@ -188,6 +224,18 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
     _freqCtrl.addListener(_updateAutoSpotStatus);
     if (widget.editQso == null) _freqCtrl.addListener(_saveFreqDebounced);
     _potaInputCtrl.addListener(_onPotaInputChanged);
+    _potaInputFocus.addListener(_onPotaInputFocusChanged);
+    if (edit == null) {
+      // Follow the radio's dial while a CAT link is up; _saveFreqDebounced
+      // then picks the matching band.
+      ref.listenManual<int?>(rigProvider.select((s) => s.frequencyHz),
+          (_, hz) {
+        if (hz != null) _freqCtrl.text = formatRigFreqMhz(hz);
+      });
+      ref.listenManual<RigMode?>(rigProvider.select((s) => s.mode), (_, m) {
+        if (m != null) _applyRigMode(m);
+      });
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (edit == null &&
@@ -202,8 +250,27 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
         // A spot-tap prefill already set band/frequency — don't let the
         // last-used-session restore clobber it.
         if (widget.prefillFrequencyMhz == null) {
-          _loadLastBand();
-          _loadLastFreq();
+          final rigHz = ref.read(rigProvider).frequencyHz;
+          if (rigHz != null) {
+            _freqCtrl.text = formatRigFreqMhz(rigHz);
+          } else {
+            _loadLastBand();
+            _loadLastFreq();
+          }
+        }
+        final rigMode = ref.read(rigProvider).mode;
+        if (widget.prefillMode == null && rigMode != null) {
+          _applyRigMode(rigMode);
+        }
+        // Spot tap: tune the radio to the spot, so the radio and the form
+        // agree (the rig listeners above then just confirm it).
+        final spotHz = widget.prefillFrequencyMhz == null
+            ? null
+            : double.tryParse(widget.prefillFrequencyMhz!);
+        if (spotHz != null) {
+          final hz = (spotHz * 1e6).round();
+          ref.read(rigProvider.notifier).tune(hz,
+              mode: RigMode.forLogMode(widget.prefillMode ?? '', hz));
         }
         _loadLastSubmode(_band, _mode);
       }
@@ -247,15 +314,23 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
 
   @override
   void dispose() {
+    _screenOn.stop();
     _callsignPanelTimer?.cancel();
     _statusTimer?.cancel();
     _freqSaveDebounce?.cancel();
     _freqCtrl.removeListener(_updateAutoSpotStatus);
     if (widget.editQso == null) _freqCtrl.removeListener(_saveFreqDebounced);
     _potaInputCtrl.removeListener(_onPotaInputChanged);
+    _potaInputFocus.removeListener(_onPotaInputFocusChanged);
     _callsignFocus.removeListener(_onCallsignFocusChange);
     _callsignFocus.dispose();
     _rstRcvdFocus.dispose();
+    _freqFocus.dispose();
+    _rstSentFocus.dispose();
+    _potaInputFocus.dispose();
+    _sotaRefFocus.dispose();
+    _wwffRefFocus.dispose();
+    HardwareKeyboard.instance.removeHandler(_noteHardwareEnter);
     _callsignCtrl.dispose();
     _freqCtrl.dispose();
     _rstSentCtrl.dispose();
@@ -268,6 +343,34 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
     _sotaRefCtrl.dispose();
     _wwffRefCtrl.dispose();
     super.dispose();
+  }
+
+  List<String> get _potaRefsWithPending {
+    final pending = _potaInputCtrl.text.trim().toUpperCase();
+    return [
+      ..._potaRefs,
+      if (potaRefPattern.hasMatch(pending) && !_potaRefs.contains(pending))
+        pending,
+    ];
+  }
+
+  /// Leaving the POTA field confirms a typed park as Enter would, so it is
+  /// looked up (name shown, an unknown one flagged) rather than left as
+  /// unchecked text.
+  void _onPotaInputFocusChanged() {
+    if (_potaInputFocus.hasFocus) return;
+    final r = _potaInputCtrl.text.trim().toUpperCase();
+    // Only a reference: text typed to search by name ("biebrz") is not one.
+    if (!potaRefPattern.hasMatch(r)) return;
+    _potaInputCtrl.clear();
+    _addPotaRef(r);
+  }
+
+  /// A park picked from the pota.app suggestions: its name is known already.
+  void _onPotaParkSelected(PotaPark park) {
+    _potaInputCtrl.clear();
+    _potaNameCache[park.reference] = park.name;
+    _addPotaRef(park.reference);
   }
 
   void _onPotaInputChanged() {
@@ -328,6 +431,7 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
       setState(() => _currentCallsign = callsign);
     }
 
+    final seq = ++_lookupSeq;
     setState(() {
       _lookupLoading = true;
       _lookupSuccess = false;
@@ -337,7 +441,7 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
       final remote = ref.read(wavelogRemoteDatasourceProvider);
       final result = await remote.lookupCallsign(
           callsign: callsign, band: _band, mode: _mode);
-      if (!mounted) return;
+      if (!mounted || seq != _lookupSeq) return;
       setState(() {
         _lookupLoading = false;
         _lookupDone = true;
@@ -347,9 +451,10 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
         if (result.gridSquare != null) _gridCtrl.text = result.gridSquare!;
         _dxccCountry = result.country;
         _dxccFlag = result.flag;
+        _dxccId = result.dxcc;
       });
     } catch (_) {
-      if (mounted) {
+      if (mounted && seq == _lookupSeq) {
         setState(() {
           _lookupLoading = false;
           _lookupDone = true;
@@ -388,10 +493,27 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
     final ds = ref.read(settingsLocalDatasourceProvider);
     final saved = await ds.getLastSubmode(band, mode);
     if (!mounted) return;
+    // The sideband the radio is actually on beats any remembered one.
+    final rigMode = widget.editQso == null ? ref.read(rigProvider).mode : null;
+    if (rigMode != null && rigMode.appMode == mode && rigMode.appSubmode != null) {
+      setState(() => _submode = rigMode.appSubmode);
+      return;
+    }
     final resolved = (saved != null && (kSubmodes[mode]?.contains(saved) ?? false))
         ? saved
         : defaultSubmodeFor(band, mode);
     if (resolved != null) setState(() => _submode = resolved);
+  }
+
+  /// Follows the radio's mode (CAT link, see rig_provider.dart) unless the
+  /// log is on a digital mode the radio runs in USB/LSB.
+  void _applyRigMode(RigMode m) {
+    if (!m.appliesTo(_mode)) return;
+    if (m.appMode != _mode) {
+      _onModeChanged(m.appMode);
+    } else if (m.appSubmode != null && m.appSubmode != _submode) {
+      setState(() => _submode = m.appSubmode);
+    }
   }
 
   void _onModeChanged(String mode) {
@@ -526,6 +648,7 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
       _lookupSuccess = false;
       _dxccCountry = null;
       _dxccFlag = null;
+      _dxccId = null;
       if (_isLive) _dateTimeOn = DateTime.now().toUtc();
     });
     // Rapid re-entry for pile-ups / hardware keyboard use (issue #48): snap
@@ -557,17 +680,127 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
     if (_callsignFocus.hasFocus) _submit();
   }
 
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+  /// Moves to the next field of the on-screen keyboard Enter chain with its
+  /// text selected, so typing replaces a default like "59" and Enter
+  /// accepts it as it is.
+  ///
+  /// The selection waits for the next frame: set together with
+  /// requestFocus() it can reach the native input connection before the
+  /// keyboard has moved to the field, which then loses focus altogether on
+  /// some devices and keyboards.
+  void _focusAndSelect(FocusNode node, TextEditingController ctrl) {
+    node.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !node.hasFocus) return;
+      ctrl.selection =
+          TextSelection(baseOffset: 0, extentOffset: ctrl.text.length);
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
 
-    // Resolve the effective station: explicit selection → settings ID → first
-    // active station in the loaded list (handles stale or null activeStationProfileId).
+  bool _noteHardwareEnter(KeyEvent event) {
+    if (event is KeyDownEvent &&
+        (event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
+      _hardwareEnterAt = DateTime.now();
+    }
+    return false; // only noting it, the key goes on as usual
+  }
+
+  /// Enter on the callsign. A hardware-keyboard Enter saves the QSO (issue
+  /// #48); one from the on-screen keyboard walks on to the report (the
+  /// frequency first while it is empty), and Enter there onward to saving.
+  ///
+  /// The submit action and the hardware key event arrive in an order that
+  /// differs between devices and keyboards, so the choice waits a moment
+  /// for both: moving focus at once would take it from the callsign before
+  /// the Enter-to-save shortcut, which only acts there, sees the key.
+  void _onCallsignSubmitted() {
+    Timer(const Duration(milliseconds: 100), () {
+      if (!mounted || _isSaving || !_callsignFocus.hasFocus) return;
+      if (_callsignCtrl.text.trim().isEmpty) return; // saved meanwhile
+      final at = _hardwareEnterAt;
+      if (at != null &&
+          DateTime.now().difference(at) < const Duration(milliseconds: 500)) {
+        _submit();
+      } else if (_freqCtrl.text.trim().isEmpty) {
+        _focusAndSelect(_freqFocus, _freqCtrl);
+      } else {
+        _focusAndSelect(_rstSentFocus, _rstSentCtrl);
+      }
+    });
+  }
+
+  /// The station the QSO is logged for: explicit selection → settings ID →
+  /// first active station in the loaded list (handles a stale or null
+  /// activeStationProfileId).
+  StationModel? get _effectiveStation {
     final stationList = ref.read(stationProvider).valueOrNull ?? [];
     final settingStationId = ref.read(settingsProvider).activeStationProfileId;
-    final effectiveStation = _selectedStation
+    return _selectedStation
         ?? stationList.where((s) => s.id == settingStationId).firstOrNull
         ?? stationList.where((s) => s.isActive).firstOrNull
         ?? stationList.firstOrNull;
+  }
+
+  /// Enter on RST rcvd. Logging from a park, summit or WWFF area, the chain
+  /// stops at that kind of reference field first, so a park-to-park contact
+  /// isn't saved before its reference is typed (Enter there on an empty
+  /// field saves); everywhere else, or with the reference already filled
+  /// in, it saves straight away.
+  void _afterReport() {
+    final s = _effectiveStation;
+    bool has(String? r) => r?.trim().isNotEmpty == true;
+    if (has(s?.pota) && _potaRefs.isEmpty) {
+      _focusAndSelect(_potaInputFocus, _potaInputCtrl);
+    } else if (has(s?.sota) && _sotaRefCtrl.text.trim().isEmpty) {
+      _focusAndSelect(_sotaRefFocus, _sotaRefCtrl);
+    } else if (has(s?.wwff) && _wwffRefCtrl.text.trim().isEmpty) {
+      _focusAndSelect(_wwffRefFocus, _wwffRefCtrl);
+    } else {
+      _submit();
+    }
+  }
+
+  bool _confirmingParks = false;
+
+  /// Parks pota.app answered "no such park" for (an unchecked or still
+  /// loading one doesn't count): asks before logging them anyway, e.g. a
+  /// park added to pota.app only just now.
+  Future<bool> _confirmUnknownParks() async {
+    final unknown =
+        _potaRefs.where((r) => _potaNameCache[r] == '').toList();
+    if (unknown.isEmpty) return true;
+    final l10n = context.l10n;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.potaUnknownParkTitle),
+        content: Text(l10n.potaUnknownParkBody(unknown.join(', '))),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel)),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.save)),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
+  Future<void> _submit() async {
+    // Enter can reach here twice for one press (the hardware shortcut and
+    // the field's submit action), never save the QSO twice.
+    if (_isSaving || _confirmingParks) return;
+    if (!_formKey.currentState!.validate()) return;
+    _confirmingParks = true;
+    final parksOk = await _confirmUnknownParks();
+    _confirmingParks = false;
+    if (!parksOk || !mounted) return;
+
+    final effectiveStation = _effectiveStation;
     final stationId = effectiveStation?.id;
     if (stationId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -585,8 +818,9 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
     final rawAdifMap = <String, String>{
       ...?widget.editQso?.rawAdif,
       if (_dxccFlag != null) 'APP_WAVELOG_FLAG': _dxccFlag!,
-      if (_potaRefs.isNotEmpty)
-        'POTA_REF': _potaRefs.join(','),
+      // A park typed but not yet confirmed with Enter or a comma counts too.
+      if (_potaRefsWithPending.isNotEmpty)
+        'POTA_REF': _potaRefsWithPending.join(','),
       if (_sotaRefCtrl.text.trim().isNotEmpty)
         'SOTA_REF': _sotaRefCtrl.text.trim().toUpperCase(),
       if (_wwffRefCtrl.text.trim().isNotEmpty)
@@ -838,7 +1072,11 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
     final form = Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        // Keep the Save button above the system navigation bar: Android 15+
+        // draws apps edge-to-edge, and a ListView with its own padding does
+        // not add the bottom inset by itself.
+        padding: EdgeInsets.fromLTRB(
+            16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
         children: _buildFormContent(context),
       ),
     );
@@ -979,6 +1217,9 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
                     ),
         ),
         textCapitalization: TextCapitalization.characters,
+        textInputAction: TextInputAction.next,
+        // The Enter chain moves focus itself (no default traversal).
+        onEditingComplete: () {},
         validator: validateCallsign,
         onChanged: (v) {
           if (v.endsWith(' ')) {
@@ -1000,17 +1241,21 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
                 _gridCtrl.clear();
                 _dxccCountry = null;
                 _dxccFlag = null;
+                _dxccId = null;
                 _lookupSuccess = false;
               }
             });
           }
-          // Debounced tablet panel refresh
+          // Debounced tablet panel refresh and automatic lookup once the
+          // operator pauses on a complete-looking callsign.
           _callsignPanelTimer?.cancel();
           _callsignPanelTimer = Timer(const Duration(milliseconds: 600), () {
+            if (!mounted) return;
             final cs2 = v.trim().toUpperCase();
-            if (mounted && cs2 != _currentCallsign) {
+            if (cs2 != _currentCallsign) {
               setState(() => _currentCallsign = cs2);
             }
+            if (!_lookupDone && isAutoLookupCallsign(cs2)) _doLookup();
           });
         },
         onFieldSubmitted: (v) {
@@ -1032,8 +1277,9 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
             _callsignCtrl.clear();
             return;
           }
-          _lookupDone = false;
-          _doLookup();
+          if (v.trim().isEmpty) return;
+          if (!_lookupDone) _doLookup();
+          _onCallsignSubmitted();
         },
       ),
 
@@ -1062,6 +1308,21 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
         }).toList(),
       ),
       const SizedBox(height: 8),
+
+      // ── POTA activation progress, logging from a park ──────────────
+      if (widget.editQso == null &&
+          _effectiveStation?.pota?.trim().isNotEmpty == true)
+        _PotaActivationBadge(station: _effectiveStation!),
+
+      // ── New country / band / mode, dupe ─────────────────────────────
+      if (widget.editQso == null && _currentCallsign.length >= 3)
+        _WorkedBeforeBadges(
+          callsign: _currentCallsign,
+          band: _band,
+          mode: _mode,
+          day: _dateTimeOn,
+          dxccId: _dxccId,
+        ),
 
       // ── Logbook özeti: bugün sayacı + son 5 QSO ────────────────────
       if (!Responsive.useTabletLayout(context))
@@ -1146,8 +1407,14 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
         decoration: InputDecoration(
           labelText: l10n.frequencyField,
           prefixIcon: const Icon(Icons.waves),
+          suffixIcon: const RigLinkButton(),
         ),
+        focusNode: _freqFocus,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        textInputAction: TextInputAction.next,
+        // The Enter chain moves focus itself (no default traversal).
+        onEditingComplete: () {},
+        onFieldSubmitted: (_) => _focusAndSelect(_rstSentFocus, _rstSentCtrl),
         validator: validateFrequency,
       ),
       const SizedBox(height: 12),
@@ -1157,8 +1424,14 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
         Expanded(
           child: TextFormField(
             controller: _rstSentCtrl,
+            focusNode: _rstSentFocus,
             decoration: InputDecoration(labelText: l10n.rstSentField),
             keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.next,
+            // The Enter chain moves focus itself (no default traversal).
+            onEditingComplete: () {},
+            onFieldSubmitted: (_) =>
+                _focusAndSelect(_rstRcvdFocus, _rstRcvdCtrl),
             validator: (v) => validateRst(v, _mode),
           ),
         ),
@@ -1169,6 +1442,8 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
             focusNode: _rstRcvdFocus,
             decoration: InputDecoration(labelText: l10n.rstRcvdField),
             keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.done,
+            onFieldSubmitted: (_) => _afterReport(),
             validator: (v) => validateRst(v, _mode),
           ),
         ),
@@ -1259,24 +1534,36 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
         maxLines: 2,
       ),
 
-      // ── P2P referanslar (istasyonda POTA/SOTA/WWFF varsa görünür) ───
+      // ── POTA / SOTA / WWFF references of the other station ──────────
+      // Always available (hunting a park from home as much as park-to-park),
+      // folded away unless the active station is itself in a park, summit
+      // or WWFF area, or a reference is already filled in (e.g. from a spot).
       Builder(builder: (context) {
-        final stationList = stations.valueOrNull ?? [];
-        final settingStationId =
-            ref.read(settingsProvider).activeStationProfileId;
-        final effectiveStation = _selectedStation
-            ?? stationList.where((s) => s.id == settingStationId).firstOrNull
-            ?? stationList.where((s) => s.isActive).firstOrNull
-            ?? stationList.firstOrNull;
-        final showPota = effectiveStation?.pota?.trim().isNotEmpty == true;
-        final showSota = effectiveStation?.sota?.trim().isNotEmpty == true;
-        final showWwff = effectiveStation?.wwff?.trim().isNotEmpty == true;
-        if (!showPota && !showSota && !showWwff) return const SizedBox.shrink();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        final effectiveStation = _effectiveStation;
+        final stationHasRef = [
+          effectiveStation?.pota,
+          effectiveStation?.sota,
+          effectiveStation?.wwff,
+        ].any((r) => r?.trim().isNotEmpty == true);
+        final hasRef = _potaRefs.isNotEmpty ||
+            _sotaRefCtrl.text.trim().isNotEmpty ||
+            _wwffRefCtrl.text.trim().isNotEmpty;
+        return ExpansionTile(
+          // A new key when the station gains or loses a reference of its own,
+          // so switching to a park location unfolds it (initiallyExpanded is
+          // only read when the tile is first built).
+          key: ValueKey(stationHasRef),
+          title: Text(context.l10n.qsoReferencesSection),
+          leading: const Icon(Icons.park_outlined),
+          initiallyExpanded: stationHasRef || hasRef,
+          maintainState: true,
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(bottom: 4),
+          shape: const Border(),
+          collapsedShape: const Border(),
+          expandedCrossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 12),
-            if (showPota) ...[
+            ...[
               if (_potaRefs.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(left: 48, bottom: 4),
@@ -1301,19 +1588,38 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
                     ],
                   ),
                 ),
-              TextFormField(
+              PotaParkAutocomplete(
                 controller: _potaInputCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'POTA P2P',
-                  hintText: 'US-1234, Enter veya virgülle ekle',
-                  prefixIcon: Icon(Icons.park_outlined, size: 20),
+                focusNode: _potaInputFocus,
+                onSelected: _onPotaParkSelected,
+                fieldBuilder: (context, selectHighlighted) => TextFormField(
+                  controller: _potaInputCtrl,
+                  focusNode: _potaInputFocus,
+                  textInputAction: TextInputAction.done,
+                  // Enter adds the park and stays here for another one.
+                  onEditingComplete: () {},
+                  decoration: InputDecoration(
+                    labelText: 'POTA',
+                    hintText: context.l10n.potaRefHint,
+                    prefixIcon: const Icon(Icons.park_outlined, size: 20),
+                  ),
+                  textCapitalization: TextCapitalization.characters,
+                  onFieldSubmitted: (value) {
+                    final r = value.trim().toUpperCase();
+                    // Enter on an empty field ends the Enter chain: save.
+                    if (r.isEmpty) {
+                      _submit();
+                      return;
+                    }
+                    if (!potaRefPattern.hasMatch(r)) {
+                      // A name being searched: take the top suggestion.
+                      selectHighlighted();
+                      return;
+                    }
+                    _potaInputCtrl.clear();
+                    _addPotaRef(r);
+                  },
                 ),
-                textCapitalization: TextCapitalization.characters,
-                onFieldSubmitted: (value) {
-                  final r = value.trim().toUpperCase();
-                  _potaInputCtrl.clear();
-                  if (r.isNotEmpty) _addPotaRef(r);
-                },
               ),
               if (_potaRefs.isNotEmpty)
                 Padding(
@@ -1369,24 +1675,30 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
                   ),
                 ),
             ],
-            if (showSota) ...[
-              if (showPota) const SizedBox(height: 12),
+            ...[
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _sotaRefCtrl,
+                focusNode: _sotaRefFocus,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
                 decoration: const InputDecoration(
-                  labelText: 'SOTA P2P',
+                  labelText: 'SOTA',
                   hintText: 'SP/KR-001',
                   prefixIcon: Icon(Icons.terrain_outlined, size: 20),
                 ),
                 textCapitalization: TextCapitalization.characters,
               ),
             ],
-            if (showWwff) ...[
-              if (showPota || showSota) const SizedBox(height: 12),
+            ...[
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _wwffRefCtrl,
+                focusNode: _wwffRefFocus,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
                 decoration: const InputDecoration(
-                  labelText: 'WWFF P2P',
+                  labelText: 'WWFF',
                   hintText: 'SPFF-0001, TAFF-0001',
                   prefixIcon: Icon(Icons.forest_outlined, size: 20),
                 ),
@@ -1426,11 +1738,11 @@ class _AddQsoScreenState extends ConsumerState<AddQsoScreen> {
                       overflow: TextOverflow.ellipsis,
                     )))
                 .toList(),
+            // For this QSO only: the active station stays as it is (the
+            // station chip on Home changes that, also on the server). The
+            // form opens on the active station again next time.
             onChanged: (v) {
               setState(() => _selectedStation = v);
-              if (v != null) {
-                ref.read(settingsProvider.notifier).setActiveStation(v);
-              }
               _updateAutoSpotStatus();
             },
           );
@@ -1637,7 +1949,8 @@ class _TabletInfoPanel extends ConsumerWidget {
 
     if (callsign.length < 3) {
       return ListView(
-        padding: const EdgeInsets.fromLTRB(12, 16, 16, 16),
+        padding: EdgeInsets.fromLTRB(
+            12, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
         children: [
           // ── Placeholder ──────────────────────────────────────────
           Padding(
@@ -1672,7 +1985,8 @@ class _TabletInfoPanel extends ConsumerWidget {
     final previousAsync = ref.watch(previousQsosByCallsignProvider(callsign));
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 16, 16, 16),
+      padding: EdgeInsets.fromLTRB(
+          12, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
       children: [
         // ── Callsign header ──────────────────────────────────────────
         Row(children: [
@@ -2238,6 +2552,121 @@ class _HistoryBadge extends StatelessWidget {
 }
 
 // ── Inline previous QSOs (phone layout only) ──────────────────────────────────
+
+/// Logging from a park: how many QSOs it has today (UTC) toward the
+/// [kPotaActivationQsos] a valid activation needs, one chip per park.
+class _PotaActivationBadge extends ConsumerWidget {
+  final StationModel station;
+  const _PotaActivationBadge({required this.station});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final log = ref.watch(qsoProvider).valueOrNull;
+    if (log == null) return const SizedBox.shrink();
+    final stationPotaRefs = <int, String>{
+      for (final s in ref.watch(stationProvider).valueOrNull ?? <StationModel>[])
+        if (s.pota?.trim().isNotEmpty == true) s.id: s.pota!,
+      station.id: station.pota!,
+    };
+    final now = DateTime.now().toUtc();
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Wrap(spacing: 6, runSpacing: 6, children: [
+        for (final park in potaRefsOf(station.pota))
+          Builder(builder: (context) {
+            final n = potaActivationCount(
+                log: log,
+                park: park,
+                stationPotaRefs: stationPotaRefs,
+                day: now);
+            final done = n >= kPotaActivationQsos;
+            final cs = Theme.of(context).colorScheme;
+            final fg = done ? Colors.white : cs.onSecondaryContainer;
+            return Chip(
+              avatar: Icon(done ? Icons.check_circle : Icons.park,
+                  size: 16, color: fg),
+              label: Text(
+                  done
+                      ? l10n.potaActivationDone(park, n)
+                      : l10n.potaActivationProgress(
+                          park, n, kPotaActivationQsos),
+                  style: TextStyle(color: fg, fontWeight: FontWeight.w600)),
+              backgroundColor:
+                  done ? Colors.green.shade700 : cs.secondaryContainer,
+              side: BorderSide.none,
+              visualDensity: VisualDensity.compact,
+            );
+          }),
+      ]),
+    );
+  }
+}
+
+/// Chips under the callsign: a new DXCC entity, a new band or mode for it,
+/// or a dupe (same call, band and mode already logged today), checked
+/// against the QSOs in scope (see worked_before.dart).
+class _WorkedBeforeBadges extends ConsumerWidget {
+  final String callsign;
+  final String band;
+  final String mode;
+  final DateTime day;
+  final String? dxccId;
+
+  const _WorkedBeforeBadges({
+    required this.callsign,
+    required this.band,
+    required this.mode,
+    required this.day,
+    this.dxccId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final log = ref.watch(scopedQsoProvider).valueOrNull;
+    if (log == null) return const SizedBox.shrink();
+    final matcher = ref.watch(dxccMatcherProvider).valueOrNull;
+    final s = workedStatus(
+      log: log,
+      index: ref.watch(workedIndexProvider).valueOrNull,
+      callsign: callsign,
+      entity: dxccEntityOf(callsign, dxccId, matcher),
+      band: band,
+      mode: mode,
+      day: day,
+    );
+    if (s.isEmpty) return const SizedBox.shrink();
+
+    final l10n = context.l10n;
+    final cs = Theme.of(context).colorScheme;
+    Widget chip(IconData icon, String label, Color bg, Color fg) => Chip(
+          avatar: Icon(icon, size: 16, color: fg),
+          label: Text(label,
+              style: TextStyle(color: fg, fontWeight: FontWeight.w600)),
+          backgroundColor: bg,
+          side: BorderSide.none,
+          visualDensity: VisualDensity.compact,
+        );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Wrap(spacing: 6, runSpacing: 6, children: [
+        if (s.dupe)
+          chip(Icons.warning_amber_rounded, l10n.workedDupe(band, mode),
+              Colors.orange.shade700, Colors.white),
+        if (s.newCountry)
+          chip(Icons.public, l10n.workedNewCountry, Colors.green.shade700,
+              Colors.white),
+        if (s.newBand)
+          chip(Icons.waves, l10n.workedNewBand(band), cs.primaryContainer,
+              cs.onPrimaryContainer),
+        if (s.newMode)
+          chip(Icons.tune, l10n.workedNewMode(mode), cs.primaryContainer,
+              cs.onPrimaryContainer),
+      ]),
+    );
+  }
+}
 
 class _InlinePreviousQsos extends ConsumerWidget {
   final String callsign;

@@ -40,5 +40,8 @@
 # Geolocator
 -keep class com.baseflow.geolocator.** { *; }
 
+# usb-serial-for-android instantiates its drivers by reflection
+-keep class com.hoho.android.usbserial.driver.* { *; }
+
 # Keep data models (ADIF/QSO serialization)
 -keep class com.wavelog_mobile.** { *; }

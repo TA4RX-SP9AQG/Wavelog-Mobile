@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 
@@ -8,12 +9,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/utils/error_l10n.dart';
+import '../../../core/utils/geo_utils.dart';
+import '../../../core/utils/map_geo.dart';
+import '../../../core/utils/worked_before.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/qso_scope.dart';
 import '../../../data/models/qso_model.dart';
 import '../../../providers/qso_provider.dart';
+import '../../../providers/settings_provider.dart';
+import '../../../providers/station_provider.dart';
+import '../../../providers/worked_before_provider.dart';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -48,18 +56,39 @@ class _QsoMarker {
   });
 }
 
-// Top-level: runs in isolate — no Flutter imports allowed here
+// Top-level: runs in isolate — no Flutter imports allowed here.
+// One marker per callsign: at the grid of its newest QSO that has one, else
+// at the centre of its DXCC entity ('la'/'lo'), as Wavelog's own map does
+// for QSOs without a grid (contest QSOs often have none).
 List<_QsoMarker> _processQsoData(List<Map<String, String>> raw) {
   final seen = <String>{};
   final result = <_QsoMarker>[];
-  for (final q in raw) {
-    final callsign = q['c'] ?? '';
-    if (callsign.isEmpty || !seen.add(callsign)) continue;
-    final grid = q['g'] ?? '';
-    if (grid.length < 4) continue;
-    final ll = _gridToLatLng(grid);
-    if (ll == null) continue;
-    result.add(_QsoMarker(
+  for (final byGrid in [true, false]) {
+    for (final q in raw) {
+      final callsign = q['c'] ?? '';
+      if (callsign.isEmpty || seen.contains(callsign)) continue;
+      final grid = q['g'] ?? '';
+      final ll = byGrid
+          ? (grid.length < 4 ? null : _gridToLatLng(grid))
+          : _latLng(q['la'], q['lo']);
+      if (ll == null) continue;
+      seen.add(callsign);
+      result.add(_marker(q, callsign, ll, byGrid ? grid : ''));
+    }
+  }
+  return result;
+}
+
+LatLng? _latLng(String? lat, String? lon) {
+  final la = double.tryParse(lat ?? '');
+  final lo = double.tryParse(lon ?? '');
+  if (la == null || lo == null || la.abs() > 90 || lo.abs() > 180) return null;
+  return LatLng(la, lo);
+}
+
+_QsoMarker _marker(
+        Map<String, String> q, String callsign, LatLng ll, String grid) =>
+    _QsoMarker(
       callsign: callsign,
       point: ll,
       band: q['b'] ?? '',
@@ -73,10 +102,7 @@ List<_QsoMarker> _processQsoData(List<Map<String, String>> raw) {
       country: q['co'] ?? '',
       freq: q['f'] ?? '',
       dateStr: q['d'] ?? '',
-    ));
-  }
-  return result;
-}
+    );
 
 LatLng? _gridToLatLng(String grid) {
   try {
@@ -99,23 +125,89 @@ final _mapMarkersProvider = FutureProvider<List<_QsoMarker>>((ref) async {
   final scopeIds = ref.watch(scopeStationIdsProvider);
   final qsos = filterByStations(
       Hive.box<QsoModel>('qso_cache').values.toList(), scopeIds);
+  // Not awaited: grids draw at once, DXCC fallbacks once the catalog is in.
+  final matcher = ref.watch(dxccMatcherProvider).valueOrNull;
   final fmt = DateFormat('dd MMM yyyy  HH:mm');
-  final raw = qsos.map((q) => {
-    'c': q.callsign,
-    'g': q.gridSquare ?? '',
-    'b': q.band,
-    'm': q.mode,
-    'sm': q.submode ?? '',
-    'rs': q.rstSent,
-    'rr': q.rstRcvd,
-    'n': q.name ?? '',
-    'qt': q.qth ?? '',
-    'co': q.country ?? '',
-    'f': q.freqMhz != null ? '${q.freqMhz!.toStringAsFixed(3)} MHz' : '',
-    'd': fmt.format(q.dateTimeOn.toLocal()),
+  final raw = qsos.map((q) {
+    final adif = dxccEntityOf(q.callsign, q.dxcc, matcher);
+    final entity = adif == null ? null : matcher?.byAdif(adif);
+    return {
+      'c': q.callsign,
+      'g': q.gridSquare ?? '',
+      'b': q.band,
+      'm': q.mode,
+      'sm': q.submode ?? '',
+      'rs': q.rstSent,
+      'rr': q.rstRcvd,
+      'n': q.name ?? '',
+      'qt': q.qth ?? '',
+      'co': q.country ?? entity?.name ?? '',
+      'f': q.freqMhz != null ? '${q.freqMhz!.toStringAsFixed(3)} MHz' : '',
+      'd': fmt.format(q.dateTimeOn.toLocal()),
+      if (entity?.lat != null && entity?.lon != null) ...{
+        'la': entity!.lat!.toString(),
+        'lo': entity.lon!.toString(),
+      },
+    };
   }).toList();
   return compute(_processQsoData, raw);
 });
+
+// ── Base maps ─────────────────────────────────────────────────────────────────
+
+/// The map backgrounds to choose from. [auto] is light or dark with the
+/// app's theme. All may be used by an app without an API key, with the
+/// attribution shown under the map.
+enum _BaseMap {
+  auto,
+  light,
+  dark,
+  topo;
+
+  static _BaseMap fromName(String? name) =>
+      values.firstWhere((b) => b.name == name, orElse: () => auto);
+}
+
+class _Tiles {
+  final String url;
+  final List<String> subdomains;
+  final int maxZoom;
+  final String attribution;
+  /// Shown through [_kDarkTiles]: OpenStreetMap has no dark style.
+  final bool darkened;
+  const _Tiles(this.url, this.attribution,
+      {this.subdomains = const [], this.maxZoom = 19, this.darkened = false});
+}
+
+const _osmUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const _osmAttribution = '© OpenStreetMap contributors';
+
+/// Inverts the tiles and turns the hues back by 180°, as CSS
+/// `invert(1) hue-rotate(180deg)`: dark land and sea, with water still
+/// blue and parks still green.
+const _kDarkTiles = ColorFilter.matrix(<double>[
+  0.574, -1.430, -0.144, 0, 255, //
+  -0.426, -0.430, -0.144, 0, 255, //
+  -0.426, -1.430, 0.856, 0, 255, //
+  0, 0, 0, 1, 0,
+]);
+
+_Tiles _tilesFor(_BaseMap base, bool isDark) => switch (base) {
+      _BaseMap.auto => _tilesFor(isDark ? _BaseMap.dark : _BaseMap.light, isDark),
+      _BaseMap.light => const _Tiles(_osmUrl, _osmAttribution),
+      _BaseMap.dark => const _Tiles(_osmUrl, _osmAttribution, darkened: true),
+      // The credit OpenTopoMap asks for.
+      _BaseMap.topo => const _Tiles(
+          'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+          'Map data: © OpenStreetMap contributors, SRTM  '
+          'Map style: © OpenTopoMap (CC-BY-SA)',
+          subdomains: ['a', 'b', 'c'],
+          maxZoom: 17),
+    };
+
+/// Lines to more stations than this are left out: thousands of curves make
+/// the map slow and unreadable.
+const _kMaxGreatCircles = 300;
 
 // ── Band colours ──────────────────────────────────────────────────────────────
 
@@ -148,12 +240,133 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   final _mapController = MapController();
-  String _bandFilter = 'All';
+  /// Bands shown; empty shows all.
+  Set<String> _shownBands = const {};
   _QsoMarker? _popup;
   Offset? _popupPos; // position within the map Stack
 
+  static const _kBaseKey = 'wl_map_base';
+  static const _kLinesKey = 'wl_map_great_circles';
+  static const _kGreylineKey = 'wl_map_greyline';
+  _BaseMap _base = _BaseMap.auto;
+  bool _showLines = true;
+  bool _showGreyline = true;
+  // The greyline moves about a degree every four minutes.
+  Timer? _greylineTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+    _greylineTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted && _showGreyline) setState(() {});
+    });
+  }
+
+  Future<void> _loadPrefs() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      setState(() {
+        _base = _BaseMap.fromName(p.getString(_kBaseKey));
+        _showLines = p.getBool(_kLinesKey) ?? true;
+        _showGreyline = p.getBool(_kGreylineKey) ?? true;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _savePrefs() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setString(_kBaseKey, _base.name);
+      await p.setBool(_kLinesKey, _showLines);
+      await p.setBool(_kGreylineKey, _showGreyline);
+    } catch (_) {}
+  }
+
+  /// The active station location, from its grid.
+  LatLng? _stationPoint() {
+    final id = ref.watch(settingsProvider.select((s) => s.activeStationProfileId));
+    final station = ref
+        .watch(stationProvider)
+        .valueOrNull
+        ?.where((s) => s.id == id)
+        .firstOrNull;
+    final ll = maidenheadToLatLon(station?.gridSquare ?? '');
+    return ll == null ? null : LatLng(ll.lat, ll.lon);
+  }
+
+  Future<void> _openLayers() async {
+    final l10n = context.l10n;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) {
+          void update(VoidCallback change) {
+            setState(change);
+            setS(() {});
+            _savePrefs();
+          }
+
+          final names = {
+            _BaseMap.auto: l10n.mapBaseAuto,
+            _BaseMap.light: l10n.mapBaseLight,
+            _BaseMap.dark: l10n.mapBaseDark,
+            _BaseMap.topo: l10n.mapBaseTopo,
+          };
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                    child: Text(l10n.mapLayers,
+                        style: Theme.of(ctx).textTheme.titleMedium),
+                  ),
+                  RadioGroup<_BaseMap>(
+                    groupValue: _base,
+                    onChanged: (v) => update(() => _base = v ?? _base),
+                    child: Column(children: [
+                      for (final b in _BaseMap.values)
+                        RadioListTile<_BaseMap>(
+                          dense: true,
+                          title: Text(names[b]!),
+                          value: b,
+                        ),
+                    ]),
+                  ),
+                  const Divider(),
+                  SwitchListTile(
+                    dense: true,
+                    secondary: const Icon(Icons.timeline),
+                    title: Text(l10n.mapGreatCircles),
+                    value: _showLines,
+                    onChanged: (v) => update(() => _showLines = v),
+                  ),
+                  SwitchListTile(
+                    dense: true,
+                    secondary: const Icon(Icons.wb_twilight),
+                    title: Text(l10n.mapGreyline),
+                    subtitle: Text(l10n.mapGreylineHint),
+                    value: _showGreyline,
+                    onChanged: (v) => update(() => _showGreyline = v),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   List<_QsoMarker> _filter(List<_QsoMarker> all) =>
-      _bandFilter == 'All' ? all : all.where((m) => m.band == _bandFilter).toList();
+      _shownBands.isEmpty
+          ? all
+          : all.where((m) => _shownBands.contains(m.band)).toList();
 
   List<String> _bands(List<_QsoMarker> all) {
     final bands = all.map((m) => m.band).where((b) => b.isNotEmpty).toSet().toList();
@@ -196,6 +409,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     });
   }
 
+  /// The map's rotation in degrees, for the north-up button.
+  double _rotation = 0;
+
+  void _onMapEvent(MapEvent event) {
+    final r = event.camera.rotation;
+    // Only the button's visibility depends on it: rebuild when it flips.
+    if ((r.abs() > 0.5) != (_rotation.abs() > 0.5)) {
+      setState(() => _rotation = r);
+    } else {
+      _rotation = r;
+    }
+  }
+
   void _zoom(double delta) {
     final cam = _mapController.camera;
     _mapController.move(cam.center, (cam.zoom + delta).clamp(1.0, 18.0));
@@ -203,6 +429,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   void dispose() {
+    _greylineTimer?.cancel();
     _mapController.dispose();
     super.dispose();
   }
@@ -214,20 +441,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final tileUrl = isDark
-        ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    final tiles = _tilesFor(_base, isDark);
+    final station = _stationPoint();
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.mapTitle),
         actions: [
           IconButton(
+            icon: const Icon(Icons.layers_outlined),
+            tooltip: l10n.mapLayers,
+            onPressed: _openLayers,
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
             onPressed: () {
               setState(() {
-                _bandFilter = 'All';
+                _shownBands = const {};
                 _popup = null;
               });
               ref.invalidate(_mapMarkersProvider);
@@ -266,39 +497,55 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 borderStrokeWidth: 1.2,
               )).toList();
 
+          final lines = !_showLines || station == null
+              ? const <Polyline>[]
+              : [
+                  for (final m in visible.take(_kMaxGreatCircles))
+                    for (final run in greatCircle(station, m.point, segments: 32))
+                      Polyline(
+                        points: run,
+                        strokeWidth: 1,
+                        color: _bandColor(m.band).withValues(alpha: 0.45),
+                      ),
+                ];
+
           return Column(
             children: [
               // Band filter chips
+              // Tap bands to show several at once; "All" clears the choice.
               if (bands.isNotEmpty)
-                SizedBox(
-                  height: 44,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    children: [
-                      _BandChip(
-                        label: 'All',
-                        color: cs.primary,
-                        selected: _bandFilter == 'All',
-                        onTap: () => setState(() {
-                          _bandFilter = 'All';
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                  child: Row(children: [
+                    ChoiceChip(
+                      label: Text(l10n.filterAll),
+                      selected: _shownBands.isEmpty,
+                      showCheckmark: false,
+                      visualDensity: VisualDensity.compact,
+                      onSelected: (_) => setState(() {
+                        _shownBands = const {};
+                        _popup = null;
+                      }),
+                    ),
+                    for (final b in bands) ...[
+                      const SizedBox(width: 6),
+                      FilterChip(
+                        avatar: CircleAvatar(
+                            radius: 5, backgroundColor: _bandColor(b)),
+                        label: Text(b),
+                        selected: _shownBands.contains(b),
+                        showCheckmark: false,
+                        visualDensity: VisualDensity.compact,
+                        onSelected: (on) => setState(() {
+                          _shownBands = on
+                              ? {..._shownBands, b}
+                              : ({..._shownBands}..remove(b));
                           _popup = null;
                         }),
                       ),
-                      ...bands.map((b) => Padding(
-                            padding: const EdgeInsets.only(left: 6),
-                            child: _BandChip(
-                              label: b,
-                              color: _bandColor(b),
-                              selected: _bandFilter == b,
-                              onTap: () => setState(() {
-                                _bandFilter = b;
-                                _popup = null;
-                              }),
-                            ),
-                          )),
                     ],
-                  ),
+                  ]),
                 ),
 
               // Map + overlays
@@ -311,16 +558,62 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         initialCenter: const LatLng(30, 15),
                         initialZoom: 2,
                         minZoom: 1,
+                        cameraConstraint: CameraConstraint.contain(
+                          bounds: LatLngBounds(
+                            const LatLng(-kWebMercatorMaxLat, -180),
+                            const LatLng(kWebMercatorMaxLat, 180),
+                          ),
+                        ),
                         maxZoom: 18,
                         onTap: (tapPos, latLng) => _handleTap(tapPos, latLng, visible),
+                        onMapEvent: _onMapEvent,
+                        // As in Google Maps: whichever two-finger gesture
+                        // starts first wins, so a pinch zooms without also
+                        // turning the map; turning it takes a clear twist.
+                        interactionOptions: const InteractionOptions(
+                          enableMultiFingerGestureRace: true,
+                          rotationThreshold: 30,
+                        ),
                       ),
                       children: [
-                        TileLayer(
-                          urlTemplate: tileUrl,
-                          userAgentPackageName: 'com.wavelog_mobile',
-                          maxZoom: 19,
+                        ColorFiltered(
+                          colorFilter: tiles.darkened
+                              ? _kDarkTiles
+                              : const ColorFilter.mode(
+                                  Colors.transparent, BlendMode.dst),
+                          child: TileLayer(
+                            urlTemplate: tiles.url,
+                            subdomains: tiles.subdomains,
+                            userAgentPackageName: 'com.wavelog_mobile',
+                            maxNativeZoom: tiles.maxZoom,
+                            maxZoom: 19,
+                          ),
                         ),
+                        if (_showGreyline)
+                          PolygonLayer(polygons: [
+                            Polygon(
+                              points: nightPolygon(DateTime.now().toUtc()),
+                              color: Colors.black.withValues(alpha: 0.28),
+                              borderColor: Colors.amber.withValues(alpha: 0.6),
+                              borderStrokeWidth: 1,
+                            ),
+                          ]),
+                        if (lines.isNotEmpty) PolylineLayer(polylines: lines),
                         CircleLayer(circles: circles),
+                        if (station != null)
+                          MarkerLayer(markers: [
+                            Marker(
+                              point: station,
+                              width: 30,
+                              height: 30,
+                              child: Icon(Icons.cell_tower,
+                                  size: 26,
+                                  color: cs.primary,
+                                  shadows: const [
+                                    Shadow(color: Colors.black54, blurRadius: 4)
+                                  ]),
+                            ),
+                          ]),
                       ],
                     ),
 
@@ -338,6 +631,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       bottom: 16,
                       child: Column(
                         children: [
+                          // Shown while the map is turned: back to north up.
+                          if (_rotation.abs() > 0.5) ...[
+                            _ZoomButton(
+                              icon: Icons.navigation,
+                              iconAngle: _rotation * pi / 180, // layers turn by +rotation
+                              tooltip: l10n.mapNorthUp,
+                              onTap: () => _mapController.rotate(0),
+                            ),
+                            const SizedBox(height: 6),
+                          ],
                           _ZoomButton(
                             icon: Icons.add,
                             onTap: () => _zoom(1),
@@ -355,8 +658,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
 
               // Status bar
+              // Clear of the system navigation bar (edge-to-edge).
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                padding: EdgeInsets.fromLTRB(
+                    16, 7, 16, 7 + MediaQuery.paddingOf(context).bottom),
                 color: cs.surfaceContainerLow,
                 child: Row(
                   children: [
@@ -366,25 +671,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       l10n.mapStationCount(visible.length),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
                     ),
-                    if (_bandFilter != 'All') ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(color: _bandColor(_bandFilter), shape: BoxShape.circle),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _bandFilter,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: _bandColor(_bandFilter),
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ],
                     const Spacer(),
                     Text(
-                      '© CARTO  © OpenStreetMap',
+                      tiles.attribution,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: cs.onSurface.withValues(alpha: 0.35),
                             fontSize: 9,
@@ -678,7 +967,15 @@ class _MiniChip extends StatelessWidget {
 class _ZoomButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  const _ZoomButton({required this.icon, required this.onTap});
+  /// Turns the icon, so the compass needle points to north.
+  final double iconAngle;
+  /// Read out by screen readers.
+  final String? tooltip;
+  const _ZoomButton(
+      {required this.icon,
+      required this.onTap,
+      this.iconAngle = 0,
+      this.tooltip});
 
   @override
   Widget build(BuildContext context) {
@@ -694,46 +991,10 @@ class _ZoomButton extends StatelessWidget {
         child: SizedBox(
           width: 38,
           height: 38,
-          child: Icon(icon, size: 20, color: cs.onSurface),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Band Filter Chip ──────────────────────────────────────────────────────────
-
-class _BandChip extends StatelessWidget {
-  final String label;
-  final Color color;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _BandChip({
-    required this.label,
-    required this.color,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: selected ? color : color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: selected ? 0.0 : 0.45)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : color,
+          child: Transform.rotate(
+            angle: iconAngle,
+            child: Icon(icon,
+                size: 20, color: cs.onSurface, semanticLabel: tooltip),
           ),
         ),
       ),

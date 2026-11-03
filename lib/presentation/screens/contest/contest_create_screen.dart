@@ -73,6 +73,18 @@ class _ContestCreateScreenState extends ConsumerState<ContestCreateScreen> {
     super.dispose();
   }
 
+  /// Picks [c] and switches the exchange fields to the ones its exchange
+  /// uses (a zone for CQ WW / IARU HF, else a serial).
+  void _selectContest(ContestTemplate c) {
+    final fields = defaultExchangeFields(c.adifName);
+    setState(() {
+      _selectedContest = c;
+      _useSerial = fields.contains('serial');
+      _useGrid   = fields.contains('gridsquare');
+      _useExch   = fields.contains('exchange');
+    });
+  }
+
   // ── Contest picker sheet ──────────────────────────────────────────────────
 
   // Merges server list + builtin list, preferring server entries (real IDs).
@@ -158,7 +170,7 @@ class _ContestCreateScreenState extends ConsumerState<ContestCreateScreen> {
                       ...filtered.map((c) => _ContestTile(
                         contest: c,
                         onTap: () {
-                          setState(() => _selectedContest = c);
+                          _selectContest(c);
                           Navigator.of(ctx).pop();
                         },
                       )),

@@ -14,6 +14,7 @@ import 'app_localizations_ko.dart';
 import 'app_localizations_pl.dart';
 import 'app_localizations_ru.dart';
 import 'app_localizations_tr.dart';
+import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
 
@@ -109,7 +110,9 @@ abstract class AppLocalizations {
     Locale('it'),
     Locale('ja'),
     Locale('ko'),
-    Locale('ru')
+    Locale('ru'),
+    Locale('zh'),
+    Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans')
   ];
 
   /// No description provided for @appTitle.
@@ -1479,6 +1482,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Русский'**
   String get langRussian;
+
+  /// No description provided for @langChinese.
+  ///
+  /// In en, this message translates to:
+  /// **'简体中文'**
+  String get langChinese;
 
   /// No description provided for @aboutTitle.
   ///
@@ -4222,6 +4231,18 @@ abstract class AppLocalizations {
   /// **'Lookup'**
   String get scopeTestLookup;
 
+  /// No description provided for @scopeRadioWrite.
+  ///
+  /// In en, this message translates to:
+  /// **'Report the CAT radio\'s frequency and mode'**
+  String get scopeRadioWrite;
+
+  /// No description provided for @scopeTestRadio.
+  ///
+  /// In en, this message translates to:
+  /// **'Radio'**
+  String get scopeTestRadio;
+
   /// No description provided for @apiScopeGuideBtn.
   ///
   /// In en, this message translates to:
@@ -4419,6 +4440,318 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing to sync'**
   String get syncNothing;
+
+  /// No description provided for @openAddQsoOnStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start on Add QSO'**
+  String get openAddQsoOnStart;
+
+  /// No description provided for @openAddQsoOnStartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the QSO form right after the app starts; Back leads to Home'**
+  String get openAddQsoOnStartHint;
+
+  /// No description provided for @rigSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Radio (CAT)'**
+  String get rigSection;
+
+  /// No description provided for @rigScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Radio connection (CAT)'**
+  String get rigScreenTitle;
+
+  /// No description provided for @rigTileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read the frequency live from a radio connected by USB cable'**
+  String get rigTileSubtitle;
+
+  /// No description provided for @rigProtocolLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Protocol'**
+  String get rigProtocolLabel;
+
+  /// No description provided for @rigProtocolIcom.
+  ///
+  /// In en, this message translates to:
+  /// **'Icom CI-V'**
+  String get rigProtocolIcom;
+
+  /// No description provided for @rigProtocolXiegu.
+  ///
+  /// In en, this message translates to:
+  /// **'Xiegu G90 (CI-V)'**
+  String get rigProtocolXiegu;
+
+  /// No description provided for @rigProtocolKenwood.
+  ///
+  /// In en, this message translates to:
+  /// **'Kenwood / Elecraft / Yaesu (FA;)'**
+  String get rigProtocolKenwood;
+
+  /// No description provided for @rigProtocolYaesuLegacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Yaesu FT-817/818/857/897'**
+  String get rigProtocolYaesuLegacy;
+
+  /// No description provided for @rigBaudLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Baud rate'**
+  String get rigBaudLabel;
+
+  /// No description provided for @rigCivAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'CI-V address'**
+  String get rigCivAddressLabel;
+
+  /// No description provided for @rigCivAddressHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 94 IC-7300, A4 IC-705, 98 IC-7610, 88 Xiegu G90'**
+  String get rigCivAddressHint;
+
+  /// No description provided for @rigAutoConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect automatically'**
+  String get rigAutoConnect;
+
+  /// No description provided for @rigAutoConnectHint.
+  ///
+  /// In en, this message translates to:
+  /// **'When the radio\'s USB cable is plugged in, or the app starts with it plugged in. Tick \"Always\" in Android\'s prompt to skip it next time.'**
+  String get rigAutoConnectHint;
+
+  /// No description provided for @rigDevicesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'USB devices'**
+  String get rigDevicesLabel;
+
+  /// No description provided for @rigNoDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'No USB serial device found. Connect the radio with a USB OTG cable.'**
+  String get rigNoDevices;
+
+  /// No description provided for @rigRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get rigRefresh;
+
+  /// No description provided for @rigConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get rigConnect;
+
+  /// No description provided for @rigDisconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get rigDisconnect;
+
+  /// No description provided for @rigStatusConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected: {device}'**
+  String rigStatusConnected(String device);
+
+  /// No description provided for @rigStatusConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting…'**
+  String get rigStatusConnecting;
+
+  /// No description provided for @rigStatusDisconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected'**
+  String get rigStatusDisconnected;
+
+  /// No description provided for @rigWaitingForData.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the radio… Check the protocol, baud rate and CI-V address.'**
+  String get rigWaitingForData;
+
+  /// No description provided for @rigErrorPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'USB permission denied'**
+  String get rigErrorPermission;
+
+  /// No description provided for @rigErrorDetached.
+  ///
+  /// In en, this message translates to:
+  /// **'Radio disconnected'**
+  String get rigErrorDetached;
+
+  /// No description provided for @rigErrorConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection error ({code})'**
+  String rigErrorConnection(String code);
+
+  /// No description provided for @workedNewCountry.
+  ///
+  /// In en, this message translates to:
+  /// **'New country'**
+  String get workedNewCountry;
+
+  /// No description provided for @workedNewBand.
+  ///
+  /// In en, this message translates to:
+  /// **'New band ({band})'**
+  String workedNewBand(String band);
+
+  /// No description provided for @workedNewMode.
+  ///
+  /// In en, this message translates to:
+  /// **'New mode ({mode})'**
+  String workedNewMode(String mode);
+
+  /// No description provided for @workedDupe.
+  ///
+  /// In en, this message translates to:
+  /// **'Dupe: already worked today on {band} {mode}'**
+  String workedDupe(String band, String mode);
+
+  /// Note under the station's integrations: settings the v2 API does not expose
+  ///
+  /// In en, this message translates to:
+  /// **'QRZ.com, HRDLog.net, QO-100 (webADIF), OQRS and the default eQSL message are set in Wavelog\'s web interface: the API does not expose them to the app.'**
+  String get stationWebOnlySettingsHint;
+
+  /// QSO form section for the other station's park, summit or WWFF area
+  ///
+  /// In en, this message translates to:
+  /// **'POTA / SOTA / WWFF'**
+  String get qsoReferencesSection;
+
+  /// Hint of the QSO form POTA park field
+  ///
+  /// In en, this message translates to:
+  /// **'US-1234, add more with Enter or a comma'**
+  String get potaRefHint;
+
+  /// Title of the dialog shown before saving a QSO with a POTA park pota.app does not know
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown park'**
+  String get potaUnknownParkTitle;
+
+  /// No description provided for @potaUnknownParkBody.
+  ///
+  /// In en, this message translates to:
+  /// **'pota.app has no park {refs}. Save the QSO anyway?'**
+  String potaUnknownParkBody(String refs);
+
+  /// Badge on a POTA spot whose park is not in the log yet
+  ///
+  /// In en, this message translates to:
+  /// **'New park'**
+  String get spotNewPark;
+
+  /// No description provided for @potaActivationProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{park}: {count}/{needed} QSOs today (UTC)'**
+  String potaActivationProgress(String park, int count, int needed);
+
+  /// No description provided for @potaActivationDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{park}: activated ({count} QSOs today)'**
+  String potaActivationDone(String park, int count);
+
+  /// No description provided for @keepScreenOnWhileLogging.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the screen on while logging'**
+  String get keepScreenOnWhileLogging;
+
+  /// No description provided for @keepScreenOnWhileLoggingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The screen stays on while Add QSO or the contest log is open'**
+  String get keepScreenOnWhileLoggingHint;
+
+  /// No description provided for @contestDupe.
+  ///
+  /// In en, this message translates to:
+  /// **'DUPE: already in this contest on {band} ({time} UTC)'**
+  String contestDupe(String band, String time);
+
+  /// No description provided for @contestWorkedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'In this contest on: {bands}'**
+  String contestWorkedOn(String bands);
+
+  /// No description provided for @mapLayers.
+  ///
+  /// In en, this message translates to:
+  /// **'Map layers'**
+  String get mapLayers;
+
+  /// No description provided for @mapBaseAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic (light / dark)'**
+  String get mapBaseAuto;
+
+  /// No description provided for @mapBaseLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get mapBaseLight;
+
+  /// No description provided for @mapBaseDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get mapBaseDark;
+
+  /// No description provided for @mapBaseTopo.
+  ///
+  /// In en, this message translates to:
+  /// **'Topographic'**
+  String get mapBaseTopo;
+
+  /// No description provided for @mapGreatCircles.
+  ///
+  /// In en, this message translates to:
+  /// **'Great-circle lines from my station'**
+  String get mapGreatCircles;
+
+  /// No description provided for @mapGreyline.
+  ///
+  /// In en, this message translates to:
+  /// **'Greyline'**
+  String get mapGreyline;
+
+  /// No description provided for @mapGreylineHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Night side and the day/night boundary, now'**
+  String get mapGreylineHint;
+
+  /// No description provided for @mapNorthUp.
+  ///
+  /// In en, this message translates to:
+  /// **'North up'**
+  String get mapNorthUp;
 }
 
 class _AppLocalizationsDelegate
@@ -4440,7 +4773,8 @@ class _AppLocalizationsDelegate
         'ko',
         'pl',
         'ru',
-        'tr'
+        'tr',
+        'zh'
       ].contains(locale.languageCode);
 
   @override
@@ -4448,6 +4782,18 @@ class _AppLocalizationsDelegate
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+  // Lookup logic when language+script codes are specified.
+  switch (locale.languageCode) {
+    case 'zh':
+      {
+        switch (locale.scriptCode) {
+          case 'Hans':
+            return AppLocalizationsZhHans();
+        }
+        break;
+      }
+  }
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
     case 'de':
@@ -4468,6 +4814,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsRu();
     case 'tr':
       return AppLocalizationsTr();
+    case 'zh':
+      return AppLocalizationsZh();
   }
 
   throw FlutterError(

@@ -62,31 +62,32 @@ class WwffSpotModel {
 }
 
 class WwffSpotFilter {
-  final String? band;
+  /// The bands shown; empty shows all.
+  final Set<String> bands;
   final String? mode;
   final String? country;
   final bool newestFirst;
 
   const WwffSpotFilter({
-    this.band,
+    this.bands = const {},
     this.mode,
     this.country,
     this.newestFirst = true,
   });
 
   WwffSpotFilter copyWith({
-    Object? band = _s,
+    Set<String>? bands,
     Object? mode = _s,
     Object? country = _s,
     bool? newestFirst,
   }) =>
       WwffSpotFilter(
-        band: band == _s ? this.band : band as String?,
+        bands: bands ?? this.bands,
         mode: mode == _s ? this.mode : mode as String?,
         country: country == _s ? this.country : country as String?,
         newestFirst: newestFirst ?? this.newestFirst,
       );
 
-  bool get hasFilters => band != null || mode != null || country != null;
+  bool get hasFilters => bands.isNotEmpty || mode != null || country != null;
   static const _s = Object();
 }

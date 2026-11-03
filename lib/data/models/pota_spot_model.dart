@@ -59,33 +59,34 @@ class PotaSpotModel {
 }
 
 class PotaSpotFilter {
-  final String? band;
+  /// The bands shown; empty shows all.
+  final Set<String> bands;
   final String? mode;
   final String? country;
   final bool newestFirst;
 
   const PotaSpotFilter({
-    this.band,
+    this.bands = const {},
     this.mode,
     this.country,
     this.newestFirst = true,
   });
 
   PotaSpotFilter copyWith({
-    Object? band = _sentinel,
+    Set<String>? bands,
     Object? mode = _sentinel,
     Object? country = _sentinel,
     bool? newestFirst,
   }) {
     return PotaSpotFilter(
-      band: band == _sentinel ? this.band : band as String?,
+      bands: bands ?? this.bands,
       mode: mode == _sentinel ? this.mode : mode as String?,
       country: country == _sentinel ? this.country : country as String?,
       newestFirst: newestFirst ?? this.newestFirst,
     );
   }
 
-  bool get hasFilters => band != null || mode != null || country != null;
+  bool get hasFilters => bands.isNotEmpty || mode != null || country != null;
 
   static const _sentinel = Object();
 }

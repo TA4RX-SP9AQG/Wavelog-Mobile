@@ -16,6 +16,11 @@ final wavelogRemoteDatasourceProvider =
   return WavelogRemoteDatasource(dio: ref.watch(dioProvider));
 });
 
+/// The account's own callsign, as the server knows it; null when it can't
+/// be fetched.
+final accountCallsignProvider = FutureProvider<String?>(
+    (ref) => ref.watch(wavelogRemoteDatasourceProvider).getTokenOwner());
+
 final qsoRepositoryProvider = Provider<QsoRepository>((ref) {
   return QsoRepository(
     remote: ref.watch(wavelogRemoteDatasourceProvider),

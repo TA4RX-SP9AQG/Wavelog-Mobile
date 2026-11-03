@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="open_with_import_adif">Importer ADIF</string>
+    <string name="open_not_adif">%1$s n’est pas un fichier ADIF. Seuls les journaux ADIF (.adi, .adif) peuvent être importés.</string>
+</resources>

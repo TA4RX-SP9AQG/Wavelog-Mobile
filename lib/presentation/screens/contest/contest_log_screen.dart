@@ -7,18 +7,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/band_mode_data.dart';
-import '../../../core/utils/adif_generator.dart';
+import '../../../core/constants/contest_data.dart';
+import '../../../core/rig/cat_protocol.dart';
+import '../../../core/utils/contest_dupe.dart';
 import '../../../core/utils/keyboard_shortcuts.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/validators.dart';
 import '../../../data/models/callsign_lookup_model.dart';
 import '../../../data/models/contest_model.dart';
 import '../../../data/models/qso_model.dart';
+import '../../../data/models/station_model.dart';
 import '../../../providers/connectivity_provider.dart';
 import '../../../providers/lookup_provider.dart';
 import '../../../providers/qso_provider.dart';
 import '../../../providers/remote_datasource_provider.dart';
+import '../../../providers/rig_provider.dart';
 import '../../../providers/settings_provider.dart';
+import '../../../providers/station_provider.dart';
+import '../../widgets/keep_screen_on.dart';
+import '../../widgets/rig/rig_link_button.dart';
 import '../qso/add_qso_screen.dart';
 
 // ── Logged QSO entry (in-memory recent list) ──────────────────────────────────
@@ -93,12 +101,54 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
   CallsignLookupModel? _lookupResult;
   String _currentCallsign = '';    // tracks callsign for tablet panel
   String _lastLookedUp = '';       // avoid re-lookup for same callsign
+  Timer? _lookupDebounce;          // automatic lookup while typing
+  // Bumped by every lookup; a reply for an older one is dropped.
+  int _lookupSeq = 0;
 
   ContestSession? _session;
+
+  /// The location this screen logs to: the session's, else the active one.
+  int? get _stationId =>
+      _session?.stationId ?? ref.read(settingsProvider).activeStationProfileId;
+
+  StationModel? get _station {
+    final id = _stationId;
+    return ref
+        .read(stationProvider)
+        .valueOrNull
+        ?.where((s) => s.id == id)
+        .firstOrNull;
+  }
+
+  ContestZone? get _zone => contestZoneOf(_contestId);
+
+  /// The zone [zone] picks out of a station or lookup result, as text.
+  static String? _zoneText(ContestZone? zone, {int? cq, int? itu}) {
+    final z = switch (zone) {
+      ContestZone.cq => cq,
+      ContestZone.itu => itu,
+      null => null,
+    };
+    return z != null && z > 0 ? z.toString() : null;
+  }
+
+  /// In a zone contest the sent exchange is the station's own zone: fills it
+  /// in while it is still empty.
+  void _prefillSentZone() {
+    if (!_showExchange || _exchangeSentCtrl.text.trim().isNotEmpty) return;
+    final s = _station;
+    final zone = _zoneText(_zone, cq: s?.cqZone, itu: s?.ituZone);
+    if (zone == null) return;
+    _exchangeSentCtrl.text = zone;
+    _exchangeSent = zone;
+  }
+
+  final _screenOn = KeepScreenOn();
 
   @override
   void initState() {
     super.initState();
+    _screenOn.start(ref);
     _session = widget.session;
     if (_session != null) {
       _contestId = _session!.adifName;
@@ -112,7 +162,25 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
     final centerFreq = kBandCenterFreqMhz[_band];
     if (centerFreq != null) _freqCtrl.text = centerFreq.toStringAsFixed(3);
     _freqCtrl.addListener(_onFreqChanged);
+    // Follow the radio's dial while a CAT link is up; _onFreqChanged then
+    // picks the matching band.
+    final rigHz = ref.read(rigProvider).frequencyHz;
+    if (rigHz != null) _freqCtrl.text = formatRigFreqMhz(rigHz);
+    ref.listenManual<int?>(rigProvider.select((s) => s.frequencyHz), (_, hz) {
+      if (hz != null) _freqCtrl.text = formatRigFreqMhz(hz);
+    });
+    // …and its mode, unless the log is on a digital mode run in USB/LSB.
+    void applyRigMode(RigMode? m) {
+      if (m != null && m.appliesTo(_mode) && m.appMode != _mode) {
+        setState(() => _mode = m.appMode);
+      }
+    }
+    applyRigMode(ref.read(rigProvider).mode);
+    ref.listenManual<RigMode?>(
+        rigProvider.select((s) => s.mode), (_, m) => applyRigMode(m));
     _callsignFocus.addListener(_onCallsignFocusChange);
+    ref.listenManual(stationProvider, (_, __) => _prefillSentZone(),
+        fireImmediately: true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_session == null && _contestId.isEmpty) {
         _openSetupSheet();
@@ -124,7 +192,9 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
 
   @override
   void dispose() {
+    _screenOn.stop();
     _freqDebounce?.cancel();
+    _lookupDebounce?.cancel();
     _freqCtrl.removeListener(_onFreqChanged);
     _freqCtrl.dispose();
     _callsignFocus.removeListener(_onCallsignFocusChange);
@@ -189,6 +259,7 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
   Future<void> _doLookup(String callsign) async {
     if (callsign.isEmpty) return;
     _lastLookedUp = callsign;
+    final seq = ++_lookupSeq;
     setState(() {
       _currentCallsign = callsign;
       _lookupLoading = true;
@@ -200,15 +271,26 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
       final result = await ref
           .read(wavelogRemoteDatasourceProvider)
           .lookupCallsign(callsign: callsign, band: _band, mode: _mode);
-      if (!mounted) return;
+      if (!mounted || seq != _lookupSeq) return;
       setState(() {
         _lookupLoading = false;
         _lookupDone = true;
         _lookupSuccess = true;
         _lookupResult = result;
       });
+      // A zone exchange is known from the callsign in most cases: pre-fill
+      // it, the operator only corrects the odd one out.
+      final zone = _zoneText(_zone,
+          cq: int.tryParse(result.cqZone ?? ''),
+          itu: int.tryParse(result.ituZone ?? ''));
+      if (_showExchange &&
+          zone != null &&
+          _exchangeRcvdCtrl.text.trim().isEmpty &&
+          _callsignCtrl.text.trim().toUpperCase() == callsign) {
+        _exchangeRcvdCtrl.text = zone;
+      }
     } catch (_) {
-      if (mounted) {
+      if (mounted && seq == _lookupSeq) {
         setState(() {
           _lookupLoading = false;
           _lookupDone = true;
@@ -264,6 +346,13 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
                     hintText: l10n.contestNameHint,
                     border: const OutlineInputBorder(),
                   ),
+                  onChanged: (v) {
+                    if (contestZoneOf(v) == null) return;
+                    setS(() {
+                      useSerial = false;
+                      useExch = true;
+                    });
+                  },
                 ),
                 const SizedBox(height: 12),
                 Row(children: [
@@ -372,6 +461,7 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
                         _serialSent       =
                             int.tryParse(serialCtrl.text.trim()) ?? 1;
                       });
+                      _prefillSentZone();
                       Navigator.of(ctx).pop();
                       WidgetsBinding.instance.addPostFrameCallback(
                           (_) => _callsignFocus.requestFocus());
@@ -397,8 +487,7 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
       return;
     }
 
-    final stationId = _session?.stationId ??
-        ref.read(settingsProvider).activeStationProfileId;
+    final stationId = _stationId;
     if (stationId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -417,31 +506,50 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
         ? double.tryParse(freqText)
         : kBandCenterFreqMhz[_band];
 
-    final raw = <String, String>{
-      'CALL':     callsign,
-      'QSO_DATE': _fmtDate(now),
-      'TIME_ON':  _fmtTime(now),
-      'BAND':     _band,
-      'MODE':     _mode,
-      'RST_SENT': rstSent,
-      'RST_RCVD': rstRcvd,
-    };
-    if (freq != null) raw['FREQ'] = freq.toStringAsFixed(3);
+    // Only the contest fields: call, time, band, mode, report, name, QTH and
+    // grid come from the model. A rawAdif with CALL in it counts as a full
+    // server record, and the ADIF generator then skips the model fields.
+    final raw = <String, String>{};
     if (_contestId.isNotEmpty) raw['CONTEST_ID'] = _contestId;
+    // Wavelog's contest screen lets only the QSO's operator edit it, and
+    // compares with the account's callsign: without OPERATOR nobody can.
+    final operator = contestOperator(
+        ref.read(accountCallsignProvider).valueOrNull, _station?.callsign);
+    if (operator != null) raw['OPERATOR'] = operator;
     if (_showSerial) {
       raw['STX'] = _serialSent.toString().padLeft(3, '0');
       if (_serialRcvdCtrl.text.trim().isNotEmpty) raw['SRX'] = _serialRcvdCtrl.text.trim();
     }
+    String? gridRcvd;
     if (_showGridsquare) {
       final gs = _gridsquareSentCtrl.text.trim();
       if (gs.isNotEmpty) raw['MY_GRIDSQUARE'] = gs;
-      if (_gridsquareRcvdCtrl.text.trim().isNotEmpty) raw['GRIDSQUARE'] = _gridsquareRcvdCtrl.text.trim();
+      gridRcvd = _gridsquareRcvdCtrl.text.trim().toUpperCase();
     }
     if (_showExchange) {
       final exchSent = _exchangeSentCtrl.text.trim();
       if (exchSent.isNotEmpty) raw['STX_STRING'] = exchSent;
-      if (_exchangeRcvdCtrl.text.trim().isNotEmpty) raw['SRX_STRING'] = _exchangeRcvdCtrl.text.trim();
+      final exchRcvd = _exchangeRcvdCtrl.text.trim();
+      if (exchRcvd.isNotEmpty) raw['SRX_STRING'] = exchRcvd;
+      // The received zone is the station's zone too (CQZ / ITUZ), and
+      // the one the score counts.
+      final zone = int.tryParse(exchRcvd);
+      switch (_zone) {
+        case ContestZone.cq when zone != null && zone >= 1 && zone <= 40:
+          raw['CQZ'] = '$zone';
+        case ContestZone.itu when zone != null && zone >= 1 && zone <= 90:
+          raw['ITUZ'] = '$zone';
+        default:
+      }
     }
+
+    // What the lookup found for this callsign goes into the log, as on the
+    // normal QSO screen; a grid typed in the exchange wins over it.
+    final info = _lookupResult?.callsign.toUpperCase() == callsign
+        ? _lookupResult
+        : null;
+    String? orNull(String? s) => s == null || s.trim().isEmpty ? null : s.trim();
+    final grid = orNull(gridRcvd) ?? orNull(info?.gridSquare)?.toUpperCase();
 
     final qso = QsoModel(
       callsign: callsign,
@@ -451,6 +559,10 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
       mode: _mode,
       rstSent: rstSent,
       rstRcvd: rstRcvd,
+      name: orNull(info?.name),
+      qth: orNull(info?.qth),
+      gridSquare: grid,
+      country: orNull(info?.country),
       stationProfileId: stationId,
       rawAdif: raw,
     );
@@ -460,17 +572,10 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
       final offlineMode = ref.read(settingsProvider).offlineModeEnabled;
       final forceLocal  = offlineMode || !isOnline;
 
-      if (_session != null && !forceLocal) {
-        final adif = AdifGenerator.generateSingle(qso);
-        await ref.read(wavelogRemoteDatasourceProvider).logContestQso(
-              contestSessionId: _session!.id,
-              stationProfileId: stationId,
-              adifString: adif,
-            );
-        await ref.read(qsoProvider.notifier).addQso(qso, forceLocal: true);
-      } else {
-        await ref.read(qsoProvider.notifier).addQso(qso, forceLocal: forceLocal);
-      }
+      // One save path: online it goes to the server (into the session, if
+      // there is one) and is cached as synced; offline it waits for sync.
+      await ref.read(qsoProvider.notifier).addQso(qso,
+          forceLocal: forceLocal, contestSessionId: _session?.id);
 
       if (!mounted) return;
 
@@ -503,6 +608,7 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
         _exchangeRcvdCtrl.clear();
         _gridsquareRcvdCtrl.clear();
         // Reset lookup state for next QSO
+        _lookupSeq++;
         _lookupDone = false;
         _lookupSuccess = false;
         _lookupResult = null;
@@ -644,6 +750,11 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
     final displayName = _session?.contestName.isNotEmpty == true
         ? _session!.contestName
         : null;
+    // Rebuild when the stations load or the active one changes.
+    ref.watch(stationProvider);
+    ref.watch(accountCallsignProvider); // loaded before the first save
+    ref.watch(settingsProvider.select((s) => s.activeStationProfileId));
+    final station = _station;
 
     final formColumn = Column(
       children: [
@@ -651,7 +762,10 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
           contestId: displayContest,
           band: _band,
           mode: _mode,
-          serialSent: _serialSent,
+          serialSent: _showSerial ? _serialSent : null,
+          station: station == null
+              ? null
+              : '${station.callsign} · ${station.profileName}',
           onTap: _session == null ? _openSetupSheet : null,
         ),
 
@@ -730,6 +844,17 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
                     return;
                   }
                   setState(() {});
+                  _lookupDebounce?.cancel();
+                  _lookupDebounce =
+                      Timer(const Duration(milliseconds: 600), () {
+                    if (!mounted) return;
+                    // Read the field, not [v]: the QSO may have been
+                    // logged and the form cleared since this keystroke.
+                    final cs = _callsignCtrl.text.trim().toUpperCase();
+                    if (cs != _lastLookedUp && isAutoLookupCallsign(cs)) {
+                      _doLookup(cs);
+                    }
+                  });
                 },
                 onSubmitted: (v) {
                   final band = matchBandCommand(v, kCommonBands);
@@ -747,6 +872,23 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
                   final cs = v.trim().toUpperCase();
                   if (cs.isNotEmpty && cs != _lastLookedUp) _doLookup(cs);
                 },
+              ),
+
+              // ── Already worked in this contest (dupe / other bands) ────
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _callsignCtrl,
+                builder: (context, value, _) => _ContestDupeBanner(
+                  callsign: value.text,
+                  band: _band,
+                  contestId: _session?.adifName.isNotEmpty == true
+                      ? _session!.adifName
+                      : _contestId,
+                  from: _session?.timeStart ??
+                      DateTime.now()
+                          .toUtc()
+                          .subtract(kContestWindowWithoutSession),
+                  stationId: _stationId,
+                ),
               ),
 
               // ── Compact lookup result (phone only) ─────────────────────
@@ -769,6 +911,7 @@ class _ContestLogScreenState extends ConsumerState<ContestLogScreen> {
                       labelText: l10n.frequencyField,
                       hintText: '14.225',
                       suffixText: 'MHz',
+                      suffixIcon: const RigLinkButton(),
                       border: const OutlineInputBorder(),
                     ),
                   ),
@@ -1077,7 +1220,10 @@ class _SessionBar extends StatelessWidget {
   final String contestId;
   final String band;
   final String mode;
-  final int serialSent;
+  /// Next serial to send; null when the contest has no serial.
+  final int? serialSent;
+  /// "CALL · location" the QSOs are logged for, so a wrong one shows.
+  final String? station;
   final VoidCallback? onTap;
 
   const _SessionBar({
@@ -1085,6 +1231,7 @@ class _SessionBar extends StatelessWidget {
     required this.band,
     required this.mode,
     required this.serialSent,
+    this.station,
     this.onTap,
   });
 
@@ -1102,18 +1249,22 @@ class _SessionBar extends StatelessWidget {
           Expanded(
             child: Wrap(
               spacing: 8,
+              runSpacing: 4,
               children: [
                 if (contestId.isNotEmpty) _Chip(label: contestId, color: cs.primary),
                 _Chip(label: band,  color: cs.secondary),
                 _Chip(label: mode,  color: cs.tertiary),
+                if (station != null)
+                  _Chip(label: station!, color: cs.onSurfaceVariant),
               ],
             ),
           ),
-          Text(
-            '# ${serialSent.toString().padLeft(3, '0')}',
-            style: tt.titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold, color: cs.primary),
-          ),
+          if (serialSent != null)
+            Text(
+              '# ${serialSent.toString().padLeft(3, '0')}',
+              style: tt.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold, color: cs.primary),
+            ),
           if (onTap != null) ...[
             const SizedBox(width: 4),
             Icon(Icons.edit, size: 14, color: cs.onSurfaceVariant),
@@ -1141,6 +1292,73 @@ class _Chip extends StatelessWidget {
             style: TextStyle(
                 fontSize: 12, fontWeight: FontWeight.w600, color: color)),
       );
+}
+
+// ── Contest dupe banner ───────────────────────────────────────────────────────
+
+/// Under the callsign while it is typed: a dupe warning when the station is
+/// already in this contest's log on the current band, else the bands it was
+/// worked on so far. Warns only; logging a dupe stays possible.
+class _ContestDupeBanner extends ConsumerWidget {
+  final String callsign;
+  final String band;
+  final String contestId;
+  final DateTime from;
+  final int? stationId;
+
+  const _ContestDupeBanner({
+    required this.callsign,
+    required this.band,
+    required this.contestId,
+    required this.from,
+    required this.stationId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (callsign.trim().length < 3) return const SizedBox.shrink();
+    final log = ref.watch(qsoProvider).valueOrNull;
+    if (log == null) return const SizedBox.shrink();
+    final w = contestWorked(
+        log: log,
+        callsign: callsign,
+        band: band,
+        contestId: contestId,
+        from: from,
+        stationId: stationId);
+    if (w.isEmpty) return const SizedBox.shrink();
+
+    final l10n = context.l10n;
+    final cs = Theme.of(context).colorScheme;
+    final dupe = w.dupeOf;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Wrap(spacing: 6, runSpacing: 6, children: [
+        if (dupe != null)
+          Chip(
+            avatar: const Icon(Icons.warning_amber_rounded,
+                size: 16, color: Colors.white),
+            label: Text(
+                l10n.contestDupe(band,
+                    DateFormat('HH:mm').format(dupe.dateTimeOn.toUtc())),
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
+            backgroundColor: Colors.orange.shade700,
+            side: BorderSide.none,
+            visualDensity: VisualDensity.compact,
+          ),
+        if (w.otherBands.isNotEmpty)
+          Chip(
+            avatar: Icon(Icons.history, size: 16, color: cs.onSecondaryContainer),
+            label: Text(l10n.contestWorkedOn(w.otherBands.join(', ')),
+                style: TextStyle(color: cs.onSecondaryContainer)),
+            backgroundColor: cs.secondaryContainer,
+            side: BorderSide.none,
+            visualDensity: VisualDensity.compact,
+          ),
+      ]),
+    );
+  }
 }
 
 // ── Compact lookup card (phone) ───────────────────────────────────────────────
@@ -1548,15 +1766,3 @@ class _RecentQsoTile extends StatelessWidget {
     );
   }
 }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-String _fmtDate(DateTime dt) =>
-    '${dt.year.toString().padLeft(4, '0')}'
-    '${dt.month.toString().padLeft(2, '0')}'
-    '${dt.day.toString().padLeft(2, '0')}';
-
-String _fmtTime(DateTime dt) =>
-    '${dt.hour.toString().padLeft(2, '0')}'
-    '${dt.minute.toString().padLeft(2, '0')}'
-    '${dt.second.toString().padLeft(2, '0')}';

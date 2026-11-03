@@ -285,7 +285,11 @@ class QsoRepository {
     return updated;
   }
 
-  Future<void> addQso(QsoModel qso, {bool forceLocal = false}) async {
+  /// Saves [qso] to the server, or only locally (unsynced, picked up by the
+  /// next sync) when [forceLocal] or the network fails. With
+  /// [contestSessionId] the QSO is also linked to that contest session.
+  Future<void> addQso(QsoModel qso,
+      {bool forceLocal = false, int? contestSessionId}) async {
     if (forceLocal) {
       await _local.saveLocalQso(qso);
       return;
@@ -293,12 +297,16 @@ class QsoRepository {
 
     try {
       final adif = AdifGenerator.generateSingle(qso);
-      final success = await _remote.importQso(adif, qso.stationProfileId);
-      if (success) {
-        await _local.saveLocalQso(qso.copyWith(synced: true));
+      if (contestSessionId != null) {
+        await _remote.logContestQso(
+          contestSessionId: contestSessionId,
+          stationProfileId: qso.stationProfileId,
+          adifString: adif,
+        );
       } else {
-        throw const ServerException('QSO kaydedilemedi');
+        await _remote.createQso(adif, qso.stationProfileId);
       }
+      await _local.saveLocalQso(qso.copyWith(synced: true));
     } on NetworkException {
       await _local.saveLocalQso(qso.copyWith(synced: false));
       rethrow;

@@ -45,6 +45,7 @@ When creating the token in Wavelog under **Settings → API Tokens → New Token
 | `logbook:read` / `logbook:write` / `logbook:delete` | Manage logbooks |
 | `lookup:read` | Callsign lookup |
 | `qso:read` / `qso:write` / `qso:delete` | Log and browse QSOs |
+| `radio:write` | Report the CAT radio's frequency and mode to Wavelog (optional, only with a USB CAT radio) |
 | `station:read` / `station:write` / `station:delete` | Manage station profiles |
 | `statistic:read` | Statistics screen |
 
@@ -73,7 +74,7 @@ Community features include:
 
 ## Localisation
 
-The app is available in **9 languages**: English, Turkish, German, Polish, Russian, French, Italian, Japanese and Korean.
+The app is available in **10 languages**: English, Turkish, German, Polish, Russian, French, Italian, Japanese, Korean and Simplified Chinese.
 
 [![Translation status](https://translate.wavelogmobile.app/widget/wavelog-mobile/app/svg-badge.svg)](https://translate.wavelogmobile.app/projects/wavelog-mobile/)
 
@@ -88,6 +89,14 @@ Community translations are welcome and hosted on [Weblate](https://translate.wav
 - [go_router](https://pub.dev/packages/go_router) — navigation
 - [Dio](https://pub.dev/packages/dio) — HTTP client
 - [flutter_svg](https://pub.dev/packages/flutter_svg) — SVG rendering
+
+## Author
+
+**[TA4RX / SP9AQG](https://github.com/TA4RX-SP9AQG)** — creator and main developer
+
+## Contributors
+
+- **[Gerlowski](https://github.com/Gerlowski)** — USB CAT radio control (live frequency/mode following, auto-connect, tap-a-spot-to-tune), worked-before badges, UI fixes
 
 ## Contributing
 
@@ -109,7 +118,3 @@ Signing is configured via `android/key.properties` (not included in the reposito
 ## License
 
 This project is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
-
----
-
-By TA4RX / SP9AQG

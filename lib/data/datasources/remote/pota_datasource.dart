@@ -32,6 +32,26 @@ class PotaDatasource {
     }
   }
 
+  /// Parks whose reference or name matches [query] (pota.app's search, the
+  /// one its website uses), best match first. Other hits, such as
+  /// activators' callsigns, are left out.
+  Future<List<({String reference, String name})>> searchParks(String query,
+      {int size = 8}) async {
+    final response = await _dio.get<List<dynamic>>('/lookup',
+        queryParameters: {'search': query, 'size': size});
+    return [
+      for (final r in response.data ?? const [])
+        if (r is Map && r['type'] == 'park' && r['value'] != null)
+          (
+            reference: r['value'].toString(),
+            // "PL-0341  Dębowe Góry Nature Reserve" -> the name part.
+            name: (r['display']?.toString() ?? '')
+                .replaceFirst(r['value'].toString(), '')
+                .trim(),
+          ),
+    ];
+  }
+
   Future<List<PotaSpotModel>> getSpots() async {
     final response = await _dio.get<List<dynamic>>('/spot');
     final list = response.data ?? [];

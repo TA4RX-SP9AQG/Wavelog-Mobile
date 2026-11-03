@@ -9,6 +9,7 @@ import '../../../data/models/dxcc_entity_model.dart';
 import '../../../data/models/state_subdivision_model.dart';
 import '../../../data/models/station_model.dart';
 import '../../../providers/station_provider.dart';
+import '../../widgets/pota/pota_park_autocomplete.dart';
 
 class CreateStationScreen extends ConsumerStatefulWidget {
   final StationModel? existingStation;
@@ -33,6 +34,8 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
 
   // DXCC — stored as int id; DxccEntity holds name for display
   DxccEntity? _selectedDxcc;
+  // Set when Save is pressed on a new location without a DXCC entity.
+  bool _dxccMissing = false;
   List<DxccEntity> _dxccList = [];
   bool _dxccLoading = false;
   bool _dxccError = false;
@@ -51,33 +54,19 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
   final _sotaCtrl    = TextEditingController();
   final _wwffCtrl    = TextEditingController();
   final _potaCtrl    = TextEditingController();
+  final _potaFocus   = FocusNode();
   final _sigCtrl     = TextEditingController();
   final _sigInfoCtrl = TextEditingController();
 
   // eQSL
   final _eqslNickCtrl = TextEditingController();
-  final _eqslMsgCtrl  = TextEditingController();
-
-  // Integrations
-  final _qrzApiKeyCtrl     = TextEditingController();
-  final _hrdlogUserCtrl    = TextEditingController();
-  final _hrdlogCodeCtrl    = TextEditingController();
-  final _webAdifApiKeyCtrl = TextEditingController();
-
-  // OQRS
-  final _oqrsTextCtrl  = TextEditingController();
-  final _oqrsEmailCtrl = TextEditingController();
 
   // Flags
   bool _isActive        = false;
   bool _linkLogbook     = false;
   bool _gpsLoading      = false;
-  int  _qrzRealtime     = -1;
-  bool _webAdifRealtime = false;
   bool _clublogRealtime = false;
   bool _clublogIgnore   = false;
-  int  _hrdlogRealtime  = -1;
-  bool _oqrsEnabled     = false;
   bool _saving          = false;
 
   @override
@@ -102,20 +91,9 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
       _sigCtrl.text           = s.sig ?? '';
       _sigInfoCtrl.text       = s.sigInfo ?? '';
       _eqslNickCtrl.text      = s.eqslQthNickname ?? '';
-      _eqslMsgCtrl.text       = s.eqslDefaultQslMsg ?? '';
-      _qrzApiKeyCtrl.text     = s.qrzApiKey ?? '';
-      _hrdlogUserCtrl.text    = s.hrdlogUsername ?? '';
-      _hrdlogCodeCtrl.text    = s.hrdlogCode ?? '';
-      _webAdifApiKeyCtrl.text = s.webAdifApiKey ?? '';
       _isActive               = s.isActive;
-      _qrzRealtime            = s.qrzRealtime;
-      _webAdifRealtime        = s.webAdifRealtime;
       _clublogRealtime        = s.clublogRealtime;
       _clublogIgnore          = s.clublogIgnore;
-      _hrdlogRealtime         = s.hrdlogRealtime;
-      _oqrsEnabled            = s.oqrsEnabled;
-      _oqrsTextCtrl.text      = s.oqrsText ?? '';
-      _oqrsEmailCtrl.text     = s.oqrsEmail ?? '';
     }
   }
 
@@ -208,16 +186,10 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
     _sotaCtrl.dispose();
     _wwffCtrl.dispose();
     _potaCtrl.dispose();
+    _potaFocus.dispose();
     _sigCtrl.dispose();
     _sigInfoCtrl.dispose();
     _eqslNickCtrl.dispose();
-    _eqslMsgCtrl.dispose();
-    _qrzApiKeyCtrl.dispose();
-    _hrdlogUserCtrl.dispose();
-    _hrdlogCodeCtrl.dispose();
-    _webAdifApiKeyCtrl.dispose();
-    _oqrsTextCtrl.dispose();
-    _oqrsEmailCtrl.dispose();
     super.dispose();
   }
 
@@ -246,23 +218,17 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
         sig: _t(_sigCtrl),
         sigInfo: _t(_sigInfoCtrl),
         eqslQthNickname: _t(_eqslNickCtrl),
-        eqslDefaultQslMsg: _t(_eqslMsgCtrl),
-        qrzApiKey: _t(_qrzApiKeyCtrl),
-        hrdlogUsername: _t(_hrdlogUserCtrl),
-        hrdlogCode: _t(_hrdlogCodeCtrl),
-        webAdifApiKey: _t(_webAdifApiKeyCtrl),
-        qrzRealtime: _qrzRealtime,
-        webAdifRealtime: _webAdifRealtime,
         clublogRealtime: _clublogRealtime,
         clublogIgnore: _clublogIgnore,
-        hrdlogRealtime: _hrdlogRealtime,
-        oqrsEnabled: _oqrsEnabled,
-        oqrsText: _t(_oqrsTextCtrl),
-        oqrsEmail: _t(_oqrsEmailCtrl),
       );
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Wavelog requires DXCC, CQ and ITU zone for a new location and answers
+    // a validation error without them, which surfaced as the misleading
+    // "profile may already exist". Check them here instead.
+    final dxccMissing = !_isEditing && _selectedDxcc == null;
+    setState(() => _dxccMissing = dxccMissing);
+    if (!_formKey.currentState!.validate() || dxccMissing) return;
     setState(() => _saving = true);
     final l10n = context.l10n;
 
@@ -304,6 +270,11 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
     }
   }
 
+  String? _requiredZone(String? v) =>
+      !_isEditing && (int.tryParse(v?.trim() ?? '') ?? 0) <= 0
+          ? context.l10n.required
+          : null;
+
   Future<void> _pickDxcc() async {
     if (_dxccList.isEmpty) return;
     final result = await showModalBottomSheet<DxccEntity>(
@@ -317,6 +288,7 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
     if (result != null && mounted) {
       setState(() {
         _selectedDxcc = result;
+        _dxccMissing = false;
         if (result.cqZone > 0) _cqCtrl.text = result.cqZone.toString();
         if (result.ituZone > 0) _ituCtrl.text = result.ituZone.toString();
         _selectedState = null;
@@ -324,40 +296,6 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
       });
       _loadStateList(result.adif);
     }
-  }
-
-  Widget _uploadSelector({
-    required String label,
-    required int value,
-    required ValueChanged<int> onChanged,
-  }) {
-    final l10n = context.l10n;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 4),
-          child: Text(label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface)),
-        ),
-        SegmentedButton<int>(
-          segments: [
-            ButtonSegment(value: -1, label: Text(l10n.uploadDisabled)),
-            ButtonSegment(value: 0,  label: Text(l10n.uploadEnabled)),
-            ButtonSegment(value: 1,  label: Text(l10n.uploadRealtime)),
-          ],
-          selected: {value},
-          onSelectionChanged: (s) => onChanged(s.first),
-          style: const ButtonStyle(
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            visualDensity: VisualDensity.compact,
-          ),
-        ),
-      ],
-    );
   }
 
   @override
@@ -444,6 +382,7 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
               selected: _selectedDxcc,
               loading: _dxccLoading,
               hasError: _dxccError,
+              errorText: _dxccMissing ? l10n.required : null,
               onTap: _dxccError ? _loadDxccList : _pickDxcc,
             ),
             const SizedBox(height: 12),
@@ -489,6 +428,7 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
                   decoration: const InputDecoration(
                       labelText: 'CQ Zone', hintText: '20'),
                   keyboardType: TextInputType.number,
+                  validator: _requiredZone,
                 ),
               ),
               const SizedBox(width: 12),
@@ -498,6 +438,7 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
                   decoration: const InputDecoration(
                       labelText: 'ITU Zone', hintText: '29'),
                   keyboardType: TextInputType.number,
+                  validator: _requiredZone,
                 ),
               ),
             ]),
@@ -535,11 +476,18 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: TextFormField(
+                // Find the park being activated by name, too.
+                child: PotaParkAutocomplete(
                   controller: _potaCtrl,
-                  decoration: InputDecoration(
-                      labelText: l10n.pota, hintText: 'TA-0001'),
-                  textCapitalization: TextCapitalization.characters,
+                  focusNode: _potaFocus,
+                  onSelected: (_) {}, // the field now holds its reference
+                  fieldBuilder: (context, _) => TextFormField(
+                    controller: _potaCtrl,
+                    focusNode: _potaFocus,
+                    decoration: InputDecoration(
+                        labelText: l10n.pota, hintText: 'TA-0001'),
+                    textCapitalization: TextCapitalization.characters,
+                  ),
                 ),
               ),
             ]),
@@ -561,30 +509,10 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
               decoration:
                   InputDecoration(labelText: l10n.eqslQthNicknameLabel),
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _eqslMsgCtrl,
-              decoration: InputDecoration(labelText: l10n.eqslDefaultMsgLabel),
-              maxLines: 2,
-            ),
 
             const SizedBox(height: 24),
             _section(l10n.integrationsSectionTitle),
 
-            _subSection('QRZ.com'),
-            TextFormField(
-              controller: _qrzApiKeyCtrl,
-              decoration: InputDecoration(labelText: l10n.qrzApiKeyLabel),
-              autocorrect: false,
-            ),
-            const SizedBox(height: 8),
-            _uploadSelector(
-              label: l10n.qrzUploadLabel,
-              value: _qrzRealtime,
-              onChanged: (v) => setState(() => _qrzRealtime = v),
-            ),
-
-            const SizedBox(height: 16),
             _subSection('Clublog'),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -603,66 +531,16 @@ class _CreateStationScreenState extends ConsumerState<CreateStationScreen> {
                   : (v) => setState(() => _clublogRealtime = v),
             ),
 
-            const SizedBox(height: 16),
-            _subSection('HRDLog.net'),
-            TextFormField(
-              controller: _hrdlogUserCtrl,
-              decoration: InputDecoration(labelText: l10n.hrdlogUsernameLabel),
-              autocorrect: false,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _hrdlogCodeCtrl,
-              decoration: InputDecoration(labelText: l10n.hrdlogApiKeyLabel),
-              autocorrect: false,
-              obscureText: true,
-            ),
+            // QRZ.com, HRDLog.net, QO-100 (webADIF), OQRS and the default
+            // eQSL message are not exposed by Wavelog's v2 station API (it
+            // keeps external-service credentials out of it): they can be
+            // neither shown nor saved here, only in Wavelog's web UI.
             const SizedBox(height: 8),
-            _uploadSelector(
-              label: l10n.hrdlogUploadLabel,
-              value: _hrdlogRealtime,
-              onChanged: (v) => setState(() => _hrdlogRealtime = v),
+            Text(
+              l10n.stationWebOnlySettingsHint,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
-
-            const SizedBox(height: 16),
-            _subSection('QO-100 DX Club'),
-            TextFormField(
-              controller: _webAdifApiKeyCtrl,
-              decoration: InputDecoration(labelText: l10n.qo100ApiKeyLabel),
-              autocorrect: false,
-              obscureText: true,
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l10n.qo100RealtimeTitle),
-              subtitle: Text(l10n.qo100RealtimeSubtitle),
-              value: _webAdifRealtime,
-              onChanged: (v) => setState(() => _webAdifRealtime = v),
-            ),
-
-            const SizedBox(height: 24),
-            _section(l10n.oqrsSectionTitle),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l10n.oqrsEnabledTitle),
-              subtitle: Text(l10n.oqrsEnabledSubtitle),
-              value: _oqrsEnabled,
-              onChanged: (v) => setState(() => _oqrsEnabled = v),
-            ),
-            if (_oqrsEnabled) ...[
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _oqrsTextCtrl,
-                decoration: InputDecoration(labelText: l10n.oqrsTextLabel),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _oqrsEmailCtrl,
-                decoration: InputDecoration(labelText: l10n.oqrsEmailLabel),
-                keyboardType: TextInputType.emailAddress,
-              ),
-            ],
 
             const SizedBox(height: 24),
             _section(l10n.stationSettingsSection),
@@ -730,12 +608,14 @@ class _DxccPickerField extends StatelessWidget {
   final DxccEntity? selected;
   final bool loading;
   final bool hasError;
+  final String? errorText;
   final VoidCallback onTap;
   const _DxccPickerField({
     required this.selected,
     required this.loading,
     required this.onTap,
     this.hasError = false,
+    this.errorText,
   });
 
   @override
@@ -749,7 +629,7 @@ class _DxccPickerField extends StatelessWidget {
         decoration: InputDecoration(
           labelText: l10n.dxccCountry,
           border: const OutlineInputBorder(),
-          errorText: hasError ? context.l10n.error : null,
+          errorText: hasError ? context.l10n.error : errorText,
           suffixIcon: loading
               ? const Padding(
                   padding: EdgeInsets.all(12),

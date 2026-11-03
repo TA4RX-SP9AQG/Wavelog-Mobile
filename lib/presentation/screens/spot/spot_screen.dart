@@ -12,6 +12,7 @@ import '../../../data/datasources/remote/sota_datasource.dart';
 import '../../../data/models/pota_spot_model.dart';
 import '../../../data/models/sota_spot_model.dart';
 import '../../../data/models/wwff_spot_model.dart';
+import '../../../providers/pota_stats_provider.dart';
 import '../../../providers/dx_spot_provider.dart';
 import '../../../providers/pota_spot_provider.dart';
 import '../../../providers/settings_provider.dart';
@@ -343,11 +344,16 @@ String _formatAge(DateTime dt) {
 /// Navigates to the QSO form, prefilled from a tapped spot. Frequency is
 /// always passed on; mode only when it's a recognised value — otherwise the
 /// user picks it themselves on the form (many spots, SOTA especially, don't
-/// report a mode at all).
+/// report a mode at all). The activator's POTA / SOTA / WWFF reference goes
+/// along too, so a hunted park, summit or area is logged with the QSO.
 void _goLogSpot(BuildContext context, _SpotView spot) {
   final params = <String, String>{'callsign': spot.activator};
   if (spot.freqMhzForLog != null) params['freq'] = spot.freqMhzForLog!;
   if (spot.modeForLog != null) params['mode'] = spot.modeForLog!;
+  final ref = spot.refForLog;
+  if (ref != null && ref.ref.trim().isNotEmpty) {
+    params[ref.key] = ref.ref.trim().toUpperCase();
+  }
   context.push(Uri(path: '/add-qso', queryParameters: params).toString());
 }
 
@@ -365,6 +371,22 @@ List<String> _distinct(Iterable<String?> values) =>
         .toSet()
         .toList()
       ..sort();
+
+/// The bands among [values], longest wavelength first (160m … 70cm), as a
+/// band plan reads, not alphabetically (which puts 160m between 15m and
+/// 17m). Bands outside the common list go last.
+List<String> _bandsInOrder(Iterable<String?> values) {
+  int rank(String b) {
+    final i = kCommonBands.indexOf(b.toLowerCase());
+    return i < 0 ? kCommonBands.length : i;
+  }
+
+  return _distinct(values)
+    ..sort((a, b) {
+      final r = rank(a).compareTo(rank(b));
+      return r != 0 ? r : a.compareTo(b);
+    });
+}
 
 /// Tile'ın ihtiyaç duyduğu ortak alanlar — her model buna eşlenir.
 class _SpotView {
@@ -387,6 +409,14 @@ class _SpotView {
   /// which case this stays null and the user picks it manually on the form.
   final String? modeForLog;
 
+  /// The activator's reference for the QSO form, under its query key
+  /// ('pota' / 'sota' / 'wwff'); null for DX spots.
+  final ({String key, String ref})? refForLog;
+
+  /// Shown next to the mode when set, e.g. "New park" for a park not yet
+  /// in the log.
+  final String? badge;
+
   const _SpotView({
     required this.activator,
     required this.mode,
@@ -399,6 +429,8 @@ class _SpotView {
     required this.time,
     this.freqMhzForLog,
     this.modeForLog,
+    this.refForLog,
+    this.badge,
   });
 }
 
@@ -443,6 +475,21 @@ class _SpotTile extends StatelessWidget {
                   fontWeight: FontWeight.bold, fontSize: 15)),
           const SizedBox(width: 8),
           _ModeChip(spot.mode),
+          if (spot.badge != null) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: Colors.green.shade700,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(spot.badge!,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600)),
+            ),
+          ],
           const Spacer(),
           Text(
             spot.freqDisplay,
@@ -600,14 +647,43 @@ class _FilterSpec {
   final String placeholder;
   final String? value;
   final List<String> items;
-  final ValueChanged<String?> onChanged;
+  final ValueChanged<String?>? onChanged;
+
+  /// For a filter that takes several values at once (bands): the chosen
+  /// ones, empty for all.
+  final Set<String>? values;
+  final ValueChanged<Set<String>>? onChangedMulti;
 
   const _FilterSpec({
     required this.placeholder,
     required this.value,
     required this.items,
-    required this.onChanged,
-  });
+    required ValueChanged<String?> this.onChanged,
+  })  : values = null,
+        onChangedMulti = null;
+
+  const _FilterSpec.multi({
+    required this.placeholder,
+    required Set<String> this.values,
+    required this.items,
+    required ValueChanged<Set<String>> this.onChangedMulti,
+  })  : value = null,
+        onChanged = null;
+
+  bool get active => values != null ? values!.isNotEmpty : value != null;
+
+  /// The chosen values in list order, e.g. "40m, 20m".
+  String get label {
+    if (values == null) return value ?? placeholder;
+    if (values!.isEmpty) return placeholder;
+    return [
+      ...items.where(values!.contains),
+      ...values!.where((v) => !items.contains(v)),
+    ].join(', ');
+  }
+
+  void clear() =>
+      values != null ? onChangedMulti!(const {}) : onChanged!(null);
 }
 
 class _SpotFilterBar extends StatelessWidget {
@@ -626,7 +702,7 @@ class _SpotFilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final hasFilters = filters.any((f) => f.value != null);
+    final hasFilters = filters.any((f) => f.active);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -642,13 +718,23 @@ class _SpotFilterBar extends StatelessWidget {
           ),
           for (final f in filters) ...[
             const SizedBox(width: 6),
-            _DropdownChip(
-              label: f.value ?? f.placeholder,
-              active: f.value != null,
-              items: f.items,
-              onSelected: (v) => f.onChanged(v),
-              onCleared: () => f.onChanged(null),
-            ),
+            if (f.values != null)
+              _MultiSelectChip(
+                label: f.label,
+                title: f.placeholder,
+                selected: f.values!,
+                items: f.items,
+                onChanged: f.onChangedMulti!,
+                onCleared: f.clear,
+              )
+            else
+              _DropdownChip(
+                label: f.label,
+                active: f.active,
+                items: f.items,
+                onSelected: (v) => f.onChanged!(v),
+                onCleared: f.clear,
+              ),
           ],
           if (hasFilters) ...[
             const SizedBox(width: 6),
@@ -705,6 +791,80 @@ class _DropdownChip extends StatelessWidget {
   }
 }
 
+/// A filter chip whose dialog takes several values at once, e.g. 20m and
+/// 40m together. Nothing ticked means everything is shown.
+class _MultiSelectChip extends StatelessWidget {
+  final String label;
+  final String title;
+  final Set<String> selected;
+  final List<String> items;
+  final ValueChanged<Set<String>> onChanged;
+  final VoidCallback onCleared;
+
+  const _MultiSelectChip({
+    required this.label,
+    required this.title,
+    required this.selected,
+    required this.items,
+    required this.onChanged,
+    required this.onCleared,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final active = selected.isNotEmpty;
+    return FilterChip(
+      label: Text(label),
+      selected: active,
+      deleteIcon: active ? const Icon(Icons.close, size: 14) : null,
+      onDeleted: active ? onCleared : null,
+      onSelected: (_) async {
+        // Bands no longer in the spot list stay chosen until cleared.
+        final choices = {...items, ...selected}.toList();
+        if (choices.isEmpty) return;
+        final picked = {...selected};
+        final l10n = context.l10n;
+        final result = await showDialog<Set<String>>(
+          context: context,
+          builder: (ctx) => StatefulBuilder(
+            builder: (ctx, setS) => AlertDialog(
+              title: Text(title),
+              contentPadding: const EdgeInsets.only(top: 8),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final item in choices)
+                      CheckboxListTile(
+                        dense: true,
+                        title: Text(item),
+                        value: picked.contains(item),
+                        onChanged: (v) => setS(() =>
+                            v == true ? picked.add(item) : picked.remove(item)),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => setS(picked.clear),
+                  child: Text(l10n.filterClear),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, picked),
+                  child: Text(MaterialLocalizations.of(ctx).okButtonLabel),
+                ),
+              ],
+            ),
+          ),
+        );
+        if (result != null) onChanged(result);
+      },
+    );
+  }
+}
+
 class _ModeChip extends StatelessWidget {
   final String mode;
   const _ModeChip(this.mode);
@@ -743,6 +903,7 @@ class _PotaSpotContent extends ConsumerWidget {
     final spots = ref.watch(filteredPotaSpotsProvider);
     final filter = ref.watch(potaSpotFilterProvider);
     final allSpots = ref.watch(potaSpotsProvider).valueOrNull ?? [];
+    final hunted = ref.watch(huntedParksProvider);
 
     void update(PotaSpotFilter f) =>
         ref.read(potaSpotFilterProvider.notifier).state = f;
@@ -755,11 +916,11 @@ class _PotaSpotContent extends ConsumerWidget {
               update(filter.copyWith(newestFirst: !filter.newestFirst)),
           onClearAll: () => update(const PotaSpotFilter()),
           filters: [
-            _FilterSpec(
+            _FilterSpec.multi(
               placeholder: l10n.filterBand,
-              value: filter.band,
-              items: _distinct(allSpots.map((s) => s.band)),
-              onChanged: (v) => update(filter.copyWith(band: v)),
+              values: filter.bands,
+              items: _bandsInOrder(allSpots.map((s) => s.band)),
+              onChangedMulti: (v) => update(filter.copyWith(bands: v)),
             ),
             _FilterSpec(
               placeholder: l10n.filterMode,
@@ -785,6 +946,11 @@ class _PotaSpotContent extends ConsumerWidget {
                       band: s.band,
                       freqDisplay: s.freqDisplay,
                       refIcon: Icons.park_outlined,
+                      refForLog: (key: 'pota', ref: s.reference),
+                      badge: hunted != null &&
+                              !hunted.contains(s.reference.toUpperCase())
+                          ? l10n.spotNewPark
+                          : null,
                       refLine: s.parkName.isNotEmpty
                           ? '${s.reference}  ${s.parkName}'
                           : s.reference,
@@ -830,11 +996,11 @@ class _SotaSpotContent extends ConsumerWidget {
               update(filter.copyWith(newestFirst: !filter.newestFirst)),
           onClearAll: () => update(const SotaSpotFilter()),
           filters: [
-            _FilterSpec(
+            _FilterSpec.multi(
               placeholder: l10n.filterBand,
-              value: filter.band,
-              items: _distinct(allSpots.map((s) => s.band)),
-              onChanged: (v) => update(filter.copyWith(band: v)),
+              values: filter.bands,
+              items: _bandsInOrder(allSpots.map((s) => s.band)),
+              onChangedMulti: (v) => update(filter.copyWith(bands: v)),
             ),
             _FilterSpec(
               placeholder: l10n.filterMode,
@@ -860,6 +1026,7 @@ class _SotaSpotContent extends ConsumerWidget {
                       band: s.band,
                       freqDisplay: s.freqDisplay,
                       refIcon: Icons.terrain_outlined,
+                      refForLog: (key: 'sota', ref: s.reference),
                       refLine: s.summitDetails.isNotEmpty
                           ? '${s.reference}  ${s.summitDetails}'
                           : s.reference,
@@ -904,11 +1071,11 @@ class _WwffSpotContent extends ConsumerWidget {
               update(filter.copyWith(newestFirst: !filter.newestFirst)),
           onClearAll: () => update(const WwffSpotFilter()),
           filters: [
-            _FilterSpec(
+            _FilterSpec.multi(
               placeholder: l10n.filterBand,
-              value: filter.band,
-              items: _distinct(allSpots.map((s) => s.band)),
-              onChanged: (v) => update(filter.copyWith(band: v)),
+              values: filter.bands,
+              items: _bandsInOrder(allSpots.map((s) => s.band)),
+              onChangedMulti: (v) => update(filter.copyWith(bands: v)),
             ),
             _FilterSpec(
               placeholder: l10n.filterMode,
@@ -934,6 +1101,7 @@ class _WwffSpotContent extends ConsumerWidget {
                       band: s.band,
                       freqDisplay: s.freqDisplay,
                       refIcon: Icons.eco_outlined,
+                      refForLog: (key: 'wwff', ref: s.reference),
                       refLine: s.referenceName.isNotEmpty
                           ? '${s.reference}  ${s.referenceName}'
                           : s.reference,
@@ -978,11 +1146,11 @@ class _DxClusterContent extends ConsumerWidget {
               update(filter.copyWith(newestFirst: !filter.newestFirst)),
           onClearAll: () => update(const DxSpotFilter()),
           filters: [
-            _FilterSpec(
+            _FilterSpec.multi(
               placeholder: l10n.filterBand,
-              value: filter.band,
-              items: _distinct(allSpots.map((s) => s.band)),
-              onChanged: (v) => update(filter.copyWith(band: v)),
+              values: filter.bands,
+              items: _bandsInOrder(allSpots.map((s) => s.band)),
+              onChangedMulti: (v) => update(filter.copyWith(bands: v)),
             ),
             _FilterSpec(
               placeholder: l10n.filterMode,

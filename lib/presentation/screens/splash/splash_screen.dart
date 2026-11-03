@@ -59,6 +59,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           '/community/chat/${pendingRoom.roomId}',
           extra: pendingRoom.roomName,
         );
+      } else if (settings.openAddQsoOnStart) {
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        appRouter.push('/add-qso');
       }
     }
   }

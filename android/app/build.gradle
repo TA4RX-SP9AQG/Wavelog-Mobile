@@ -66,4 +66,6 @@ dependencies {
     // whatever version Flutter's own embedding happens to pull in
     // transitively.
     implementation 'androidx.core:core-ktx:1.13.1'
+    // USB serial drivers for reading the radio's frequency over CAT
+    implementation 'com.github.mik3y:usb-serial-for-android:3.11.0'
 }

@@ -328,7 +328,8 @@ class _AddProfileSheetState extends ConsumerState<_AddProfileSheet> {
   /// Lightweight, read-only probes per scope group — safe to run before the
   /// user has even confirmed sign-in. Only *:read scopes are checked live;
   /// write/delete scopes can't be tested without risking real data changes
-  /// on the user's server, so they're left to the full scope guide instead.
+  /// on the user's server, so they're left to the full scope guide instead
+  /// (the exception is radio:write, see [probeRadioWriteScope]).
   Future<List<_ScopeTestResult>> _runScopeTests(
       Dio dio, String callsign) async {
     Future<bool?> probe(String path, [Map<String, dynamic>? params]) async {
@@ -361,6 +362,7 @@ class _AddProfileSheetState extends ConsumerState<_AddProfileSheet> {
           await probe(ApiEndpoints.confirmation, {'page': 1})),
       _ScopeTestResult(
           'qso:read', await probe(ApiEndpoints.qso, {'page': 1})),
+      _ScopeTestResult('radio:write', await probeRadioWriteScope(dio)),
     ];
   }
 
@@ -561,6 +563,25 @@ class _AddProfileSheetState extends ConsumerState<_AddProfileSheet> {
 
 // ── Scope test result & panel ────────────────────────────────────────────────
 
+/// radio:write is the one write scope that can be tested without touching
+/// data: Wavelog checks the scope first (403 without it) and only then the
+/// body, and an empty body is rejected as a validation error (400) before
+/// anything is written. Reaching that 400 means the scope is there.
+/// Null when it can't be told (network, or a server without the endpoint).
+Future<bool?> probeRadioWriteScope(Dio dio) async {
+  try {
+    await dio.post(ApiEndpoints.radio, data: <String, dynamic>{});
+    return true;
+  } on DioException catch (e) {
+    final code = e.response?.statusCode;
+    if (code == 401 || code == 403) return false;
+    if (code == 400 || code == 422) return true;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 /// [passed]: true = scope confirmed working, false = server rejected it
 /// (401/403 — likely missing from the token), null = could not be
 /// determined (network hiccup etc.) and isn't held against the user.
@@ -589,6 +610,8 @@ String _scopeDescription(BuildContext context, String scopeKey) {
       return l10n.scopeConfirmationRead;
     case 'qso:read':
       return l10n.scopeQsoRead;
+    case 'radio:write':
+      return l10n.scopeRadioWrite;
     default:
       return scopeKey;
   }

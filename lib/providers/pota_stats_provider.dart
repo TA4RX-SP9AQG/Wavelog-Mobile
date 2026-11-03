@@ -1,8 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/utils/pota_activity.dart';
 import '../data/datasources/remote/pota_datasource.dart';
 import '../data/models/pota_stats_model.dart';
+import 'qso_provider.dart';
 import 'remote_datasource_provider.dart';
 import 'station_provider.dart';
+
+/// Parks hunted so far (POTA_REF across the whole log). Null until the log
+/// has loaded, so that no park looks new before it is known.
+final huntedParksProvider = Provider<Set<String>?>((ref) {
+  final log = ref.watch(qsoProvider).valueOrNull;
+  return log == null ? null : huntedParks(log);
+});
 
 final _potaDatasourceProvider = Provider<PotaDatasource>((_) => PotaDatasource());
 

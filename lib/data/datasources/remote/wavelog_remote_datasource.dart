@@ -386,6 +386,24 @@ class WavelogRemoteDatasource {
 
   // ── Statistics, v2 native ───────────────────────────────────────────────────
 
+  /// Pushes the live rig state to Wavelog's CAT radios (POST upserts by
+  /// [radio] name). Needs the token's radio:write scope.
+  Future<void> pushRadioStatus({
+    required String radio,
+    required int frequencyHz,
+    String? mode,
+  }) async {
+    try {
+      await _dio.post(ApiEndpoints.radio, data: {
+        'radio': radio,
+        'frequency': frequencyHz,
+        if (mode != null) 'mode': mode,
+      });
+    } on DioException catch (e) {
+      throw _mapDioException(e);
+    }
+  }
+
   Future<StatisticsModel> getStatistics() async {
     try {
       final response = await _dio.get(ApiEndpoints.statistics);
@@ -411,6 +429,20 @@ class WavelogRemoteDatasource {
       final data = response.data;
       if (data is Map) return data['version']?.toString();
       return null;
+    } on DioException catch (_) {
+      return null;
+    }
+  }
+
+  /// The callsign of the account the API token belongs to (`owner` of
+  /// GET /api/v2/token), or null when the server can't say.
+  Future<String?> getTokenOwner() async {
+    try {
+      final response = await _dio.get(ApiEndpoints.token);
+      final raw = response.data;
+      final data = raw is Map && raw['data'] is Map ? raw['data'] : raw;
+      final owner = data is Map ? data['owner']?.toString().trim() : null;
+      return owner == null || owner.isEmpty ? null : owner.toUpperCase();
     } on DioException catch (_) {
       return null;
     }
@@ -808,42 +840,70 @@ class WavelogRemoteDatasource {
     }
   }
 
+  /// Creates one QSO, given as a one-record ADIF string, and returns its
+  /// server id (null when the server already had it).
+  ///
+  /// Sent as a single JSON QSO, not as an ADIF import, for two reasons only
+  /// the JSON create gives: it answers with the new QSO's id, and it runs
+  /// the station's real-time exports (QRZ.com, ClubLog, HRDLog "live"
+  /// uploads), which Wavelog skips for ADIF imports. The JSON body takes the
+  /// ADIF field names; only FREQ / FREQ_RX are in Hz there.
+  ///
+  /// A QSO the server already has is answered with a validation error that
+  /// lists it as a duplicate; that counts as saved, as the ADIF import's
+  /// "skipped" did.
+  Future<int?> createQso(String adifString, int stationProfileId) async {
+    final record = AdifParser.parse(adifString).firstOrNull;
+    if (record == null) throw const ServerException('Empty ADIF record');
+    final body = <String, dynamic>{
+      'station_profile_id': stationProfileId,
+      'import_type': 'json',
+    };
+    for (final MapEntry(:key, :value) in record.entries) {
+      final mhz = key == 'FREQ' || key == 'FREQ_RX' ? double.tryParse(value) : null;
+      body[key.toLowerCase()] = mhz != null ? (mhz * 1e6).round() : value;
+    }
+
+    try {
+      final response = await _dio.post(ApiEndpoints.qso, data: body);
+      final raw = response.data;
+      final d = raw is Map ? raw['data'] : null;
+      return _parseInt(d is Map ? d['id'] : null);
+    } on DioException catch (e) {
+      if (_isOnlyDuplicate(e)) return null;
+      throw _mapDioException(e);
+    }
+  }
+
+  /// Whether [e] is the JSON create's answer for a QSO that already exists:
+  /// a 400 whose details list duplicates and nothing else.
+  static bool _isOnlyDuplicate(DioException e) {
+    if (e.response?.statusCode != 400) return false;
+    final data = e.response?.data;
+    final error = data is Map ? data['error'] : null;
+    final details = error is Map ? error['details'] : null;
+    if (details is! Map) return false;
+    bool has(String k) => details[k] is List && (details[k] as List).isNotEmpty;
+    return has('duplicate') && !has('critical') && !has('validation');
+  }
+
+  /// Logs one QSO and links it to contest session [contestSessionId].
   Future<void> logContestQso({
     required int contestSessionId,
     required int stationProfileId,
     required String adifString,
   }) async {
-    int? qsoId;
-    try {
-      final response = await _dio.post(
-        ApiEndpoints.qso,
-        data: {
-          'station_profile_id': stationProfileId,
-          'import_type': 'adif',
-          'adif': adifString,
-        },
-      );
-      final raw = response.data;
-      if (raw is Map) {
-        final d = raw['data'];
-        qsoId = _parseInt(d is Map ? d['id'] : null);
-      }
-    } on DioException catch (e) {
-      if (e.type == DioExceptionType.connectionError) {
-        await importQso(adifString, stationProfileId);
-        return;
-      }
-      throw _mapDioException(e);
-    }
-
+    final qsoId = await createQso(adifString, stationProfileId);
     if (qsoId != null && qsoId > 0) {
       try {
         await _dio.patch(
           ApiEndpoints.contestById(contestSessionId),
           data: {'link_qso_ids': [qsoId]},
         );
-      } on DioException catch (_) {
-        // QSO logged but not linked to session, non-critical
+      } on DioException catch (e) {
+        // The QSO is in the log; only the session link is missing, which the
+        // web UI can still add ("Attach to contest").
+        debugPrint('Contest link failed for QSO $qsoId: ${e.message}');
       }
     }
   }
@@ -920,6 +980,14 @@ class WavelogRemoteDatasource {
     if (s.sig != null && s.sig!.isNotEmpty) body['sig'] = s.sig;
     if (s.sigInfo != null && s.sigInfo!.isNotEmpty) body['sig_info'] = s.sigInfo;
     if (s.power != null) body['power'] = s.power;
+    // Only when set: an empty nickname switches the station's eQSL upload
+    // off, and a Wavelog older than this API field would read back nothing.
+    if (s.eqslQthNickname != null && s.eqslQthNickname!.isNotEmpty) {
+      body['eqsl_qth_nickname'] = s.eqslQthNickname;
+    }
+    body['clublog_upload'] = s.clublogIgnore
+        ? 'disabled'
+        : (s.clublogRealtime ? 'live' : 'on');
     return body;
   }
 

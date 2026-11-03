@@ -63,32 +63,33 @@ class SotaSpotModel {
 }
 
 class SotaSpotFilter {
-  final String? band;
+  /// The bands shown; empty shows all.
+  final Set<String> bands;
   final String? mode;
   final String? association;
   final bool newestFirst;
 
   const SotaSpotFilter({
-    this.band,
+    this.bands = const {},
     this.mode,
     this.association,
     this.newestFirst = true,
   });
 
   SotaSpotFilter copyWith({
-    Object? band = _s,
+    Set<String>? bands,
     Object? mode = _s,
     Object? association = _s,
     bool? newestFirst,
   }) =>
       SotaSpotFilter(
-        band: band == _s ? this.band : band as String?,
+        bands: bands ?? this.bands,
         mode: mode == _s ? this.mode : mode as String?,
         association:
             association == _s ? this.association : association as String?,
         newestFirst: newestFirst ?? this.newestFirst,
       );
 
-  bool get hasFilters => band != null || mode != null || association != null;
+  bool get hasFilters => bands.isNotEmpty || mode != null || association != null;
   static const _s = Object();
 }

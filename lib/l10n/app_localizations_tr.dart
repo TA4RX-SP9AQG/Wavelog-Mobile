@@ -723,6 +723,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get langRussian => 'Rusça';
 
   @override
+  String get langChinese => '简体中文';
+
+  @override
   String get aboutTitle => 'Uygulama Hakkında';
 
   @override
@@ -2176,6 +2179,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get scopeTestLookup => 'Arama';
 
   @override
+  String get scopeRadioWrite => 'CAT telsizin frekansını ve modunu bildir';
+
+  @override
+  String get scopeTestRadio => 'Telsiz';
+
+  @override
   String get apiScopeGuideBtn => 'API Scope Rehberi';
 
   @override
@@ -2284,4 +2293,189 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get syncNothing => 'Senkronize edilecek bir şey yok';
+
+  @override
+  String get openAddQsoOnStart => 'QSO Ekle ekranıyla başlat';
+
+  @override
+  String get openAddQsoOnStartHint =>
+      'Uygulama açılır açılmaz QSO formunu aç; Geri tuşu Ana Sayfa\'ya götürür';
+
+  @override
+  String get rigSection => 'Telsiz (CAT)';
+
+  @override
+  String get rigScreenTitle => 'Telsiz bağlantısı (CAT)';
+
+  @override
+  String get rigTileSubtitle =>
+      'USB kablosuyla bağlı telsizden frekansı canlı oku';
+
+  @override
+  String get rigProtocolLabel => 'Protokol';
+
+  @override
+  String get rigProtocolIcom => 'Icom CI-V';
+
+  @override
+  String get rigProtocolXiegu => 'Xiegu G90 (CI-V)';
+
+  @override
+  String get rigProtocolKenwood => 'Kenwood / Elecraft / Yaesu (FA;)';
+
+  @override
+  String get rigProtocolYaesuLegacy => 'Yaesu FT-817/818/857/897';
+
+  @override
+  String get rigBaudLabel => 'Baud hızı';
+
+  @override
+  String get rigCivAddressLabel => 'CI-V adresi';
+
+  @override
+  String get rigCivAddressHint =>
+      'ör. IC-7300 için 94, IC-705 için A4, IC-7610 için 98, Xiegu G90 için 88';
+
+  @override
+  String get rigAutoConnect => 'Otomatik bağlan';
+
+  @override
+  String get rigAutoConnectHint =>
+      'Kablo takıldığında veya uygulama kablo takılıyken açıldığında. Android sorusunda \"Her zaman\" seçilirse soru tekrar çıkmaz.';
+
+  @override
+  String get rigDevicesLabel => 'USB cihazları';
+
+  @override
+  String get rigNoDevices =>
+      'USB seri cihaz bulunamadı. Telsizi bir USB OTG kablosuyla bağlayın.';
+
+  @override
+  String get rigRefresh => 'Yenile';
+
+  @override
+  String get rigConnect => 'Bağlan';
+
+  @override
+  String get rigDisconnect => 'Bağlantıyı kes';
+
+  @override
+  String rigStatusConnected(String device) {
+    return 'Bağlandı: $device';
+  }
+
+  @override
+  String get rigStatusConnecting => 'Bağlanıyor…';
+
+  @override
+  String get rigStatusDisconnected => 'Bağlı değil';
+
+  @override
+  String get rigWaitingForData =>
+      'Telsiz bekleniyor… Protokolü, baud hızını ve CI-V adresini kontrol edin.';
+
+  @override
+  String get rigErrorPermission => 'USB izni reddedildi';
+
+  @override
+  String get rigErrorDetached => 'Telsiz bağlantısı kesildi';
+
+  @override
+  String rigErrorConnection(String code) {
+    return 'Bağlantı hatası ($code)';
+  }
+
+  @override
+  String get workedNewCountry => 'Yeni ülke';
+
+  @override
+  String workedNewBand(String band) {
+    return 'Yeni bant ($band)';
+  }
+
+  @override
+  String workedNewMode(String mode) {
+    return 'Yeni mod ($mode)';
+  }
+
+  @override
+  String workedDupe(String band, String mode) {
+    return 'Dupe: bugün $band $mode üzerinde zaten çalışıldı';
+  }
+
+  @override
+  String get stationWebOnlySettingsHint =>
+      'QRZ.com, HRDLog.net, QO-100, OQRS ve varsayılan eQSL mesajı yalnızca Wavelog web arayüzünden ayarlanır.';
+
+  @override
+  String get qsoReferencesSection => 'POTA / SOTA / WWFF';
+
+  @override
+  String get potaRefHint => 'TA-0001, yenisini Enter veya virgülle ekleyin';
+
+  @override
+  String get potaUnknownParkTitle => 'Bilinmeyen park';
+
+  @override
+  String potaUnknownParkBody(String refs) {
+    return 'pota.app\'te $refs parkı yok. Yine de kaydedilsin mi?';
+  }
+
+  @override
+  String get spotNewPark => 'Yeni park';
+
+  @override
+  String potaActivationProgress(String park, int count, int needed) {
+    return '$park: bugün $count/$needed QSO (UTC)';
+  }
+
+  @override
+  String potaActivationDone(String park, int count) {
+    return '$park: aktivasyon tamamlandı (bugün $count QSO)';
+  }
+
+  @override
+  String get keepScreenOnWhileLogging =>
+      'Günlük kaydı sırasında ekranı açık tut';
+
+  @override
+  String get keepScreenOnWhileLoggingHint =>
+      'QSO Ekle veya yarışma logu açıkken ekran kapanmaz';
+
+  @override
+  String contestDupe(String band, String time) {
+    return 'DUPE: bu yarışmada $band bandında zaten yapıldı ($time UTC)';
+  }
+
+  @override
+  String contestWorkedOn(String bands) {
+    return 'Bu yarışmada çalışıldı: $bands';
+  }
+
+  @override
+  String get mapLayers => 'Harita katmanları';
+
+  @override
+  String get mapBaseAuto => 'Otomatik (açık / koyu)';
+
+  @override
+  String get mapBaseLight => 'Açık';
+
+  @override
+  String get mapBaseDark => 'Koyu';
+
+  @override
+  String get mapBaseTopo => 'Topografik';
+
+  @override
+  String get mapGreatCircles => 'İstasyonumdan büyük daire çizgileri';
+
+  @override
+  String get mapGreyline => 'Gri çizgi (greyline)';
+
+  @override
+  String get mapGreylineHint => 'Gece tarafı ve gündüz/gece sınırı, şu an';
+
+  @override
+  String get mapNorthUp => 'Kuzey yukarı';
 }

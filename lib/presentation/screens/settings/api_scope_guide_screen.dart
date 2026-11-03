@@ -75,6 +75,14 @@ class ApiScopeGuideScreen extends StatelessWidget {
           ('lookup:read', l10n.scopeLookupRead),
         ],
       ),
+      _ScopeGroup(
+        label: l10n.scopeTestRadio,
+        icon: Icons.settings_input_antenna,
+        color: Colors.deepOrange,
+        scopes: [
+          ('radio:write', l10n.scopeRadioWrite),
+        ],
+      ),
     ];
 
     return Scaffold(

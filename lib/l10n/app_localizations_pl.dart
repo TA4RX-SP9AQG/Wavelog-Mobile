@@ -722,6 +722,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get langRussian => 'Rosyjski';
 
   @override
+  String get langChinese => '简体中文';
+
+  @override
   String get aboutTitle => 'O aplikacji';
 
   @override
@@ -2180,6 +2183,12 @@ class AppLocalizationsPl extends AppLocalizations {
   String get scopeTestLookup => 'Wyszukiwanie';
 
   @override
+  String get scopeRadioWrite => 'Report the CAT radio\'s frequency and mode';
+
+  @override
+  String get scopeTestRadio => 'Radio';
+
+  @override
   String get apiScopeGuideBtn => 'Przewodnik po zakresach API';
 
   @override
@@ -2288,4 +2297,189 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get syncNothing => 'Nie ma nic do synchronizacji';
+
+  @override
+  String get openAddQsoOnStart => 'Start od dodawania QSO';
+
+  @override
+  String get openAddQsoOnStartHint =>
+      'Po uruchomieniu aplikacji od razu otwiera formularz QSO; Wstecz prowadzi do ekranu głównego';
+
+  @override
+  String get rigSection => 'Radio (CAT)';
+
+  @override
+  String get rigScreenTitle => 'Połączenie z radiem (CAT)';
+
+  @override
+  String get rigTileSubtitle =>
+      'Odczyt częstotliwości na żywo z radia podłączonego kablem USB';
+
+  @override
+  String get rigProtocolLabel => 'Protokół';
+
+  @override
+  String get rigProtocolIcom => 'Icom CI-V';
+
+  @override
+  String get rigProtocolXiegu => 'Xiegu G90 (CI-V)';
+
+  @override
+  String get rigProtocolKenwood => 'Kenwood / Elecraft / Yaesu (FA;)';
+
+  @override
+  String get rigProtocolYaesuLegacy => 'Yaesu FT-817/818/857/897';
+
+  @override
+  String get rigBaudLabel => 'Prędkość (baud)';
+
+  @override
+  String get rigCivAddressLabel => 'Adres CI-V';
+
+  @override
+  String get rigCivAddressHint =>
+      'np. 94 IC-7300, A4 IC-705, 98 IC-7610, 88 Xiegu G90';
+
+  @override
+  String get rigAutoConnect => 'Łącz automatycznie';
+
+  @override
+  String get rigAutoConnectHint =>
+      'Po podłączeniu kabla USB radia albo przy starcie aplikacji z podłączonym radiem. Zaznacz „Zawsze” w pytaniu Androida, żeby nie pytał następnym razem.';
+
+  @override
+  String get rigDevicesLabel => 'Urządzenia USB';
+
+  @override
+  String get rigNoDevices =>
+      'Nie znaleziono portu szeregowego USB. Podłącz radio kablem USB OTG.';
+
+  @override
+  String get rigRefresh => 'Odśwież';
+
+  @override
+  String get rigConnect => 'Połącz';
+
+  @override
+  String get rigDisconnect => 'Rozłącz';
+
+  @override
+  String rigStatusConnected(String device) {
+    return 'Połączono: $device';
+  }
+
+  @override
+  String get rigStatusConnecting => 'Łączenie…';
+
+  @override
+  String get rigStatusDisconnected => 'Nie połączono';
+
+  @override
+  String get rigWaitingForData =>
+      'Czekam na radio… Sprawdź protokół, prędkość i adres CI-V.';
+
+  @override
+  String get rigErrorPermission => 'Brak zgody na dostęp do USB';
+
+  @override
+  String get rigErrorDetached => 'Radio odłączone';
+
+  @override
+  String rigErrorConnection(String code) {
+    return 'Błąd połączenia ($code)';
+  }
+
+  @override
+  String get workedNewCountry => 'Nowy kraj';
+
+  @override
+  String workedNewBand(String band) {
+    return 'Nowe pasmo ($band)';
+  }
+
+  @override
+  String workedNewMode(String mode) {
+    return 'Nowy tryb ($mode)';
+  }
+
+  @override
+  String workedDupe(String band, String mode) {
+    return 'Duplikat: dziś już było na $band $mode';
+  }
+
+  @override
+  String get stationWebOnlySettingsHint =>
+      'QRZ.com, HRDLog.net, QO-100 (webADIF), OQRS i domyślną wiadomość eQSL ustawia się w Wavelogu przez stronę www: API nie udostępnia ich aplikacji.';
+
+  @override
+  String get qsoReferencesSection => 'POTA / SOTA / WWFF';
+
+  @override
+  String get potaRefHint => 'PL-0123, kolejny park: Enter lub przecinek';
+
+  @override
+  String get potaUnknownParkTitle => 'Nieznany park';
+
+  @override
+  String potaUnknownParkBody(String refs) {
+    return 'W bazie pota.app nie ma parku $refs. Zapisać QSO mimo to?';
+  }
+
+  @override
+  String get spotNewPark => 'Nowy park';
+
+  @override
+  String potaActivationProgress(String park, int count, int needed) {
+    return '$park: $count/$needed QSO dziś (UTC)';
+  }
+
+  @override
+  String potaActivationDone(String park, int count) {
+    return '$park: aktywacja zaliczona ($count QSO dziś)';
+  }
+
+  @override
+  String get keepScreenOnWhileLogging =>
+      'Nie wygaszaj ekranu podczas logowania';
+
+  @override
+  String get keepScreenOnWhileLoggingHint =>
+      'Ekran nie gaśnie, gdy otwarte jest dodawanie QSO albo log konkursowy';
+
+  @override
+  String contestDupe(String band, String time) {
+    return 'DUPLIKAT: już w tych zawodach na $band ($time UTC)';
+  }
+
+  @override
+  String contestWorkedOn(String bands) {
+    return 'W tych zawodach na: $bands';
+  }
+
+  @override
+  String get mapLayers => 'Warstwy mapy';
+
+  @override
+  String get mapBaseAuto => 'Automatyczna (jasna / ciemna)';
+
+  @override
+  String get mapBaseLight => 'Jasna';
+
+  @override
+  String get mapBaseDark => 'Ciemna';
+
+  @override
+  String get mapBaseTopo => 'Topograficzna';
+
+  @override
+  String get mapGreatCircles => 'Linie po wielkim kole od mojej stacji';
+
+  @override
+  String get mapGreyline => 'Greyline';
+
+  @override
+  String get mapGreylineHint => 'Strona nocna i granica dnia i nocy, na żywo';
+
+  @override
+  String get mapNorthUp => 'Północ do góry';
 }

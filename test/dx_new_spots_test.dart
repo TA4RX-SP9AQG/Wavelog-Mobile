@@ -63,9 +63,9 @@ void main() {
     await _refresh(c);
     expect(newCalls(), {'C3'});
 
-    // An unchanged list (e.g. the datasource's cached answer) keeps them.
+    // A refresh without new spots (e.g. a cached answer) clears them.
     await _refresh(c);
-    expect(newCalls(), {'C3'});
+    expect(newCalls(), isEmpty);
   });
 
   test('a failed refresh keeps the last spots within the hour and says so',

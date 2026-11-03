@@ -37,11 +37,9 @@ class _DxHistory {
 
   void update(List<DxSpotModel> spots) {
     final keys = spots.map(dxSpotKey).toSet();
-    // The first fetch has nothing to compare with; an unchanged list (e.g.
-    // a cached answer) keeps the current highlights.
-    if (_spots != null && !_keys.containsAll(keys)) {
-      newKeys = keys.difference(_keys);
-    }
+    // New since the previous refresh only, so a refresh without new spots
+    // clears the highlights; the first fetch has nothing to compare with.
+    newKeys = _spots == null ? const {} : keys.difference(_keys);
     _spots = spots;
     _keys = keys;
     updatedAt = DateTime.now();

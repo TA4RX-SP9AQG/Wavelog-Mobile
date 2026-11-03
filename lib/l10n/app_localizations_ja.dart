@@ -1364,6 +1364,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get spotLoadError => 'スポットを読み込めませんでした';
 
   @override
+  String spotOfflineSince(String time) {
+    return 'No connection — spots from $time';
+  }
+
+  @override
   String get spotActivator => '運用局コールサイン';
 
   @override
@@ -1429,6 +1434,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get spotRefreshHint => 'この間隔でスポットリストを自動的に更新します';
+
+  @override
+  String spotNextRefresh(int seconds) {
+    return 'Refresh in $seconds s';
+  }
 
   @override
   String autoSpotSent(String ref) {

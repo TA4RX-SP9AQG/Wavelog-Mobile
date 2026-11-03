@@ -947,6 +947,11 @@
   "@spotNoResults": {},
   "spotLoadError": "Could not load spots",
   "@spotLoadError": {},
+  "spotOfflineSince": "No connection — spots from {time}",
+  "@spotOfflineSince": {
+    "description": "Banner over DX spots kept from the last successful refresh",
+    "placeholders": { "time": { "type": "String" } }
+  },
   "spotActivator": "Activator Callsign",
   "@spotActivator": {},
   "spotSpotter": "Spotter Callsign",
@@ -991,6 +996,11 @@
   "@spotRefreshLabel": {},
   "spotRefreshHint": "Automatically reload the spot list at this interval",
   "@spotRefreshHint": {},
+  "spotNextRefresh": "Refresh in {seconds} s",
+  "@spotNextRefresh": {
+    "description": "Countdown to the next automatic spot refresh, next to the refresh button",
+    "placeholders": { "seconds": { "type": "int" } }
+  },
   "autoSpotSent": "Auto-spot sent: {ref}",
   "@autoSpotSent": {
     "placeholders": { "ref": { "type": "String" } }

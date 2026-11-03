@@ -2725,6 +2725,12 @@ abstract class AppLocalizations {
   /// **'Could not load spots'**
   String get spotLoadError;
 
+  /// Banner over DX spots kept from the last successful refresh
+  ///
+  /// In en, this message translates to:
+  /// **'No connection — spots from {time}'**
+  String spotOfflineSince(String time);
+
   /// No description provided for @spotActivator.
   ///
   /// In en, this message translates to:
@@ -2856,6 +2862,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Automatically reload the spot list at this interval'**
   String get spotRefreshHint;
+
+  /// Countdown to the next automatic spot refresh, next to the refresh button
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh in {seconds} s'**
+  String spotNextRefresh(int seconds);
 
   /// No description provided for @autoSpotSent.
   ///

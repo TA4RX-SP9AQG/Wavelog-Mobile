@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/band_colors.dart';
 import '../../../core/constants/band_mode_data.dart';
 import '../../../core/enums/activity_type.dart';
 import '../../../core/utils/error_l10n.dart';
@@ -12,6 +13,7 @@ import '../../../data/datasources/remote/sota_datasource.dart';
 import '../../../data/models/pota_spot_model.dart';
 import '../../../data/models/sota_spot_model.dart';
 import '../../../data/models/wwff_spot_model.dart';
+import '../../../providers/connectivity_provider.dart';
 import '../../../providers/pota_stats_provider.dart';
 import '../../../providers/dx_spot_provider.dart';
 import '../../../providers/pota_spot_provider.dart';
@@ -35,6 +37,8 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
   Timer? _autoRefreshTimer;
   int _timerSeconds = 0;
   ActivityType _timerActivity = ActivityType.dx;
+  /// When the auto-refresh timer fires next; null while it is off.
+  final _nextAutoRefresh = ValueNotifier<DateTime?>(null);
 
   void _refreshSelected(ActivityType selected) {
     switch (selected) {
@@ -56,15 +60,27 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
     _timerSeconds = seconds;
     _timerActivity = selected;
     _autoRefreshTimer?.cancel();
+    final period = Duration(seconds: seconds);
+    _nextAutoRefresh.value = seconds > 0 ? DateTime.now().add(period) : null;
     if (seconds <= 0) return;
-    _autoRefreshTimer = Timer.periodic(Duration(seconds: seconds), (_) {
-      if (mounted) _refreshSelected(_timerActivity);
+    _autoRefreshTimer = Timer.periodic(period, (_) {
+      if (!mounted) return;
+      _nextAutoRefresh.value = DateTime.now().add(period);
+      _refreshSelected(_timerActivity);
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Spots are cached across visits; show the current ones on entry.
+    _refreshSelected(ref.read(_selectedActivityProvider));
   }
 
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _nextAutoRefresh.dispose();
     super.dispose();
   }
 
@@ -75,27 +91,37 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
     final refreshSeconds =
         ref.watch(settingsProvider.select((s) => s.spotRefreshSeconds));
     _syncAutoRefreshTimer(refreshSeconds, selected);
+    // Back online: replace the list kept while offline. The system reports
+    // a network a moment before it carries traffic, so wait briefly.
+    ref.listen<bool>(isOnlineProvider, (wasOnline, isOnline) {
+      if (wasOnline != false || !isOnline) return;
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) _refreshSelected(ref.read(_selectedActivityProvider));
+      });
+    });
 
     return Scaffold(
       appBar: AppBar(
         leading: const DrawerMenuButton(),
-        title: Text(l10n.spotTitle),
+        titleSpacing: 0,
+        title: _ActivitySelector(
+          selected: selected,
+          onChanged: (t) {
+            ref.read(_selectedActivityProvider.notifier).state = t;
+            _refreshSelected(t);
+          },
+        ),
         actions: [
           if (selected.available)
-            IconButton(
-              icon: const Icon(Icons.refresh),
+            _RefreshButton(
+              nextRefresh: _nextAutoRefresh,
+              periodSeconds: refreshSeconds,
               onPressed: () => _refreshSelected(selected),
             ),
         ],
       ),
       body: Column(
         children: [
-          _ActivitySelector(
-            selected: selected,
-            onChanged: (t) =>
-                ref.read(_selectedActivityProvider.notifier).state = t,
-          ),
-          const Divider(height: 1),
           Expanded(
             child: switch (selected) {
               ActivityType.pota => const _PotaSpotContent(),
@@ -180,6 +206,7 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
 // Activity Selector
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// The activities as small pills in the app bar, in place of a title.
 class _ActivitySelector extends StatelessWidget {
   final ActivityType selected;
   final ValueChanged<ActivityType> onChanged;
@@ -192,74 +219,35 @@ class _ActivitySelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
 
-    return SizedBox(
-      height: 72,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
         children: ActivityType.values.map((type) {
           final isSelected = type == selected;
           final isAvailable = type.available;
-
           return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: isAvailable ? () => onChanged(type) : null,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? theme.colorScheme.primaryContainer
-                      : isAvailable
-                          ? theme.colorScheme.surfaceContainerHighest
-                          : theme.colorScheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected
-                        ? theme.colorScheme.primary
-                        : Colors.transparent,
-                    width: 1.5,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(type.icon,
-                        style: TextStyle(
-                            fontSize: 18,
-                            color: isAvailable ? null : Colors.grey)),
-                    const SizedBox(width: 6),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          type.label,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isSelected
-                                ? theme.colorScheme.onPrimaryContainer
-                                : isAvailable
-                                    ? theme.colorScheme.onSurface
-                                    : theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.35),
-                          ),
-                        ),
-                        if (!isAvailable)
-                          Text(
-                            'Coming soon',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.35),
-                              fontSize: 9,
-                            ),
-                          ),
-                      ],
+            padding: const EdgeInsets.only(right: 4),
+            child: Material(
+              color: isSelected ? cs.primaryContainer : Colors.transparent,
+              shape: const StadiumBorder(),
+              child: InkWell(
+                customBorder: const StadiumBorder(),
+                onTap: isAvailable ? () => onChanged(type) : null,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: Text(
+                    type.label,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isSelected
+                          ? cs.onPrimaryContainer
+                          : cs.onSurface
+                              .withValues(alpha: isAvailable ? 0.75 : 0.3),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -417,6 +405,12 @@ class _SpotView {
   /// in the log.
   final String? badge;
 
+  /// Arrived with the latest update; the tile is highlighted.
+  final bool isNew;
+
+  /// Called when the spot is opened, e.g. to stop highlighting it.
+  final VoidCallback? onOpened;
+
   const _SpotView({
     required this.activator,
     required this.mode,
@@ -431,122 +425,155 @@ class _SpotView {
     this.modeForLog,
     this.refForLog,
     this.badge,
+    this.isNew = false,
+    this.onOpened,
   });
 }
 
+/// Two lines: band, callsign, mode and frequency; then the reference or
+/// comment, the spotter and the age.
 class _SpotTile extends StatelessWidget {
   final _SpotView spot;
-  final Color avatarBg;
-  final Color avatarFg;
   final VoidCallback? onTap;
 
   const _SpotTile({
     required this.spot,
-    required this.avatarBg,
-    required this.avatarFg,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dimmed = theme.colorScheme.onSurface.withValues(alpha: 0.5);
+    final dimmed = theme.colorScheme.onSurface.withValues(alpha: 0.55);
+    final small = theme.textTheme.bodySmall;
+    final detail = [
+      if (spot.refLine != null) spot.refLine!,
+      if (spot.comments.isNotEmpty) spot.comments,
+    ].join(' · ');
 
-    return ListTile(
-      onTap: onTap,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      leading: CircleAvatar(
-        radius: 20,
-        backgroundColor: avatarBg,
-        child: Text(
-          spot.band ?? '?',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: avatarFg,
+    // A Material of its own, so the highlight stays inside the list when
+    // it scrolls under the filters.
+    return Material(
+      color: spot.isNew
+          ? theme.colorScheme.primary.withValues(alpha: 0.15)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                width: 3,
+                color: spot.isNew
+                    ? theme.colorScheme.primary
+                    : Colors.transparent,
+              ),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(9, 6, 12, 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _BandTag(spot.band),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(spot.activator,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                  if (spot.mode.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    _ModeChip(spot.mode),
+                  ],
+                  if (spot.badge != null) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade700,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(spot.badge!,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                  const Spacer(),
+                  Text(
+                    spot.freqDisplay,
+                    style: small?.copyWith(
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  const SizedBox(width: _BandTag.width + 8),
+                  if (spot.refIcon != null && spot.refLine != null) ...[
+                    Icon(spot.refIcon, size: 12, color: dimmed),
+                    const SizedBox(width: 4),
+                  ],
+                  Expanded(
+                    child: Text(
+                      detail,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: small?.copyWith(
+                        color: dimmed,
+                        fontStyle: spot.refLine == null
+                            ? FontStyle.italic
+                            : FontStyle.normal,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('${spot.spotter} · ${_formatAge(spot.time)}',
+                      style: small?.copyWith(color: dimmed)),
+                ],
+              ),
+            ],
           ),
         ),
       ),
-      title: Row(
-        children: [
-          Text(spot.activator,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 15)),
-          const SizedBox(width: 8),
-          _ModeChip(spot.mode),
-          if (spot.badge != null) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: Colors.green.shade700,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(spot.badge!,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600)),
-            ),
-          ],
-          const Spacer(),
-          Text(
-            spot.freqDisplay,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontFamily: 'monospace',
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+    );
+  }
+}
+
+/// The band in its map colour, fixed width so the callsigns line up.
+class _BandTag extends StatelessWidget {
+  static const double width = 44;
+
+  final String? band;
+
+  const _BandTag(this.band);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: bandColor(band),
+        borderRadius: BorderRadius.circular(6),
       ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (spot.refLine != null) ...[
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Icon(spot.refIcon, size: 12),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    spot.refLine!,
-                    style: theme.textTheme.bodySmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ],
-          if (spot.comments.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(
-              spot.comments,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                fontStyle: FontStyle.italic,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              Icon(Icons.person_outline, size: 12, color: dimmed),
-              const SizedBox(width: 4),
-              Text(spot.spotter,
-                  style:
-                      theme.textTheme.bodySmall?.copyWith(color: dimmed)),
-              const Spacer(),
-              Text(_formatAge(spot.time),
-                  style:
-                      theme.textTheme.bodySmall?.copyWith(color: dimmed)),
-            ],
-          ),
-        ],
+      child: Text(
+        band ?? '?',
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+        ),
       ),
     );
   }
@@ -556,15 +583,11 @@ class _SpotTile extends StatelessWidget {
 class _SpotListSection extends StatelessWidget {
   final AsyncValue<List<_SpotView>> spots;
   final VoidCallback onRefresh;
-  final Color avatarBg;
-  final Color avatarFg;
   final bool showErrorDetails;
 
   const _SpotListSection({
     required this.spots,
     required this.onRefresh,
-    required this.avatarBg,
-    required this.avatarFg,
     this.showErrorDetails = false,
   });
 
@@ -598,9 +621,10 @@ class _SpotListSection extends StatelessWidget {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, i) => _SpotTile(
               spot: list[i],
-              avatarBg: avatarBg,
-              avatarFg: avatarFg,
-              onTap: () => _goLogSpot(context, list[i]),
+              onTap: () {
+                list[i].onOpened?.call();
+                _goLogSpot(context, list[i]);
+              },
             ),
           ),
         );
@@ -703,10 +727,21 @@ class _SpotFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final hasFilters = filters.any((f) => f.active);
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
+    // Compact chips: the bar sits above the list and should take little room.
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        chipTheme: theme.chipTheme.copyWith(
+          labelStyle: theme.textTheme.labelMedium,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Row(
         children: [
           FilterChip(
             label: Text(newestFirst ? l10n.sortNewest : l10n.sortOldest),
@@ -745,6 +780,7 @@ class _SpotFilterBar extends StatelessWidget {
             ),
           ],
         ],
+        ),
       ),
     );
   }
@@ -899,7 +935,6 @@ class _PotaSpotContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final cs = Theme.of(context).colorScheme;
     final spots = ref.watch(filteredPotaSpotsProvider);
     final filter = ref.watch(potaSpotFilterProvider);
     final allSpots = ref.watch(potaSpotsProvider).valueOrNull ?? [];
@@ -925,7 +960,7 @@ class _PotaSpotContent extends ConsumerWidget {
             _FilterSpec(
               placeholder: l10n.filterMode,
               value: filter.mode,
-              items: _distinct(allSpots.map((s) => s.mode)),
+              items: _distinct(allSpots.map((s) => spotFilterMode(s.mode))),
               onChanged: (v) => update(filter.copyWith(mode: v)),
             ),
             _FilterSpec(
@@ -965,8 +1000,6 @@ class _PotaSpotContent extends ConsumerWidget {
                     ))
                 .toList()),
             onRefresh: () => ref.invalidate(potaSpotsProvider),
-            avatarBg: cs.primaryContainer,
-            avatarFg: cs.onPrimaryContainer,
           ),
         ),
       ],
@@ -980,7 +1013,6 @@ class _SotaSpotContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final cs = Theme.of(context).colorScheme;
     final spots = ref.watch(filteredSotaSpotsProvider);
     final filter = ref.watch(sotaSpotFilterProvider);
     final allSpots = ref.watch(sotaSpotsProvider).valueOrNull ?? [];
@@ -1005,7 +1037,7 @@ class _SotaSpotContent extends ConsumerWidget {
             _FilterSpec(
               placeholder: l10n.filterMode,
               value: filter.mode,
-              items: _distinct(allSpots.map((s) => s.mode)),
+              items: _distinct(allSpots.map((s) => spotFilterMode(s.mode))),
               onChanged: (v) => update(filter.copyWith(mode: v)),
             ),
             _FilterSpec(
@@ -1040,8 +1072,6 @@ class _SotaSpotContent extends ConsumerWidget {
                     ))
                 .toList()),
             onRefresh: () => ref.invalidate(sotaSpotsProvider),
-            avatarBg: cs.tertiaryContainer,
-            avatarFg: cs.onTertiaryContainer,
           ),
         ),
       ],
@@ -1055,7 +1085,6 @@ class _WwffSpotContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final cs = Theme.of(context).colorScheme;
     final spots = ref.watch(filteredWwffSpotsProvider);
     final filter = ref.watch(wwffSpotFilterProvider);
     final allSpots = ref.watch(wwffSpotsProvider).valueOrNull ?? [];
@@ -1080,7 +1109,7 @@ class _WwffSpotContent extends ConsumerWidget {
             _FilterSpec(
               placeholder: l10n.filterMode,
               value: filter.mode,
-              items: _distinct(allSpots.map((s) => s.mode)),
+              items: _distinct(allSpots.map((s) => spotFilterMode(s.mode))),
               onChanged: (v) => update(filter.copyWith(mode: v)),
             ),
             _FilterSpec(
@@ -1115,8 +1144,6 @@ class _WwffSpotContent extends ConsumerWidget {
                     ))
                 .toList()),
             onRefresh: () => ref.invalidate(wwffSpotsProvider),
-            avatarBg: cs.secondaryContainer,
-            avatarFg: cs.onSecondaryContainer,
           ),
         ),
       ],
@@ -1130,10 +1157,11 @@ class _DxClusterContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final cs = Theme.of(context).colorScheme;
     final spots = ref.watch(filteredDxSpotsProvider);
     final filter = ref.watch(dxSpotFilterProvider);
     final allSpots = ref.watch(dxSpotsProvider).valueOrNull ?? [];
+    final newKeys = ref.watch(dxNewSpotKeysProvider);
+    final staleSince = ref.watch(dxStaleSinceProvider);
 
     void update(DxSpotFilter f) =>
         ref.read(dxSpotFilterProvider.notifier).state = f;
@@ -1155,12 +1183,15 @@ class _DxClusterContent extends ConsumerWidget {
             _FilterSpec(
               placeholder: l10n.filterMode,
               value: filter.mode,
-              items: _distinct(allSpots.map((s) => s.mode)),
+              items: _distinct(allSpots.map((s) => spotFilterMode(s.mode))),
               onChanged: (v) => update(filter.copyWith(mode: v)),
             ),
           ],
         ),
         const Divider(height: 1),
+        if (staleSince != null)
+          _StaleSpotsBanner(l10n.spotOfflineSince(
+              TimeOfDay.fromDateTime(staleSince).format(context))),
         Expanded(
           child: _SpotListSection(
             spots: spots.whenData((list) => list
@@ -1177,15 +1208,114 @@ class _DxClusterContent extends ConsumerWidget {
                               .toStringAsFixed(3))
                           : null,
                       modeForLog: _validMode(s.mode),
+                      isNew: newKeys.contains(dxSpotKey(s)),
+                      onOpened: () => ref
+                          .read(dxOpenedSpotKeysProvider.notifier)
+                          .update((keys) => {...keys, dxSpotKey(s)}),
                     ))
                 .toList()),
             onRefresh: () => ref.invalidate(dxSpotsProvider),
-            avatarBg: cs.primaryContainer,
-            avatarFg: cs.onPrimaryContainer,
             showErrorDetails: true,
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The refresh button; while auto-refresh is on, a ring around it empties
+/// towards the next refresh and a long press says how many seconds are left.
+class _RefreshButton extends StatefulWidget {
+  final ValueNotifier<DateTime?> nextRefresh;
+  final int periodSeconds;
+  final VoidCallback onPressed;
+
+  const _RefreshButton({
+    required this.nextRefresh,
+    required this.periodSeconds,
+    required this.onPressed,
+  });
+
+  @override
+  State<_RefreshButton> createState() => _RefreshButtonState();
+}
+
+class _RefreshButtonState extends State<_RefreshButton> {
+  late final Timer _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(
+        const Duration(seconds: 1), (_) => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _tick.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<DateTime?>(
+      valueListenable: widget.nextRefresh,
+      builder: (context, next, _) {
+        final button = IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: widget.onPressed,
+        );
+        if (next == null || widget.periodSeconds <= 0) return button;
+        final left = next.difference(DateTime.now()).inSeconds
+            .clamp(0, widget.periodSeconds);
+        return Tooltip(
+          message: context.l10n.spotNextRefresh(left),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 34,
+                height: 34,
+                child: CircularProgressIndicator(
+                  value: left / widget.periodSeconds,
+                  strokeWidth: 2,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.7),
+                ),
+              ),
+              button,
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Shown over spots kept from the last successful refresh.
+class _StaleSpotsBanner extends StatelessWidget {
+  final String text;
+
+  const _StaleSpotsBanner(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: Colors.orange.shade800,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+      child: Row(
+        children: [
+          const Icon(Icons.wifi_off, color: Colors.white, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(color: Colors.white, fontSize: 12)),
+          ),
+        ],
+      ),
     );
   }
 }

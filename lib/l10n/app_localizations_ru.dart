@@ -1391,6 +1391,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get spotLoadError => 'Не удалось загрузить споты';
 
   @override
+  String spotOfflineSince(String time) {
+    return 'No connection — spots from $time';
+  }
+
+  @override
   String get spotActivator => 'Позывной активатора';
 
   @override
@@ -1457,6 +1462,11 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get spotRefreshHint =>
       'Автоматически обновляет список спотов с этим интервалом';
+
+  @override
+  String spotNextRefresh(int seconds) {
+    return 'Refresh in $seconds s';
+  }
 
   @override
   String autoSpotSent(String ref) {

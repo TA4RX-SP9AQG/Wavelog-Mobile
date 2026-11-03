@@ -1384,6 +1384,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get spotLoadError => 'Spotlar yüklenemedi';
 
   @override
+  String spotOfflineSince(String time) {
+    return 'No connection — spots from $time';
+  }
+
+  @override
   String get spotActivator => 'Aktivatör Çağrısı';
 
   @override
@@ -1449,6 +1454,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get spotRefreshHint => 'Spot listesini bu aralıkla otomatik yeniler';
+
+  @override
+  String spotNextRefresh(int seconds) {
+    return 'Refresh in $seconds s';
+  }
 
   @override
   String autoSpotSent(String ref) {

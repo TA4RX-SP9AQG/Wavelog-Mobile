@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/constants/band_colors.dart';
 import '../../../core/utils/error_l10n.dart';
 import '../../../core/utils/geo_utils.dart';
 import '../../../core/utils/map_geo.dart';
@@ -208,26 +209,6 @@ _Tiles _tilesFor(_BaseMap base, bool isDark) => switch (base) {
 /// Lines to more stations than this are left out: thousands of curves make
 /// the map slow and unreadable.
 const _kMaxGreatCircles = 300;
-
-// ── Band colours ──────────────────────────────────────────────────────────────
-
-const _kBandColors = <String, Color>{
-  '160m': Color(0xFFFF5252),
-  '80m': Color(0xFFFF6D00),
-  '60m': Color(0xFFFFCA28),
-  '40m': Color(0xFFD4E157),
-  '30m': Color(0xFF66BB6A),
-  '20m': Color(0xFF26C6DA),
-  '17m': Color(0xFF42A5F5),
-  '15m': Color(0xFF7E57C2),
-  '12m': Color(0xFFEC407A),
-  '10m': Color(0xFFFF7043),
-  '6m': Color(0xFF26A69A),
-  '2m': Color(0xFF78909C),
-};
-const _kDefaultBandColor = Color(0xFF90A4AE);
-
-Color _bandColor(String band) => _kBandColors[band] ?? _kDefaultBandColor;
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -492,7 +473,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           final circles = visible.map((m) => CircleMarker(
                 point: m.point,
                 radius: 5.5,
-                color: _bandColor(m.band).withValues(alpha: 0.82),
+                color: bandColor(m.band).withValues(alpha: 0.82),
                 borderColor: Colors.white.withValues(alpha: 0.55),
                 borderStrokeWidth: 1.2,
               )).toList();
@@ -505,7 +486,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       Polyline(
                         points: run,
                         strokeWidth: 1,
-                        color: _bandColor(m.band).withValues(alpha: 0.45),
+                        color: bandColor(m.band).withValues(alpha: 0.45),
                       ),
                 ];
 
@@ -532,7 +513,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       const SizedBox(width: 6),
                       FilterChip(
                         avatar: CircleAvatar(
-                            radius: 5, backgroundColor: _bandColor(b)),
+                            radius: 5, backgroundColor: bandColor(b)),
                         label: Text(b),
                         selected: _shownBands.contains(b),
                         showCheckmark: false,
@@ -707,7 +688,7 @@ class _QsoPopup extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final cs = Theme.of(context).colorScheme;
-    final bandColor = _bandColor(marker.band);
+    final markerColor = bandColor(marker.band);
 
     // Decide whether popup appears above or below the tap
     final showAbove = tapPos.dy > size.height * 0.55;
@@ -752,7 +733,7 @@ class _QsoPopup extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
                     decoration: BoxDecoration(
-                      color: bandColor.withValues(alpha: 0.15),
+                      color: markerColor.withValues(alpha: 0.15),
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                     ),
                     child: Row(
@@ -761,7 +742,7 @@ class _QsoPopup extends StatelessWidget {
                           width: 10,
                           height: 10,
                           margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(color: bandColor, shape: BoxShape.circle),
+                          decoration: BoxDecoration(color: markerColor, shape: BoxShape.circle),
                         ),
                         Expanded(
                           child: Text(
@@ -793,7 +774,7 @@ class _QsoPopup extends StatelessWidget {
                         children: [
                           // Band + Mode row
                           Row(children: [
-                            _MiniChip(label: marker.band, color: bandColor),
+                            _MiniChip(label: marker.band, color: markerColor),
                             const SizedBox(width: 6),
                             _MiniChip(
                               label: marker.submode.isNotEmpty

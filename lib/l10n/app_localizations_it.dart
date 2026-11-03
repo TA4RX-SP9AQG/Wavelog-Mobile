@@ -1386,6 +1386,11 @@ class AppLocalizationsIt extends AppLocalizations {
   String get spotLoadError => 'Impossibile caricare gli spot';
 
   @override
+  String spotOfflineSince(String time) {
+    return 'No connection — spots from $time';
+  }
+
+  @override
   String get spotActivator => 'Nominativo attivatore';
 
   @override
@@ -1452,6 +1457,11 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get spotRefreshHint =>
       'Aggiorna automaticamente l\'elenco degli spot a questo intervallo';
+
+  @override
+  String spotNextRefresh(int seconds) {
+    return 'Refresh in $seconds s';
+  }
 
   @override
   String autoSpotSent(String ref) {

@@ -4,18 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../core/constants/api_endpoints.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/utils/api_token_notice.dart';
+import '../../../core/utils/connection_diagnostics.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/datasources/remote/wavelog_remote_datasource.dart';
 import '../../../data/models/station_model.dart';
 import '../../../data/models/user_profile_model.dart';
+import '../../../providers/connection_report.dart';
 import '../../../providers/dio_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/qso_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/station_provider.dart';
 import '../../../providers/statistics_provider.dart';
+import '../../widgets/diagnostics/connection_diagnostics_dialog.dart';
 import '../celebration/api_v2_celebration_screen.dart';
 
 class LoginScreen extends ConsumerWidget {
@@ -315,7 +318,7 @@ class _AddProfileSheetState extends ConsumerState<_AddProfileSheet> {
   String? _error;
 
   bool _testingScopes = false;
-  List<_ScopeTestResult>? _scopeResults;
+  List<ScopeTestResult>? _scopeResults;
 
   @override
   void dispose() {
@@ -325,46 +328,41 @@ class _AddProfileSheetState extends ConsumerState<_AddProfileSheet> {
     super.dispose();
   }
 
-  /// Lightweight, read-only probes per scope group — safe to run before the
-  /// user has even confirmed sign-in. Only *:read scopes are checked live;
-  /// write/delete scopes can't be tested without risking real data changes
-  /// on the user's server, so they're left to the full scope guide instead
-  /// (the exception is radio:write, see [probeRadioWriteScope]).
-  Future<List<_ScopeTestResult>> _runScopeTests(
+  /// Lightweight probes per scope, see [scopeProbes]: read-only calls, plus
+  /// the one write scope that can be checked without changing anything
+  /// (radio:write, see [ScopeProbe.okStatuses]). Other write and delete scopes
+  /// can't be tested without risking real data changes on the user's server,
+  /// so they're left to the full scope guide.
+  Future<List<ScopeTestResult>> _runScopeTests(
       Dio dio, String callsign) async {
-    Future<bool?> probe(String path, [Map<String, dynamic>? params]) async {
-      try {
-        await dio.get(path, queryParameters: params);
-        return true;
-      } on DioException catch (e) {
-        final code = e.response?.statusCode;
-        if (code == 401 || code == 403) return false;
-        return null; // network/timeout/etc — inconclusive, not a scope issue
-      } catch (_) {
-        return null;
-      }
-    }
-
     return [
-      _ScopeTestResult('station:read', await probe(ApiEndpoints.station)),
-      _ScopeTestResult('logbook:read', await probe(ApiEndpoints.logbook)),
-      _ScopeTestResult('contest:read', await probe(ApiEndpoints.contest)),
-      _ScopeTestResult(
-          'statistic:read', await probe(ApiEndpoints.statistics)),
-      _ScopeTestResult(
-          'lookup:read',
-          await probe(ApiEndpoints.lookup, {
-            'callsign': callsign,
-            'detail': 'full',
-            'callbook': 'true',
-          })),
-      _ScopeTestResult('confirmation:read',
-          await probe(ApiEndpoints.confirmation, {'page': 1})),
-      _ScopeTestResult(
-          'qso:read', await probe(ApiEndpoints.qso, {'page': 1})),
-      _ScopeTestResult('radio:write', await probeRadioWriteScope(dio)),
+      for (final probe in scopeProbes(callsign))
+        ScopeTestResult(probe.scope, await runScopeProbe(dio, probe)),
     ];
   }
+
+  Future<void> _runDiagnostics() {
+    final callsign = _callsignCtrl.text.trim().toUpperCase();
+    final token = _apiKeyCtrl.text.trim();
+    final insecure = ref.read(settingsProvider).allowInsecureSsl;
+    return showConnectionDiagnostics(
+      context,
+      run: () => buildConnectionReport(
+        serverUrl: widget.serverUrl,
+        token: token,
+        callsign: callsign,
+        allowInsecureSsl: insecure,
+      ),
+    );
+  }
+
+  /// A failure that says nothing about the token's scopes: the connection to
+  /// the server did not work.
+  bool _isConnectionFailure(Object e) =>
+      e is NetworkException ||
+      e is TimeoutException ||
+      e is SslException ||
+      e is LocalNetworkPermissionException;
 
   Future<void> _addAndLogin() async {
     if (!_formKey.currentState!.validate()) return;
@@ -372,7 +370,7 @@ class _AddProfileSheetState extends ConsumerState<_AddProfileSheet> {
     setState(() {
       _loading = true;
       _error = null;
-      _testingScopes = true;
+      _testingScopes = false;
       _scopeResults = null;
     });
 
@@ -382,25 +380,32 @@ class _AddProfileSheetState extends ConsumerState<_AddProfileSheet> {
         bearerToken: apiKey,
         allowInsecureSsl: ref.read(settingsProvider).allowInsecureSsl);
 
-    // Scope diagnostics always run and stay visible, whether or not the
-    // overall sign-in below succeeds — the user needs this info either way.
-    final scopeResults = await _runScopeTests(dio, callsign);
-    if (!mounted) return;
-    setState(() {
-      _scopeResults = scopeResults;
-      _testingScopes = false;
-    });
-
+    // The station list is all sign-in needs, so it goes first and alone: a
+    // server that limits requests, or bans a client that sends many in a
+    // row, no longer fails a sign-in that would have worked.
     List<StationModel> stations = [];
     try {
       final remote = WavelogRemoteDatasource(dio: dio);
       stations = await remote.getStations();
     } catch (e) {
       if (!mounted) return;
+      // Only a failure that can be about the token is worth the scope checks
+      // (which show what is missing); when the connection itself failed they
+      // would only repeat the failure for every scope, and wait for each.
+      final checkScopes = !_isConnectionFailure(e);
       setState(() {
         _loading = false;
+        _testingScopes = checkScopes;
         _error = '${context.l10n.loginFailed}: $e';
       });
+      if (checkScopes) {
+        final results = await _runScopeTests(dio, callsign);
+        if (!mounted) return;
+        setState(() {
+          _scopeResults = results;
+          _testingScopes = false;
+        });
+      }
       return;
     }
 
@@ -520,7 +525,7 @@ class _AddProfileSheetState extends ConsumerState<_AddProfileSheet> {
               ),
               if (_testingScopes || _scopeResults != null) ...[
                 const SizedBox(height: 8),
-                _ScopeTestPanel(
+                ScopeTestPanel(
                   testing: _testingScopes,
                   results: _scopeResults,
                 ),
@@ -538,6 +543,19 @@ class _AddProfileSheetState extends ConsumerState<_AddProfileSheet> {
                       ),
                     ),
                   ],
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _runDiagnostics,
+                    icon: const Icon(Icons.bug_report_outlined, size: 16),
+                    label: Text(l10n.connectionDiagnosticsBtn,
+                        style: const TextStyle(fontSize: 13)),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 0),
+                    ),
+                  ),
                 ),
               ],
               const SizedBox(height: 24),
@@ -568,27 +586,16 @@ class _AddProfileSheetState extends ConsumerState<_AddProfileSheet> {
 /// body, and an empty body is rejected as a validation error (400) before
 /// anything is written. Reaching that 400 means the scope is there.
 /// Null when it can't be told (network, or a server without the endpoint).
-Future<bool?> probeRadioWriteScope(Dio dio) async {
-  try {
-    await dio.post(ApiEndpoints.radio, data: <String, dynamic>{});
-    return true;
-  } on DioException catch (e) {
-    final code = e.response?.statusCode;
-    if (code == 401 || code == 403) return false;
-    if (code == 400 || code == 422) return true;
-    return null;
-  } catch (_) {
-    return null;
-  }
-}
+Future<bool?> probeRadioWriteScope(Dio dio) =>
+    runScopeProbe(dio, scopeProbes('').last);
 
 /// [passed]: true = scope confirmed working, false = server rejected it
 /// (401/403 — likely missing from the token), null = could not be
 /// determined (network hiccup etc.) and isn't held against the user.
-class _ScopeTestResult {
+class ScopeTestResult {
   final String scopeKey;
   final bool? passed;
-  const _ScopeTestResult(this.scopeKey, this.passed);
+  const ScopeTestResult(this.scopeKey, this.passed);
 }
 
 /// Maps a scope key to its human description, reusing the same l10n strings
@@ -617,10 +624,10 @@ String _scopeDescription(BuildContext context, String scopeKey) {
   }
 }
 
-class _ScopeTestPanel extends StatelessWidget {
+class ScopeTestPanel extends StatelessWidget {
   final bool testing;
-  final List<_ScopeTestResult>? results;
-  const _ScopeTestPanel({required this.testing, required this.results});
+  final List<ScopeTestResult>? results;
+  const ScopeTestPanel({super.key, required this.testing, required this.results});
 
   @override
   Widget build(BuildContext context) {
@@ -653,7 +660,10 @@ class _ScopeTestPanel extends StatelessWidget {
     if (list == null || list.isEmpty) return const SizedBox.shrink();
 
     final failed = list.where((r) => r.passed == false).toList();
-    final allGood = failed.isEmpty;
+    // A check that got no answer is not a pass: with no connection to the
+    // server every check ends that way, and "all present" would be wrong.
+    final unverified = list.where((r) => r.passed == null).toList();
+    final allGood = failed.isEmpty && unverified.isEmpty;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -675,12 +685,19 @@ class _ScopeTestPanel extends StatelessWidget {
                 color: allGood ? Colors.green : Colors.orange,
               ),
               const SizedBox(width: 8),
-              Text(
-                allGood ? l10n.scopeTestAllPassed : l10n.scopeTestSomeFailed,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: allGood ? Colors.green.shade700 : Colors.orange.shade800,
+              Expanded(
+                child: Text(
+                  allGood
+                      ? l10n.scopeTestAllPassed
+                      : failed.isEmpty
+                          ? l10n.scopeTestSomeUnverified
+                          : l10n.scopeTestSomeFailed,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color:
+                        allGood ? Colors.green.shade700 : Colors.orange.shade800,
+                  ),
                 ),
               ),
             ],

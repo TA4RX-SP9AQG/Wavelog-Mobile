@@ -109,6 +109,29 @@ class AppLocalizationsTr extends AppLocalizations {
   String get scopeTestSomeFailed => 'Bazı yetkiler eksik';
 
   @override
+  String get scopeTestSomeUnverified =>
+      'Bazı yetkiler denetlenemedi (sunucudan yanıt gelmedi)';
+
+  @override
+  String get connectionDiagnosticsBtn => 'Bağlantı tanılama';
+
+  @override
+  String get connectionDiagnosticsTitle => 'Bağlantı tanılama';
+
+  @override
+  String get connectionDiagnosticsRunning => 'Sunucuya bağlantı denetleniyor…';
+
+  @override
+  String get connectionDiagnosticsHint =>
+      'Rapor API anahtarını içermez, sunucu adı ve adresler kısmen gizlenir. Kopyalayıp GitHub sorununa yapıştırın.';
+
+  @override
+  String get connectionDiagnosticsCopy => 'Raporu kopyala';
+
+  @override
+  String get connectionDiagnosticsCopied => 'Kopyalandı';
+
+  @override
   String get scopeTestAddHint =>
       'API token oluştururken bu yetkiyi de işaretleyin';
 

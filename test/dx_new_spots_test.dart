@@ -68,6 +68,24 @@ void main() {
     expect(newCalls(), isEmpty);
   });
 
+  test('an opened spot is no longer highlighted', () async {
+    final first = [spot('A1', minutesAgo: 3)];
+    final second = [spot('B2', minutesAgo: 1), spot('C3', minutesAgo: 2), ...first];
+    final c = _container([first, second]);
+    await c.read(dxSpotsProvider.future);
+    await _refresh(c);
+
+    final b2 = c.read(dxSpotsProvider).value!.first;
+    c.read(dxOpenedSpotKeysProvider.notifier).state = {dxSpotKey(b2)};
+
+    final stillNew = c
+        .read(dxSpotsProvider)
+        .value!
+        .where((s) => c.read(dxNewSpotKeysProvider).contains(dxSpotKey(s)))
+        .map((s) => s.dxCall);
+    expect(stillNew, ['C3']);
+  });
+
   test('a failed refresh keeps the last spots within the hour and says so',
       () async {
     final first = [spot('A1', minutesAgo: 5), spot('OLD1', minutesAgo: 61)];

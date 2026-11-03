@@ -447,6 +447,9 @@ class _SpotView {
   /// Arrived with the latest update; the tile is highlighted.
   final bool isNew;
 
+  /// Called when the spot is opened, e.g. to stop highlighting it.
+  final VoidCallback? onOpened;
+
   const _SpotView({
     required this.activator,
     required this.mode,
@@ -462,6 +465,7 @@ class _SpotView {
     this.refForLog,
     this.badge,
     this.isNew = false,
+    this.onOpened,
   });
 }
 
@@ -634,7 +638,10 @@ class _SpotListSection extends StatelessWidget {
               spot: list[i],
               avatarBg: avatarBg,
               avatarFg: avatarFg,
-              onTap: () => _goLogSpot(context, list[i]),
+              onTap: () {
+                list[i].onOpened?.call();
+                _goLogSpot(context, list[i]);
+              },
             ),
           ),
         );
@@ -1217,6 +1224,9 @@ class _DxClusterContent extends ConsumerWidget {
                           : null,
                       modeForLog: _validMode(s.mode),
                       isNew: newKeys.contains(dxSpotKey(s)),
+                      onOpened: () => ref
+                          .read(dxOpenedSpotKeysProvider.notifier)
+                          .update((keys) => {...keys, dxSpotKey(s)}),
                     ))
                 .toList()),
             onRefresh: () => ref.invalidate(dxSpotsProvider),

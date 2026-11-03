@@ -953,7 +953,7 @@ class _PotaSpotContent extends ConsumerWidget {
             _FilterSpec(
               placeholder: l10n.filterMode,
               value: filter.mode,
-              items: _distinct(allSpots.map((s) => s.mode)),
+              items: _distinct(allSpots.map((s) => spotFilterMode(s.mode))),
               onChanged: (v) => update(filter.copyWith(mode: v)),
             ),
             _FilterSpec(
@@ -1030,7 +1030,7 @@ class _SotaSpotContent extends ConsumerWidget {
             _FilterSpec(
               placeholder: l10n.filterMode,
               value: filter.mode,
-              items: _distinct(allSpots.map((s) => s.mode)),
+              items: _distinct(allSpots.map((s) => spotFilterMode(s.mode))),
               onChanged: (v) => update(filter.copyWith(mode: v)),
             ),
             _FilterSpec(
@@ -1102,7 +1102,7 @@ class _WwffSpotContent extends ConsumerWidget {
             _FilterSpec(
               placeholder: l10n.filterMode,
               value: filter.mode,
-              items: _distinct(allSpots.map((s) => s.mode)),
+              items: _distinct(allSpots.map((s) => spotFilterMode(s.mode))),
               onChanged: (v) => update(filter.copyWith(mode: v)),
             ),
             _FilterSpec(
@@ -1176,7 +1176,7 @@ class _DxClusterContent extends ConsumerWidget {
             _FilterSpec(
               placeholder: l10n.filterMode,
               value: filter.mode,
-              items: _distinct(allSpots.map((s) => s.mode)),
+              items: _distinct(allSpots.map((s) => spotFilterMode(s.mode))),
               onChanged: (v) => update(filter.copyWith(mode: v)),
             ),
           ],

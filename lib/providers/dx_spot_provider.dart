@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/constants/band_mode_data.dart';
 import '../data/datasources/remote/dx_cluster_datasource.dart';
 import '../data/models/dx_spot_model.dart';
 import 'connectivity_provider.dart';
@@ -117,11 +118,16 @@ final filteredDxSpotsProvider =
       if (filter.bands.isNotEmpty && !filter.bands.contains(s.band)) {
         return false;
       }
-      if (filter.mode != null && s.mode != filter.mode) return false;
+      if (filter.mode != null && spotFilterMode(s.mode) != filter.mode) {
+        return false;
+      }
       return true;
     }).toList();
 
-    if (!filter.newestFirst) result = result.reversed.toList();
+    // Sorted here: not every source lists its spots in time order.
+    result.sort((a, b) => filter.newestFirst
+        ? b.time.compareTo(a.time)
+        : a.time.compareTo(b.time));
     return result;
   });
 });

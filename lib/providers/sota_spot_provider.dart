@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/constants/band_mode_data.dart';
 import '../data/datasources/remote/sota_datasource.dart';
 import '../data/models/sota_spot_model.dart';
 
@@ -50,13 +51,18 @@ final filteredSotaSpotsProvider =
       if (filter.bands.isNotEmpty && !filter.bands.contains(s.band)) {
         return false;
       }
-      if (filter.mode != null && s.mode != filter.mode) return false;
+      if (filter.mode != null && spotFilterMode(s.mode) != filter.mode) {
+        return false;
+      }
       if (filter.association != null &&
           s.associationCode != filter.association) { return false; }
       return true;
     }).toList();
 
-    if (!filter.newestFirst) result = result.reversed.toList();
+    // Sorted here: not every source lists its spots in time order.
+    result.sort((a, b) => filter.newestFirst
+        ? b.spotTime.compareTo(a.spotTime)
+        : a.spotTime.compareTo(b.spotTime));
     return result;
   });
 });

@@ -44,6 +44,13 @@ const Map<String, String> kDefaultRst = {
   'PSK31': '599',
 };
 
+/// The mode a spot is filtered by: USB and LSB count as SSB, the way they
+/// are logged, so one "SSB" choice finds them all.
+String spotFilterMode(String mode) {
+  final m = mode.trim().toUpperCase();
+  return m == 'USB' || m == 'LSB' ? 'SSB' : m;
+}
+
 String getDefaultRst(String mode) {
   return kDefaultRst[mode.toUpperCase()] ?? '59';
 }

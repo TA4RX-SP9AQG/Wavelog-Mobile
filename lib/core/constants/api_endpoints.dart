@@ -3,6 +3,9 @@ class ApiEndpoints {
 
   static const String _v2 = '/index.php/api/v2';
 
+  /// The path every v2 endpoint starts with.
+  static const String apiRoot = _v2;
+
   // QSO
   static const String qso       = '$_v2/qso';
   static String qsoById(int id) => '$_v2/qso/$id';

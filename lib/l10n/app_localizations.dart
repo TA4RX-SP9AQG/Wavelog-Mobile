@@ -313,6 +313,48 @@ abstract class AppLocalizations {
   /// **'Some scopes are missing'**
   String get scopeTestSomeFailed;
 
+  /// No description provided for @scopeTestSomeUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'Some scopes could not be checked (no answer from the server)'**
+  String get scopeTestSomeUnverified;
+
+  /// No description provided for @connectionDiagnosticsBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection diagnostics'**
+  String get connectionDiagnosticsBtn;
+
+  /// No description provided for @connectionDiagnosticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection diagnostics'**
+  String get connectionDiagnosticsTitle;
+
+  /// No description provided for @connectionDiagnosticsRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the connection to the server…'**
+  String get connectionDiagnosticsRunning;
+
+  /// No description provided for @connectionDiagnosticsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The report contains no API token, and the server name and addresses are partly hidden. Copy it and paste it into the GitHub issue.'**
+  String get connectionDiagnosticsHint;
+
+  /// No description provided for @connectionDiagnosticsCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy report'**
+  String get connectionDiagnosticsCopy;
+
+  /// No description provided for @connectionDiagnosticsCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get connectionDiagnosticsCopied;
+
   /// No description provided for @scopeTestAddHint.
   ///
   /// In en, this message translates to:

@@ -109,6 +109,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get scopeTestSomeFailed => '一部の権限が不足しています';
 
   @override
+  String get scopeTestSomeUnverified =>
+      'Some scopes could not be checked (no answer from the server)';
+
+  @override
+  String get connectionDiagnosticsBtn => 'Connection diagnostics';
+
+  @override
+  String get connectionDiagnosticsTitle => 'Connection diagnostics';
+
+  @override
+  String get connectionDiagnosticsRunning =>
+      'Checking the connection to the server…';
+
+  @override
+  String get connectionDiagnosticsHint =>
+      'The report contains no API token, and the server name and addresses are partly hidden. Copy it and paste it into the GitHub issue.';
+
+  @override
+  String get connectionDiagnosticsCopy => 'Copy report';
+
+  @override
+  String get connectionDiagnosticsCopied => 'Copied';
+
+  @override
   String get scopeTestAddHint => 'APIトークン作成時にこの権限も選択してください';
 
   @override

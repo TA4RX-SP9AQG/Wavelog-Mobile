@@ -11,6 +11,7 @@ import 'package:wavelog_mobile/data/models/pota_park_model.dart';
 import 'helpers/fake_boundaries.dart';
 import 'package:wavelog_mobile/l10n/app_localizations.dart';
 import 'package:wavelog_mobile/presentation/widgets/pota/pota_park_sheet.dart';
+import 'package:wavelog_mobile/presentation/widgets/pota/pota_park_style.dart';
 import 'package:wavelog_mobile/providers/pota_parks_provider.dart';
 import 'package:wavelog_mobile/providers/pota_stats_provider.dart';
 
@@ -200,6 +201,15 @@ void main() {
     expect(find.textContaining('from you'), findsOneWidget);
     expect(find.textContaining('km'), findsOneWidget);
     expect(find.textContaining(' NE from you'), findsOneWidget);
+  });
+
+  test('distances read in kilometres, with the thousands set apart', () {
+    expect(formatParkDistance(0.85, 'en'), '850 m');
+    expect(formatParkDistance(4.26, 'en'), '4.3 km');
+    expect(formatParkDistance(52.4, 'en'), '52 km');
+    expect(formatParkDistance(9412, 'en'), '9,412 km');
+    expect(formatParkDistance(9412, 'tr'), '9.412 km');
+    expect(formatParkDistance(4.26, 'tr'), '4,3 km');
   });
 
   testWidgets('the direction is in the app language', (tester) async {

@@ -2599,6 +2599,11 @@ class AppLocalizationsTr extends AppLocalizations {
       'USGS PAD-US’tan sınır (ABD’nin resmi korunan alan verisi). POTA’nın kendi sınırı değildir: yayına çıkmadan önce parkın kurallarını ve haritasını kontrol edin.';
 
   @override
+  String potaParkBoundaryNoteWdpa(String name, String designation) {
+    return 'Protected Planet (UNEP-WCMC ve IUCN) verisinden “$name” ($designation) sınırı. POTA parkıyla aynı alan olmayabilir: yayına çıkmadan önce kurallarını ve haritasını kontrol edin.';
+  }
+
+  @override
   String get potaParkBoundaryMissing => 'Bu park için sınır bulunamadı';
 
   @override

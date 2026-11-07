@@ -4981,6 +4981,12 @@ abstract class AppLocalizations {
   /// **'Outline from USGS PAD-US, the official US protected lands data. It is not POTA’s own boundary: check the park’s rules and map before you operate.'**
   String get potaParkBoundaryNotePadus;
 
+  /// Note under a park outline drawn on the map, taken from the World Database on Protected Areas; {designation} is the kind of protected area
+  ///
+  /// In en, this message translates to:
+  /// **'Outline of “{name}” ({designation}) from Protected Planet (UNEP-WCMC and IUCN). It may not be the same area as the POTA park: check its rules and map before you operate.'**
+  String potaParkBoundaryNoteWdpa(String name, String designation);
+
   /// Shown on the park card when OpenStreetMap has no outline for it
   ///
   /// In en, this message translates to:

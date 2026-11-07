@@ -68,8 +68,9 @@ class PotaParkSheet extends ConsumerWidget {
     final from = me == null
         ? null
         : l10n.potaParkFromYou(
-            formatDistance(
-                calculateDistance(me.lat, me.lon, park.lat, park.lon)),
+            formatParkDistance(
+                calculateDistance(me.lat, me.lon, park.lat, park.lon),
+                Localizations.localeOf(context).toString()),
             compassLabel(
                 l10n,
                 compassPoint(
@@ -451,6 +452,8 @@ class _BoundaryNote extends ConsumerWidget {
                 switch (b?.source) {
                   null => l10n.potaParkBoundaryMissing,
                   BoundarySource.padus => l10n.potaParkBoundaryNotePadus,
+                  BoundarySource.wdpa =>
+                    l10n.potaParkBoundaryNoteWdpa(b!.name, b.designation),
                   BoundarySource.osm => l10n.potaParkBoundaryNote,
                 },
                 style: muted),

@@ -2572,6 +2572,11 @@ class AppLocalizationsKo extends AppLocalizations {
       'Outline from USGS PAD-US, the official US protected lands data. It is not POTA’s own boundary: check the park’s rules and map before you operate.';
 
   @override
+  String potaParkBoundaryNoteWdpa(String name, String designation) {
+    return 'Outline of “$name” ($designation) from Protected Planet (UNEP-WCMC and IUCN). It may not be the same area as the POTA park: check its rules and map before you operate.';
+  }
+
+  @override
   String get potaParkBoundaryMissing => 'No outline found for this park';
 
   @override

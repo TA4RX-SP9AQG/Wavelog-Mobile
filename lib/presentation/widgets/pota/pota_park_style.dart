@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/utils/pota_parks.dart';
 import '../../../l10n/app_localizations.dart';
@@ -33,3 +34,12 @@ String compassLabel(AppLocalizations l10n, CompassPoint point) =>
       CompassPoint.w => l10n.compassW,
       CompassPoint.nw => l10n.compassNW,
     };
+
+/// A distance to a park: "850 m" below a kilometre, one decimal up to 10 km,
+/// whole kilometres above, with the thousands set apart in the user's
+/// language ("9,400 km"). Not megametres, which nobody reads.
+String formatParkDistance(double km, String locale) {
+  if (km < 1) return '${(km * 1000).round()} m';
+  if (km < 10) return '${NumberFormat('0.0', locale).format(km)} km';
+  return '${NumberFormat.decimalPattern(locale).format(km.round())} km';
+}

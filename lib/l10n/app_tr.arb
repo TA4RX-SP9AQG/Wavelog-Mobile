@@ -965,6 +965,8 @@
     "@potaParkBoundaryNote": {},
     "potaParkBoundaryNotePadus": "USGS PAD-US’tan sınır (ABD’nin resmi korunan alan verisi). POTA’nın kendi sınırı değildir: yayına çıkmadan önce parkın kurallarını ve haritasını kontrol edin.",
     "@potaParkBoundaryNotePadus": {},
+    "potaParkBoundaryNoteWdpa": "Protected Planet (UNEP-WCMC ve IUCN) verisinden “{name}” ({designation}) sınırı. POTA parkıyla aynı alan olmayabilir: yayına çıkmadan önce kurallarını ve haritasını kontrol edin.",
+    "@potaParkBoundaryNoteWdpa": {"placeholders": {"name": {"type": "String"}, "designation": {"type": "String"}}},
     "potaParkBoundaryMissing": "Bu park için sınır bulunamadı",
     "@potaParkBoundaryMissing": {},
     "potaParkBoundaryLooking": "Park sınırı aranıyor",

@@ -9,9 +9,10 @@ import '../../models/park_boundary_model.dart';
 ///
 /// pota.app has no park outlines. For a park in the United States the USGS
 /// PAD-US service is asked first: the protected lands as the agencies that
-/// manage them report them, free to use. Anywhere else, and where PAD-US has
-/// nothing under that name, OpenStreetMap is searched through Nominatim by
-/// name near the park's position. Either way the best match is taken (see
+/// manage them report them. Then Protected Planet (the World Database on
+/// Protected Areas), which covers the world. Last, where neither has the park,
+/// OpenStreetMap is searched through Nominatim by name near the park's
+/// position. Either way the best match is taken (see
 /// [pickBoundary]) and none at all when nothing fits well. Nominatim is run by
 /// volunteers: it is asked only for the park the person is looking at, at most
 /// once a second, with the app identified, and what is found is remembered.
@@ -20,13 +21,16 @@ class ParkBoundaryDatasource {
   ParkBoundaryDatasource({
     Dio? dio,
     Dio? padusDio,
+    Dio? wdpaDio,
     this.minGap = const Duration(seconds: 1),
     this.remembered = 40,
   })  : _dio = dio ?? _createDio(),
-        _padusDio = padusDio ?? _createPadusDio();
+        _padusDio = padusDio ?? _createPadusDio(),
+        _wdpaDio = wdpaDio ?? _createWdpaDio();
 
   final Dio _dio;
   final Dio _padusDio;
+  final Dio _wdpaDio;
   final Duration minGap;
   final int remembered;
 
@@ -53,6 +57,14 @@ class ParkBoundaryDatasource {
         headers: {'User-Agent': 'WavelogMobile/1.0'},
       ));
 
+  static Dio _createWdpaDio() => Dio(BaseOptions(
+        baseUrl:
+            'https://data-gis.unep-wcmc.org/server/rest/services/ProtectedSites/The_World_Database_of_Protected_Areas/FeatureServer/1',
+        connectTimeout: const Duration(seconds: 12),
+        receiveTimeout: const Duration(seconds: 30),
+        headers: {'User-Agent': 'WavelogMobile/1.0'},
+      ));
+
   /// Half the side, in degrees, of the box around the park searched in. Large
   /// parks are mapped by a position far from their centre.
   static const _reach = 0.6;
@@ -71,12 +83,22 @@ class ParkBoundaryDatasource {
       return hit;
     }
     ParkBoundary? boundary;
+    // A source that could not be reached: "none" is then not final
+    var incomplete = false;
     if (reference.toUpperCase().startsWith('US-')) {
       try {
         boundary = await _padus(name, lat, lon);
       } catch (e) {
-        // PAD-US is out of reach: OpenStreetMap may still know the park
+        incomplete = true;
         debugPrint('Park outline: PAD-US failed: $e');
+      }
+    }
+    if (boundary == null) {
+      try {
+        boundary = await _wdpa(name, lat, lon);
+      } catch (e) {
+        incomplete = true;
+        debugPrint('Park outline: Protected Planet failed: $e');
       }
     }
     for (final query in boundary != null ? const <String>[] : _queries(name)) {
@@ -84,7 +106,7 @@ class ParkBoundaryDatasource {
       boundary = pickBoundary(results, name: name, lat: lat, lon: lon);
       if (boundary != null) break;
     }
-    _found[reference] = boundary;
+    if (boundary != null || !incomplete) _found[reference] = boundary;
     while (_found.length > remembered) {
       _found.remove(_found.keys.first);
     }
@@ -147,6 +169,61 @@ class ParkBoundaryDatasource {
       name: best.name,
       kind: best.kind,
       source: BoundarySource.padus,
+    );
+  }
+
+  /// The park in Protected Planet: the areas whose name has the park's
+  /// distinctive words, within about 80 km (a large park's pin can be far from
+  /// its edge), and the one that fits best.
+  Future<ParkBoundary?> _wdpa(String name, double lat, double lon) async {
+    final words = distinctiveWords(name);
+    if (words.isEmpty) return null;
+    const reach = 0.8;
+    // The words are only letters and digits, so they are safe in the query
+    final where = [
+      for (final w in words.take(2))
+        "UPPER(name) LIKE '%${w.toUpperCase()}%' OR UPPER(name_eng) LIKE '%${w.toUpperCase()}%'",
+    ].join(' OR ');
+    final response = await _wdpaDio.get<String>(
+      '/query',
+      queryParameters: {
+        'f': 'geojson',
+        'where': where,
+        'geometry': jsonEncode({
+          'xmin': lon - reach,
+          'ymin': lat - reach,
+          'xmax': lon + reach,
+          'ymax': lat + reach,
+          'spatialReference': {'wkid': 4326},
+        }),
+        'geometryType': 'esriGeometryEnvelope',
+        'inSR': 4326,
+        'spatialRel': 'esriSpatialRelIntersects',
+        'outFields': 'name,name_eng,desig_eng,iso3,status',
+        'returnGeometry': 'true',
+        'outSR': 4326,
+        // Fewer points: the outline only has to be seen on a phone
+        'maxAllowableOffset': 0.0003,
+        'geometryPrecision': 5,
+        'resultRecordCount': 40,
+      },
+      options: Options(responseType: ResponseType.plain),
+    );
+    final body = response.data;
+    if (body == null || body.trim().isEmpty) return null;
+    final Object? data;
+    try {
+      data = jsonDecode(body);
+    } on FormatException {
+      throw StateError('Protected Planet did not answer with JSON');
+    }
+    final features = data is Map ? data['features'] : null;
+    if (features is! List) return null;
+    return pickWdpaBoundary(
+      [for (final f in features) ParkBoundary.fromWdpa(f)],
+      name: name,
+      lat: lat,
+      lon: lon,
     );
   }
 

@@ -5,22 +5,28 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/park_boundary_model.dart';
 
-/// Looks a park's outline up in OpenStreetMap, through Nominatim.
+/// Looks a park's outline up.
 ///
-/// pota.app has no park outlines, so the name is searched for near the park's
-/// position and the best park-like result is taken (see [pickBoundary]). The
-/// service is run by volunteers: this asks only for the park the person is
-/// looking at, at most once a second, identifies the app, and remembers what
-/// it found.
+/// pota.app has no park outlines. For a park in the United States the USGS
+/// PAD-US service is asked first: the protected lands as the agencies that
+/// manage them report them, free to use. Anywhere else, and where PAD-US has
+/// nothing under that name, OpenStreetMap is searched through Nominatim by
+/// name near the park's position. Either way the best match is taken (see
+/// [pickBoundary]) and none at all when nothing fits well. Nominatim is run by
+/// volunteers: it is asked only for the park the person is looking at, at most
+/// once a second, with the app identified, and what is found is remembered.
 class ParkBoundaryDatasource {
   /// [dio] is for tests, which must not reach Nominatim.
   ParkBoundaryDatasource({
     Dio? dio,
+    Dio? padusDio,
     this.minGap = const Duration(seconds: 1),
     this.remembered = 40,
-  }) : _dio = dio ?? _createDio();
+  })  : _dio = dio ?? _createDio(),
+        _padusDio = padusDio ?? _createPadusDio();
 
   final Dio _dio;
+  final Dio _padusDio;
   final Duration minGap;
   final int remembered;
 
@@ -37,6 +43,14 @@ class ParkBoundaryDatasource {
               'WavelogMobile/1.0 (https://github.com/TA4RX-SP9AQG/Wavelog-Mobile)',
           'Accept-Language': 'en',
         },
+      ));
+
+  static Dio _createPadusDio() => Dio(BaseOptions(
+        baseUrl:
+            'https://services.arcgis.com/v01gqwM5QqNysAAi/ArcGIS/rest/services/PADUS_Public_Access/FeatureServer/0',
+        connectTimeout: const Duration(seconds: 12),
+        receiveTimeout: const Duration(seconds: 25),
+        headers: {'User-Agent': 'WavelogMobile/1.0'},
       ));
 
   /// Half the side, in degrees, of the box around the park searched in. Large
@@ -57,7 +71,15 @@ class ParkBoundaryDatasource {
       return hit;
     }
     ParkBoundary? boundary;
-    for (final query in _queries(name)) {
+    if (reference.toUpperCase().startsWith('US-')) {
+      try {
+        boundary = await _padus(name, lat, lon);
+      } catch (e) {
+        // PAD-US is out of reach: OpenStreetMap may still know the park
+        debugPrint('Park outline: PAD-US failed: $e');
+      }
+    }
+    for (final query in boundary != null ? const <String>[] : _queries(name)) {
       final results = await _search(query, lat, lon);
       boundary = pickBoundary(results, name: name, lat: lat, lon: lon);
       if (boundary != null) break;
@@ -67,6 +89,65 @@ class ParkBoundaryDatasource {
       _found.remove(_found.keys.first);
     }
     return boundary;
+  }
+
+  /// The park in PAD-US: every protected unit within a few hundred metres of
+  /// its position, the one named like the park, with every piece of that unit
+  /// (a refuge or a park is often several parcels).
+  Future<ParkBoundary?> _padus(String name, double lat, double lon) async {
+    const reach = 0.004; // about 400 m
+    final response = await _padusDio.get<String>(
+      '/query',
+      queryParameters: {
+        'f': 'geojson',
+        'geometry': jsonEncode({
+          'xmin': lon - reach,
+          'ymin': lat - reach,
+          'xmax': lon + reach,
+          'ymax': lat + reach,
+          'spatialReference': {'wkid': 4326},
+        }),
+        'geometryType': 'esriGeometryEnvelope',
+        'inSR': 4326,
+        'spatialRel': 'esriSpatialRelIntersects',
+        'outFields': 'Unit_Nm,Category,DesTp_Desc,MngNm_Desc',
+        'returnGeometry': 'true',
+        'outSR': 4326,
+        // Fewer points: the outline only has to be seen on a phone
+        'maxAllowableOffset': 0.0001,
+        'geometryPrecision': 5,
+        'resultRecordCount': 100,
+      },
+      options: Options(responseType: ResponseType.plain),
+    );
+    final body = response.data;
+    if (body == null || body.trim().isEmpty) return null;
+    final Object? data;
+    try {
+      data = jsonDecode(body);
+    } on FormatException {
+      throw StateError('PAD-US did not answer with JSON');
+    }
+    final features = data is Map ? data['features'] : null;
+    if (features is! List) return null;
+
+    final units = [
+      for (final f in features)
+        if (ParkBoundary.fromPadus(f) case final b?) b,
+    ];
+    // The service already searched at the park, so a name that fits is enough
+    final best = pickBoundary(units,
+        name: name, lat: lat, lon: lon, mustHoldPosition: false);
+    if (best == null) return null;
+    return ParkBoundary(
+      areas: [
+        for (final u in units)
+          if (u.name == best.name) ...u.areas,
+      ],
+      name: best.name,
+      kind: best.kind,
+      source: BoundarySource.padus,
+    );
   }
 
   /// The name as it is, then without the words that pota.app adds ("Nature

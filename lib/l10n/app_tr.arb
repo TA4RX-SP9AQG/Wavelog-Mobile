@@ -963,6 +963,8 @@
     "@potaParkUnknown": {},
     "potaParkBoundaryNote": "Yaklaşık sınır, OpenStreetMap’ten. Yayına çıkmadan önce parkın resmi haritasını kontrol edin.",
     "@potaParkBoundaryNote": {},
+    "potaParkBoundaryNotePadus": "USGS PAD-US’tan sınır (ABD’nin resmi korunan alan verisi). POTA’nın kendi sınırı değildir: yayına çıkmadan önce parkın kurallarını ve haritasını kontrol edin.",
+    "@potaParkBoundaryNotePadus": {},
     "potaParkBoundaryMissing": "Bu park için sınır bulunamadı",
     "@potaParkBoundaryMissing": {},
     "potaParkBoundaryLooking": "Park sınırı aranıyor",

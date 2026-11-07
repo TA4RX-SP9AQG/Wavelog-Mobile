@@ -448,7 +448,11 @@ class _BoundaryNote extends ConsumerWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-                b == null ? l10n.potaParkBoundaryMissing : l10n.potaParkBoundaryNote,
+                switch (b?.source) {
+                  null => l10n.potaParkBoundaryMissing,
+                  BoundarySource.padus => l10n.potaParkBoundaryNotePadus,
+                  BoundarySource.osm => l10n.potaParkBoundaryNote,
+                },
                 style: muted),
           ),
         ],

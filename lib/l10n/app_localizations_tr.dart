@@ -2595,6 +2595,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yaklaşık sınır, OpenStreetMap’ten. Yayına çıkmadan önce parkın resmi haritasını kontrol edin.';
 
   @override
+  String get potaParkBoundaryNotePadus =>
+      'USGS PAD-US’tan sınır (ABD’nin resmi korunan alan verisi). POTA’nın kendi sınırı değildir: yayına çıkmadan önce parkın kurallarını ve haritasını kontrol edin.';
+
+  @override
   String get potaParkBoundaryMissing => 'Bu park için sınır bulunamadı';
 
   @override

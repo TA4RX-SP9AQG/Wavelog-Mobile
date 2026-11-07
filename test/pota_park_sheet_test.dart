@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wavelog_mobile/core/utils/pota_parks.dart';
 import 'package:wavelog_mobile/data/datasources/remote/pota_parks_datasource.dart';
+import 'package:wavelog_mobile/data/models/park_boundary_model.dart';
 import 'package:wavelog_mobile/data/models/pota_park_model.dart';
 import 'helpers/fake_boundaries.dart';
 import 'package:wavelog_mobile/l10n/app_localizations.dart';
@@ -331,6 +332,18 @@ void main() {
       expect(find.textContaining('Approximate outline from OpenStreetMap'),
           findsOneWidget);
       expect(b.asked, ['PL-0363']);
+    });
+
+    testWidgets('an outline from PAD-US says where it comes from',
+        (tester) async {
+      await show(tester, FakeCard(),
+          boundaries: FakeBoundaries(
+              result: squareOutline(52.0088, 21.9843,
+                  source: BoundarySource.padus)));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('USGS PAD-US'), findsOneWidget);
+      expect(find.textContaining('Approximate outline from OpenStreetMap'),
+          findsNothing);
     });
 
     testWidgets('says so when there is none', (tester) async {

@@ -212,8 +212,13 @@ void main() {
           times.add(DateTime.now());
           return reply(o);
         });
+      // Parks of the United States ask PAD-US first: here it has nothing
       ds = ParkBoundaryDatasource(
-          dio: dio, minGap: const Duration(milliseconds: 150));
+          dio: dio,
+          padusDio: Dio()
+            ..httpClientAdapter =
+                _Adapter((_) async => (200, '{"features":[]}')),
+          minGap: const Duration(milliseconds: 150));
     });
 
     Future<ParkBoundary?> find([String ref = 'US-0189', String name = refuge]) =>
@@ -317,6 +322,134 @@ void main() {
       expect(requests.length, before); // still there
       await small.find(reference: 'A-0001', name: 'x', lat: 1, lon: 1);
       expect(requests.length, greaterThan(before)); // forgotten, asked again
+    });
+  });
+
+  group('PAD-US, for parks in the United States', () {
+    late List<RequestOptions> padusAsked;
+    late List<RequestOptions> osmAsked;
+    late ParkBoundaryDatasource ds;
+    FutureOr<(int, String)> Function(RequestOptions o) padusReply =
+        (_) => (200, '{"features":[]}');
+    FutureOr<(int, String)> Function(RequestOptions o) osmReply =
+        (_) => (200, '[]');
+
+    String padusFixture() => File('test/fixtures/padus_park.json').readAsStringSync();
+
+    setUp(() {
+      padusAsked = [];
+      osmAsked = [];
+      padusReply = (_) => (200, '{"features":[]}');
+      osmReply = (_) => (200, '[]');
+      ds = ParkBoundaryDatasource(
+        dio: Dio(BaseOptions(baseUrl: 'https://nominatim.openstreetmap.org'))
+          ..httpClientAdapter = _Adapter((o) async {
+            osmAsked.add(o);
+            return osmReply(o);
+          }),
+        padusDio: Dio(BaseOptions(baseUrl: 'https://services.arcgis.com/x'))
+          ..httpClientAdapter = _Adapter((o) async {
+            padusAsked.add(o);
+            return padusReply(o);
+          }),
+        minGap: Duration.zero,
+      );
+    });
+
+    // The pin of US-0189 lies outside the refuge's biggest pieces
+    Future<ParkBoundary?> findUs({String ref = 'US-0189', String name = refuge}) =>
+        ds.find(reference: ref, name: name, lat: 37.4936, lon: -122.0567);
+
+    test('asks for the lands within a few hundred metres of the park pin',
+        () async {
+      padusReply = (_) => (200, padusFixture());
+      final b = await findUs();
+      expect(b, isNotNull);
+      expect(padusAsked, hasLength(1));
+      final q = padusAsked.single.queryParameters;
+      expect(q['f'], 'geojson');
+      expect(q['geometryType'], 'esriGeometryEnvelope');
+      final env = jsonDecode(q['geometry'] as String) as Map;
+      expect(env['xmin'], lessThan(-122.0567));
+      expect(env['xmax'], greaterThan(-122.0567));
+      expect(env['ymin'], lessThan(37.4936));
+      expect(env['ymax'], greaterThan(37.4936));
+      expect((env['xmax'] as double) - (env['xmin'] as double), lessThan(0.02));
+    });
+
+    test('the unit named like the park is taken, from the official data',
+        () async {
+      padusReply = (_) => (200, padusFixture());
+      final b = (await findUs())!;
+      expect(b.source, BoundarySource.padus);
+      expect(b.name, refuge);
+      expect(b.areas, hasLength(4));
+      // OpenStreetMap is not asked when PAD-US has the park
+      expect(osmAsked, isEmpty);
+    });
+
+    test('a unit under another name is not the park: OpenStreetMap is tried',
+        () async {
+      padusReply = (_) => (
+            200,
+            jsonEncode({
+              'features': [
+                {
+                  'properties': {'Unit_Nm': 'Some County Open Space', 'DesTp_Desc': 'Local Open Space'},
+                  'geometry': jsonDecode(padusFixture())['features'][0]['geometry'],
+                },
+              ],
+            })
+          );
+      osmReply = (_) => (200, jsonEncode(fixture()));
+      final b = await findUs();
+      expect(b!.source, BoundarySource.osm);
+      expect(osmAsked, isNotEmpty);
+    });
+
+    test('the pieces of a unit that PAD-US lists in parts are put together',
+        () async {
+      final geometry = jsonDecode(padusFixture())['features'][0]['geometry'] as Map;
+      final coords = geometry['coordinates'] as List;
+      Map<String, dynamic> part(List polygons) => {
+            'properties': {'Unit_Nm': refuge, 'DesTp_Desc': 'National Wildlife Refuge'},
+            'geometry': {'type': 'MultiPolygon', 'coordinates': polygons},
+          };
+      padusReply = (_) => (
+            200,
+            jsonEncode({
+              'features': [part(coords.take(2).toList()), part(coords.skip(2).toList())],
+            })
+          );
+      final b = (await findUs())!;
+      expect(b.areas, hasLength(4));
+    });
+
+    test('PAD-US out of reach: OpenStreetMap answers instead', () async {
+      padusReply = (_) => (503, 'busy');
+      osmReply = (_) => (200, jsonEncode(fixture()));
+      final b = await findUs();
+      expect(b, isNotNull);
+      expect(b!.source, BoundarySource.osm);
+    });
+
+    test('a park outside the United States never asks PAD-US', () async {
+      osmReply = (_) => (200, '[]');
+      await ds.find(reference: 'PL-0363', name: 'Turzyniec Nature Reserve', lat: 52.5, lon: 21.0);
+      expect(padusAsked, isEmpty);
+      expect(osmAsked, isNotEmpty);
+    });
+
+    test('and the answer is remembered, from either source', () async {
+      padusReply = (_) => (200, padusFixture());
+      await findUs();
+      await findUs();
+      expect(padusAsked, hasLength(1));
+    });
+
+    test('nothing in PAD-US and nothing in OpenStreetMap: no outline',
+        () async {
+      expect(await findUs(), isNull);
     });
   });
 

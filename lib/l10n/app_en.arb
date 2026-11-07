@@ -1734,6 +1734,8 @@
   "@potaParkUnknown": {},
   "potaParkBoundaryNote": "Approximate outline from OpenStreetMap. Check the park’s official map before you operate.",
   "@potaParkBoundaryNote": {"description": "Note under the park outline drawn on the map: it is not an official boundary"},
+  "potaParkBoundaryNotePadus": "Outline from USGS PAD-US, the official US protected lands data. It is not POTA’s own boundary: check the park’s rules and map before you operate.",
+  "@potaParkBoundaryNotePadus": {"description": "Note under a US park outline drawn on the map, taken from the USGS PAD-US data"},
   "potaParkBoundaryMissing": "No outline found for this park",
   "@potaParkBoundaryMissing": {"description": "Shown on the park card when OpenStreetMap has no outline for it"},
   "potaParkBoundaryLooking": "Looking for the park outline",

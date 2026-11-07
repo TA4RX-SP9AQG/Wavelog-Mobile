@@ -5,8 +5,10 @@ import 'package:wavelog_mobile/data/datasources/remote/park_boundary_datasource.
 import 'package:wavelog_mobile/data/models/park_boundary_model.dart';
 
 /// A square outline of [half] degrees around a point.
-ParkBoundary squareOutline(double lat, double lon, {double half = 0.01}) =>
+ParkBoundary squareOutline(double lat, double lon,
+        {double half = 0.01, BoundarySource source = BoundarySource.osm}) =>
     ParkBoundary(
+      source: source,
       name: 'Test outline',
       kind: 'boundary:protected_area',
       areas: [

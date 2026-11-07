@@ -4975,6 +4975,12 @@ abstract class AppLocalizations {
   /// **'Approximate outline from OpenStreetMap. Check the park’s official map before you operate.'**
   String get potaParkBoundaryNote;
 
+  /// Note under a US park outline drawn on the map, taken from the USGS PAD-US data
+  ///
+  /// In en, this message translates to:
+  /// **'Outline from USGS PAD-US, the official US protected lands data. It is not POTA’s own boundary: check the park’s rules and map before you operate.'**
+  String get potaParkBoundaryNotePadus;
+
   /// Shown on the park card when OpenStreetMap has no outline for it
   ///
   /// In en, this message translates to:

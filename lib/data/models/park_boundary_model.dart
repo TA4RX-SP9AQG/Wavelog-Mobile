@@ -11,16 +11,31 @@ class ParkArea {
       _inRing(outer, lat, lon) && !holes.any((h) => _inRing(h, lat, lon));
 }
 
-/// A park's outline, as OpenStreetMap draws it. An approximation: it says
-/// where the park is mapped, not where its rules apply.
+/// Where an outline comes from.
+enum BoundarySource {
+  /// OpenStreetMap: drawn by volunteers.
+  osm,
+
+  /// USGS PAD-US: the protected lands of the United States, as the agencies
+  /// that manage them report them.
+  padus,
+}
+
+/// A park's outline, from [source]. An approximation: it says where the park
+/// is mapped, not where its rules apply.
 class ParkBoundary {
   final List<ParkArea> areas;
+  final BoundarySource source;
 
   /// The name and kind the outline carries in OpenStreetMap.
   final String name;
   final String kind;
-  const ParkBoundary(
-      {required this.areas, this.name = '', this.kind = ''});
+  const ParkBoundary({
+    required this.areas,
+    this.name = '',
+    this.kind = '',
+    this.source = BoundarySource.osm,
+  });
 
   bool contains(double lat, double lon) =>
       areas.any((a) => a.contains(lat, lon));
@@ -48,7 +63,8 @@ class ParkBoundary {
 
   /// A Nominatim result with a GeoJSON polygon, or null when it has none that
   /// can be used.
-  static ParkBoundary? tryParse(Object? result) {
+  static ParkBoundary? tryParse(Object? result,
+      {BoundarySource source = BoundarySource.osm}) {
     if (result is! Map) return null;
     final geo = result['geojson'];
     if (geo is! Map) return null;
@@ -73,7 +89,22 @@ class ParkBoundary {
       areas: areas,
       name: (result['name'] ?? result['display_name'] ?? '').toString(),
       kind: '${result['category'] ?? ''}:${result['type'] ?? ''}',
+      source: source,
     );
+  }
+
+  /// A GeoJSON feature of the PAD-US service: its geometry, the unit name,
+  /// and the kind of land it is (a refuge, a state park).
+  static ParkBoundary? fromPadus(Object? feature) {
+    if (feature is! Map) return null;
+    final props = feature['properties'];
+    if (props is! Map) return null;
+    return tryParse({
+      'geojson': feature['geometry'],
+      'name': props['Unit_Nm'],
+      'category': 'padus',
+      'type': props['DesTp_Desc'] ?? props['Category'] ?? '',
+    }, source: BoundarySource.padus);
   }
 
   static ParkArea? _area(List rings) {
@@ -138,15 +169,21 @@ ParkBoundary? pickBoundary(
   required String name,
   required double lat,
   required double lon,
+  bool mustHoldPosition = true,
 }) {
   final wanted = _words(name);
   final scored = <(ParkBoundary, double)>[];
   for (final r in results) {
-    final b = ParkBoundary.tryParse(r);
-    if (b == null || !_parkKinds.contains(b.kind)) continue;
+    final b = r is ParkBoundary ? r : ParkBoundary.tryParse(r);
+    if (b == null) continue;
+    // PAD-US lists only protected land; in OpenStreetMap the name alone does
+    // not say that a feature is a park
+    if (b.source == BoundarySource.osm && !_parkKinds.contains(b.kind)) continue;
     final similarity = _similarity(wanted, _words(b.name));
     if (similarity < _minSimilarity) continue;
-    if (b.contains(lat, lon)) {
+    // The search was already for what lies at the park, so a name that fits
+    // is enough; elsewhere the outline must hold the park's position
+    if (!mustHoldPosition || b.contains(lat, lon)) {
       scored.add((b, similarity));
       continue;
     }

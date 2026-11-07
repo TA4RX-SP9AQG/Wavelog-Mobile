@@ -2607,6 +2607,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Approximate outline from OpenStreetMap. Check the park’s official map before you operate.';
 
   @override
+  String get potaParkBoundaryNotePadus =>
+      'Outline from USGS PAD-US, the official US protected lands data. It is not POTA’s own boundary: check the park’s rules and map before you operate.';
+
+  @override
   String get potaParkBoundaryMissing => 'No outline found for this park';
 
   @override

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/utils/l10n_extension.dart';
+
 /// The map backgrounds to choose from. [auto] is light or dark with the
 /// app's theme. All may be used by an app without an API key, with the
 /// attribution shown under the map.
@@ -115,7 +117,7 @@ class MapRoundButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Material(
+    final button = Material(
       elevation: 3,
       shadowColor: Colors.black38,
       color: cs.surface,
@@ -128,11 +130,64 @@ class MapRoundButton extends StatelessWidget {
           height: 38,
           child: Transform.rotate(
             angle: iconAngle,
-            child: Icon(icon,
-                size: 20, color: cs.onSurface, semanticLabel: tooltip),
+            child: Icon(icon, size: 20, color: cs.onSurface),
           ),
         ),
       ),
     );
+    // The tooltip is also what a screen reader reads out
+    final label = tooltip;
+    return label == null ? button : Tooltip(message: label, child: button);
   }
+}
+
+/// The sheet to choose the background. [onChanged] is called at once with
+/// each choice, and the sheet stays open to show it.
+Future<void> showBaseMapPicker(
+  BuildContext context, {
+  required BaseMap current,
+  required ValueChanged<BaseMap> onChanged,
+}) {
+  final l10n = context.l10n;
+  var chosen = current;
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setSheet) {
+        final names = {
+          BaseMap.auto: l10n.mapBaseAuto,
+          BaseMap.light: l10n.mapBaseLight,
+          BaseMap.dark: l10n.mapBaseDark,
+          BaseMap.topo: l10n.mapBaseTopo,
+        };
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                child: Text(l10n.mapLayers,
+                    style: Theme.of(ctx).textTheme.titleMedium),
+              ),
+              RadioGroup<BaseMap>(
+                groupValue: chosen,
+                onChanged: (v) {
+                  if (v == null) return;
+                  setSheet(() => chosen = v);
+                  onChanged(v);
+                },
+                child: Column(children: [
+                  for (final b in BaseMap.values)
+                    RadioListTile<BaseMap>(
+                        dense: true, title: Text(names[b]!), value: b),
+                ]),
+              ),
+            ],
+          ),
+        );
+      },
+    ),
+  );
 }

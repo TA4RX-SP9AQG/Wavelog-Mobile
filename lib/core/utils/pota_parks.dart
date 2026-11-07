@@ -169,3 +169,30 @@ String compassPoint(double azimuth) {
   final a = ((azimuth % 360) + 360) % 360;
   return points[((a + 22.5) ~/ 45) % 8];
 }
+
+// ── Links ─────────────────────────────────────────────────────────────────────
+
+String _coord(double v) => v.toStringAsFixed(5);
+
+/// A `geo:` link that opens a maps app on the park, with its name as the pin
+/// label.
+Uri parkGeoUri(double lat, double lon, String name) {
+  // Brackets would end the pin label early.
+  final label = name.replaceAll(RegExp(r'[()]'), ' ').trim();
+  final at = '${_coord(lat)},${_coord(lon)}';
+  return Uri.parse(
+      'geo:$at?q=$at${label.isEmpty ? '' : '(${Uri.encodeComponent(label)})'}');
+}
+
+/// For a phone without a maps app: the same spot on openstreetmap.org.
+Uri parkOsmUri(double lat, double lon) => Uri.parse(
+    'https://www.openstreetmap.org/?mlat=${_coord(lat)}&mlon=${_coord(lon)}'
+    '#map=15/${_coord(lat)}/${_coord(lon)}');
+
+/// The park's page on pota.app.
+Uri parkWebUri(String reference) => Uri.parse(
+    'https://pota.app/#/park/${Uri.encodeComponent(reference.toUpperCase())}');
+
+/// The coordinates as typed into a maps search: "52.00880, 21.98430".
+String parkCoordinates(double lat, double lon) =>
+    '${_coord(lat)}, ${_coord(lon)}';

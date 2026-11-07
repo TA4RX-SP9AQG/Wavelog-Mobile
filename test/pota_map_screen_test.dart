@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wavelog_mobile/core/utils/pota_parks.dart';
+import 'package:wavelog_mobile/presentation/widgets/pota/park_icon.dart';
 import 'package:wavelog_mobile/data/datasources/remote/pota_parks_datasource.dart';
 import 'package:wavelog_mobile/data/models/pota_park_model.dart';
 import 'package:wavelog_mobile/l10n/app_localizations.dart';
@@ -146,9 +147,13 @@ Future<void> settle(WidgetTester tester) async {
   }
 }
 
-/// The dots (the layer above the rings that set them off from the map).
-List<CircleMarker> circles(WidgetTester tester) =>
-    tester.widget<CircleLayer>(find.byType(CircleLayer).last).circles;
+/// The parks drawn, with the status each is drawn as.
+List<(PotaParkPoint, PotaParkStatus)> circles(WidgetTester tester) =>
+    tester.widget<ParkIconLayer>(find.byType(ParkIconLayer)).parks;
+
+/// The ring around the selected park, drawn only while one is selected.
+bool hasSelectionRing(WidgetTester tester) =>
+    find.byType(CircleLayer).evaluate().isNotEmpty;
 
 Future<void> tapMapCentre(WidgetTester tester) async {
   await tester.tapAt(tester.getCenter(find.byType(FlutterMap)));
@@ -172,19 +177,17 @@ void main() {
     expect(api.asked, contains('KO02'));
     final drawn = circles(tester);
     expect(drawn, hasLength(4));
-    // Four statuses, four looks
-    expect(drawn.map((c) => c.radius).toSet(), {9.0, 8.0, 7.0});
-    expect(drawn.where((c) => c.color == const Color(0xFF1E6BFF)), hasLength(1));
-    expect(drawn.where((c) => c.color == const Color(0xFF00C853)), hasLength(1));
-    // The never-activated one is a ring: colour in the border, an empty middle
-    final ring = drawn.singleWhere(
-        (c) => c.borderColor == const Color(0xFFFF3D00));
-    expect(ring.borderStrokeWidth, greaterThan(3));
-    expect(ring.color, isNot(const Color(0xFFFF3D00)));
-    // Every dot has a ring of its own beneath it
-    final rings =
-        tester.widget<CircleLayer>(find.byType(CircleLayer).first).circles;
-    expect(rings, hasLength(4));
+    // Each park is drawn as what the logbook says of it
+    expect({for (final (p, status) in drawn) p.reference: status}, {
+      'PL-0001': PotaParkStatus.activated,
+      'PL-0002': PotaParkStatus.hunted,
+      'PL-0003': PotaParkStatus.neverActivated,
+      'PL-0004': PotaParkStatus.other,
+    });
+    // The icons themselves are drawn, one image per status
+    expect(tester.widget<ParkIconLayer>(find.byType(ParkIconLayer)).icons,
+        isNotNull);
+    expect(hasSelectionRing(tester), isFalse);
   });
 
   testWidgets('a filter chip hides a status and brings it back',
@@ -243,11 +246,13 @@ void main() {
     expect(find.text('Test Forest'), findsOneWidget);
     expect(find.text('Log QSO'), findsOneWidget);
     // The selected park has a ring of its own
-    expect(circles(tester), hasLength(2));
+    expect(hasSelectionRing(tester), isTrue);
+    expect(circles(tester), hasLength(1));
 
     await tester.tap(find.byTooltip('Close'));
     await tester.pump();
     expect(find.text('Log QSO'), findsNothing);
+    expect(hasSelectionRing(tester), isFalse);
     expect(circles(tester), hasLength(1));
   });
 
@@ -370,6 +375,20 @@ void main() {
       final loc = FakeLocation()..last = const PotaLocationFix(50.06, 19.94);
       await open(tester, api, location: loc);
       expect(api.asked, contains(gridSquare4(50.06, 19.94)));
+    });
+
+    testWidgets('the operator is shown by a marker of their own, only when '
+        'a position is known', (tester) async {
+      await open(tester, FakeApi());
+      expect(find.byKey(const ValueKey('me-marker')), findsNothing);
+    });
+
+    testWidgets('and it shows once there is one', (tester) async {
+      final loc = FakeLocation()..last = const PotaLocationFix(52.5, 21.0);
+      await open(tester, FakeApi(), location: loc);
+      expect(find.byKey(const ValueKey('me-marker')), findsOneWidget);
+      // It is not one of the parks
+      expect(circles(tester), isEmpty);
     });
 
     testWidgets('the location button asks, and centres on the answer',

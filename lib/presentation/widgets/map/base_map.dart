@@ -1,8 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/retry.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/tile_cache.dart';
 
 /// The map backgrounds to choose from. [auto] is light or dark with the
 /// app's theme. All may be used by an app without an API key, with the
@@ -76,24 +82,63 @@ Future<void> saveBaseMap(BaseMap base, {String key = kBaseMapPrefKey}) async {
   } catch (_) {}
 }
 
+/// The same tiles with less colour and a lighter touch: the fine hatching and
+/// bright roads of a terrain map recede, so what is drawn on top reads
+/// first. About 40% of the colour, and 15% lighter.
+const kCalmTiles = ColorFilter.matrix(<double>[
+  0.4486, 0.3647, 0.0367, 0, 38, //
+  0.1086, 0.7047, 0.0367, 0, 38, //
+  0.1086, 0.3647, 0.3767, 0, 38, //
+  0, 0, 0, 1, 0,
+]);
+
+/// The network tile source, with the tiles kept on the device (see
+/// [TileCacheClient]): a place seen before shows at once, even offline.
+/// Falls back to a plain network source if there is no place to keep them.
+Future<TileProvider> createCachedTileProvider() async {
+  try {
+    final tmp = await getTemporaryDirectory();
+    final dir = Directory('${tmp.path}${Platform.pathSeparator}map_tiles');
+    return NetworkTileProvider(
+      httpClient: TileCacheClient(
+        inner: RetryClient(http.Client()),
+        directory: dir,
+      ),
+    );
+  } catch (_) {
+    return NetworkTileProvider();
+  }
+}
+
 /// The tile layer for a background, dark-filtered when it asks for it.
-/// [tileProvider] is for tests, which must not reach the network.
+/// [tileProvider] is for tests, which must not reach the network. [calm]
+/// quiets a light map. A tile that failed to load is asked for again when it
+/// comes back into view, instead of staying a blank square.
 class BaseMapTileLayer extends StatelessWidget {
   final BaseTiles tiles;
   final TileProvider? tileProvider;
-  const BaseMapTileLayer({super.key, required this.tiles, this.tileProvider});
+  final bool calm;
+  const BaseMapTileLayer({
+    super.key,
+    required this.tiles,
+    this.tileProvider,
+    this.calm = false,
+  });
 
   @override
   Widget build(BuildContext context) => ColorFiltered(
         colorFilter: tiles.darkened
             ? kDarkTiles
-            : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+            : calm
+                ? kCalmTiles
+                : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
         child: TileLayer(
           urlTemplate: tiles.url,
           subdomains: tiles.subdomains,
           userAgentPackageName: 'com.wavelog_mobile',
           maxNativeZoom: tiles.maxZoom,
           maxZoom: 19,
+          evictErrorTileStrategy: EvictErrorTileStrategy.notVisibleRespectMargin,
           tileProvider: tileProvider,
         ),
       );

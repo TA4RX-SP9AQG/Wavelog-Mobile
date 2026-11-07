@@ -4,6 +4,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/datasources/local/pota_squares_store.dart';
 import '../data/datasources/remote/park_boundary_datasource.dart';
 import '../data/datasources/remote/pota_parks_datasource.dart';
 import '../data/models/park_boundary_model.dart';
@@ -11,6 +12,10 @@ import '../data/models/pota_park_model.dart';
 
 final potaParksDatasourceProvider =
     Provider<PotaParksDatasource>((_) => PotaParksDatasource());
+
+/// Where the parks of the squares seen before are kept; null for none.
+final potaSquaresStoreProvider = Provider<PotaSquaresStore?>(
+    (_) => FilePotaSquaresStore.inCache());
 
 /// The time, as a provider so tests can move it.
 final potaParksClockProvider = Provider<DateTime Function()>((_) => DateTime.now);
@@ -23,8 +28,10 @@ const kParkSquareFreshness = Duration(hours: 1);
 /// again, so that a bad connection is not hammered by every map move.
 const kParkSquareCooldown = Duration(seconds: 30);
 
-/// Squares loaded at the same time.
-const kParkLoadsAtOnce = 3;
+/// Squares loaded at the same time. A view of many squares is 16 small
+/// requests, which pota.app answers from its cache; three at a time took
+/// seconds.
+const kParkLoadsAtOnce = 8;
 
 /// Squares kept in memory; the least recently wanted go first.
 const kParkSquaresKept = 300;
@@ -164,7 +171,29 @@ class PotaParksNotifier extends Notifier<PotaParksState> {
   }
 
   Future<void> _load(String square) async {
-    final before = state.squares[square] ?? const SquareEntry();
+    var before = state.squares[square] ?? const SquareEntry();
+    final store = ref.read(potaSquaresStoreProvider);
+
+    // A square seen on an earlier visit shows at once, from the device
+    if (!before.loaded && store != null) {
+      StoredSquare? saved;
+      try {
+        saved = await store.read(square);
+      } catch (_) {}
+      if (_disposed) return;
+      if (saved != null) {
+        before = before.loadedAt(saved.at, saved.parks);
+        if (_now.difference(saved.at) < kParkSquareFreshness) {
+          _inFlight.remove(square);
+          _publish(replace: {square: before});
+          _pump();
+          return;
+        }
+        // Old: shown now, and fetched again below
+        _publish(replace: {square: before});
+      }
+    }
+
     List<PotaParkPoint>? parks;
     Object? error;
     try {
@@ -176,7 +205,9 @@ class PotaParksNotifier extends Notifier<PotaParksState> {
     if (_disposed) return;
     final SquareEntry after;
     if (parks != null) {
-      after = before.loadedAt(_now, List.unmodifiable(parks));
+      final at = _now;
+      after = before.loadedAt(at, List.unmodifiable(parks));
+      if (store != null) unawaited(store.write(square, parks, at));
     } else {
       debugPrint('POTA parks: square $square failed: $error');
       after = before.failed(_now);

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wavelog_mobile/data/datasources/local/pota_squares_store.dart';
 import 'package:wavelog_mobile/data/datasources/remote/pota_parks_datasource.dart';
 import 'package:wavelog_mobile/data/models/pota_park_model.dart';
 import 'package:wavelog_mobile/data/models/qso_model.dart';
@@ -72,9 +73,11 @@ void main() {
     container = ProviderContainer(overrides: [
       potaParksDatasourceProvider.overrideWithValue(fake),
       potaParksClockProvider.overrideWithValue(() => clock),
+      // These tests are about the loading, not about the disk
+      potaSquaresStoreProvider.overrideWithValue(null),
     ]);
     container.listen(potaParksProvider, (_, __) {});
-    addTearDown(container.dispose);
+    addTearDown(() => container.dispose());
   });
 
   test('the same square is asked for once, however often it is wanted',
@@ -90,40 +93,49 @@ void main() {
     expect(state().parksIn(['KO02']).single.reference, 'PL-0001');
   });
 
-  test('at most three squares load at once; a finished one frees a place',
-      () async {
-    final six = ['AA00', 'AA01', 'AA02', 'AA03', 'AA04', 'AA05'];
-    notifier().ensureSquares(six);
-    expect(fake.asked, six.take(3));
-    expect(state().loading, six.take(3).toSet());
+  test('a limited number of squares load at once; a finished one frees a '
+      'place', () async {
+    final many = [for (var i = 0; i < kParkLoadsAtOnce + 3; i++) 'AA${i.toString().padLeft(2, '0')}'];
+    notifier().ensureSquares(many);
+    expect(fake.asked, many.take(kParkLoadsAtOnce));
+    expect(state().loading, many.take(kParkLoadsAtOnce).toSet());
 
-    fake.answer('AA00', []);
+    fake.answer(many.first, []);
     await settle();
-    expect(fake.asked, six.take(4));
+    expect(fake.asked, many.take(kParkLoadsAtOnce + 1));
 
-    for (final s in six.skip(1).take(3)) {
+    for (final s in many.skip(1).take(kParkLoadsAtOnce - 1)) {
       fake.answer(s, []);
       await settle();
     }
-    fake.answer('AA04', []);
-    fake.answer('AA05', []);
+    for (final s in many.skip(kParkLoadsAtOnce)) {
+      fake.answer(s, []);
+    }
     await settle();
-    expect(fake.mostAtOnce, 3);
+    expect(fake.mostAtOnce, kParkLoadsAtOnce);
     expect(state().loading, isEmpty);
     expect(state().squares.values.every((e) => e.loaded), isTrue);
   });
 
   test('squares the map has moved away from are dropped from the queue',
       () async {
-    notifier().ensureSquares(['AA00', 'AA01', 'AA02', 'AA03', 'AA04']);
-    // The map moved: only AA01 and a new square are wanted now
-    notifier().ensureSquares(['AA01', 'BB00']);
-    fake.answer('AA00', []);
-    fake.answer('AA01', []);
-    fake.answer('AA02', []);
+    // Two more than can load at once: those two wait in the queue
+    final first = [
+      for (var i = 0; i < kParkLoadsAtOnce + 2; i++) 'AA${i.toString().padLeft(2, '0')}'
+    ];
+    notifier().ensureSquares(first);
+    final waiting = first.skip(kParkLoadsAtOnce).toList();
+    expect(fake.asked, first.take(kParkLoadsAtOnce));
+
+    // The map moved: only one of the old squares and a new one are wanted now
+    notifier().ensureSquares([first.first, 'BB00']);
+    for (final s in first.take(kParkLoadsAtOnce)) {
+      fake.answer(s, []);
+    }
     await settle();
-    // AA03 and AA04 were waiting and are no longer wanted; BB00 is next
-    expect(fake.asked, ['AA00', 'AA01', 'AA02', 'BB00']);
+    // Those that were waiting are no longer wanted; BB00 is next
+    expect(fake.asked, [...first.take(kParkLoadsAtOnce), 'BB00']);
+    expect(fake.asked, isNot(contains(waiting.first)));
   });
 
   test('a failed square is left alone for the cooldown, then asked again',
@@ -256,12 +268,109 @@ void main() {
       () async {
     final other = ProviderContainer(overrides: [
       potaParksDatasourceProvider.overrideWithValue(fake),
+      potaSquaresStoreProvider.overrideWithValue(null),
     ]);
     other.listen(potaParksProvider, (_, __) {});
     other.read(potaParksProvider.notifier).ensureSquares(['KO02']);
     other.dispose();
     fake.answer('KO02', [park('PL-0001')]);
     await settle(); // must not throw
+  });
+
+  group('squares kept on the device', () {
+    late FakeStore store;
+
+    setUp(() {
+      store = FakeStore();
+      container.dispose();
+      container = ProviderContainer(overrides: [
+        potaParksDatasourceProvider.overrideWithValue(fake),
+        potaParksClockProvider.overrideWithValue(() => clock),
+        potaSquaresStoreProvider.overrideWithValue(store),
+      ]);
+      container.listen(potaParksProvider, (_, __) {});
+    });
+
+    test('a square seen an hour ago or less shows from the device, with no '
+        'request', () async {
+      store.saved['KO02'] =
+          StoredSquare([park('PL-0001')], clock.subtract(const Duration(minutes: 20)));
+      notifier().ensureSquares(['KO02']);
+      await settle();
+      expect(fake.asked, isEmpty);
+      expect(state().parksIn(['KO02']).single.reference, 'PL-0001');
+      expect(state().isLoadingAny(['KO02']), isFalse);
+    });
+
+    test('an older one shows at once and is fetched again', () async {
+      store.saved['KO02'] =
+          StoredSquare([park('PL-0001')], clock.subtract(const Duration(hours: 5)));
+      notifier().ensureSquares(['KO02']);
+      await settle();
+      // The old parks are already on the map...
+      expect(state().parksIn(['KO02']).single.reference, 'PL-0001');
+      expect(state().isLoadingAny(['KO02']), isFalse);
+      // ...while the new ones are on their way
+      expect(fake.asked, ['KO02']);
+      fake.answer('KO02', [park('PL-0002')]);
+      await settle();
+      expect(state().parksIn(['KO02']).single.reference, 'PL-0002');
+      // and what came is kept for next time
+      expect(store.saved['KO02']!.parks.single.reference, 'PL-0002');
+      expect(store.saved['KO02']!.at, clock);
+    });
+
+    test('a square never seen is fetched and then kept', () async {
+      notifier().ensureSquares(['KO02']);
+      await settle();
+      expect(fake.asked, ['KO02']);
+      fake.answer('KO02', [park('PL-0001')]);
+      await settle();
+      expect(store.saved['KO02']!.parks.single.reference, 'PL-0001');
+    });
+
+    test('an old square whose refresh fails keeps its parks', () async {
+      store.saved['KO02'] =
+          StoredSquare([park('PL-0001')], clock.subtract(const Duration(hours: 5)));
+      notifier().ensureSquares(['KO02']);
+      await settle();
+      fake.fail('KO02');
+      await settle();
+      expect(state().parksIn(['KO02']).single.reference, 'PL-0001');
+      expect(state().failedIn(['KO02']), ['KO02']);
+    });
+
+    test('a store that fails is the same as an empty one', () async {
+      store.failReads = true;
+      notifier().ensureSquares(['KO02']);
+      await settle();
+      expect(fake.asked, ['KO02']);
+      fake.answer('KO02', [park('PL-0001')]);
+      await settle();
+      expect(state().parksIn(['KO02']), hasLength(1));
+    });
+
+    test('many squares from the device cost no requests and are all there',
+        () async {
+      final squares = ['AA00', 'AA01', 'AA02', 'AA03', 'AA04', 'AA05', 'AA06', 'AA07', 'AA08', 'AA09'];
+      for (final s in squares) {
+        store.saved[s] = StoredSquare([park('X-$s')], clock);
+      }
+      notifier().ensureSquares(squares);
+      await settle();
+      await settle();
+      expect(fake.asked, isEmpty);
+      expect(state().parksIn(squares), hasLength(10));
+    });
+  });
+
+  test('a view of many squares is asked for with many requests at once',
+      () async {
+    final squares = [for (var i = 0; i < 16; i++) 'AB${i.toString().padLeft(2, '0')}'];
+    notifier().ensureSquares(squares);
+    await settle();
+    expect(fake.asked, hasLength(kParkLoadsAtOnce));
+    expect(kParkLoadsAtOnce, greaterThanOrEqualTo(6));
   });
 
   group('parks the operator has been to', () {
@@ -341,4 +450,20 @@ class _Stations extends StationNotifier {
   _Stations(this.stations);
   @override
   Future<List<StationModel>> build() => stations;
+}
+
+class FakeStore implements PotaSquaresStore {
+  final saved = <String, StoredSquare>{};
+  var failReads = false;
+
+  @override
+  Future<StoredSquare?> read(String square) async {
+    if (failReads) throw Exception('disk');
+    return saved[square];
+  }
+
+  @override
+  Future<void> write(String square, List<PotaParkPoint> parks, DateTime at) async {
+    saved[square] = StoredSquare(parks, at);
+  }
 }

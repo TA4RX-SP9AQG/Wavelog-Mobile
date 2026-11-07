@@ -265,7 +265,7 @@ class _PotaMapScreenState extends ConsumerState<PotaMapScreen> {
     if (key == _cameraKey) return;
     _cameraKey = key;
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), _refresh);
+    _debounce = Timer(const Duration(milliseconds: 250), _refresh);
   }
 
   /// Works out the squares in view and asks for their parks.

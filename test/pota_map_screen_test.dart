@@ -127,6 +127,7 @@ Future<ProviderContainer> open(
   await tester.pumpWidget(ProviderScope(
     overrides: [
       potaParksDatasourceProvider.overrideWithValue(api),
+      potaSquaresStoreProvider.overrideWithValue(null),
       parkBoundaryDatasourceProvider
           .overrideWithValue(boundaries ?? FakeBoundaries()),
       potaLocationServiceProvider.overrideWithValue(location ?? FakeLocation()),
@@ -603,6 +604,7 @@ void main() {
       await tester.pumpWidget(ProviderScope(
         overrides: [
           potaParksDatasourceProvider.overrideWithValue(api),
+          potaSquaresStoreProvider.overrideWithValue(null),
           parkBoundaryDatasourceProvider.overrideWithValue(FakeBoundaries()),
           potaLocationServiceProvider.overrideWithValue(FakeLocation()),
           potaMapHomeProvider.overrideWithValue(null),

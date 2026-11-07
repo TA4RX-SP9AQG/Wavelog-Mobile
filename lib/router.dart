@@ -38,6 +38,7 @@ import 'presentation/screens/station/station_logbook_detail_screen.dart';
 import 'presentation/screens/statistics/statistics_screen.dart';
 import 'presentation/screens/spot/spot_screen.dart';
 import 'presentation/screens/map/map_screen.dart';
+import 'presentation/screens/pota/pota_map_screen.dart';
 import 'presentation/screens/sync/sync_screen.dart';
 import 'presentation/screens/community/community_screen.dart';
 import 'presentation/screens/community/plan_activation_screen.dart';
@@ -214,6 +215,11 @@ final appRouter = GoRouter(
       path: '/map',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (c, s) => const MapScreen(),
+    ),
+    GoRoute(
+      path: '/pota-map',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (c, s) => const PotaMapScreen(),
     ),
     GoRoute(
       path: '/sync',
@@ -570,6 +576,11 @@ class _AppDrawer extends ConsumerWidget {
                   icon: Icons.map_outlined,
                   label: l10n.drawerMap,
                   onTap: () => go('/map'),
+                ),
+                _DrawerItem(
+                  icon: Icons.park_outlined,
+                  label: l10n.potaMapTitle,
+                  onTap: () => go('/pota-map'),
                 ),
                 _DrawerItem(
                   icon: Icons.sync,

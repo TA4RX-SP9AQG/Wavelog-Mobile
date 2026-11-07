@@ -112,6 +112,13 @@ class _SpotScreenState extends ConsumerState<SpotScreen> {
           },
         ),
         actions: [
+          // The parks on a map: only for the POTA list
+          if (selected == ActivityType.pota)
+            IconButton(
+              icon: const Icon(Icons.park_outlined),
+              tooltip: l10n.potaMapTitle,
+              onPressed: () => context.push('/pota-map'),
+            ),
           if (selected.available)
             _RefreshButton(
               nextRefresh: _nextAutoRefresh,

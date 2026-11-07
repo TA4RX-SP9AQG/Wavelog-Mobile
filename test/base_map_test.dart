@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wavelog_mobile/presentation/widgets/map/base_map.dart';
 
 void main() {
@@ -28,6 +29,24 @@ void main() {
         expect(tilesFor(b, false).attribution, contains('OpenStreetMap'),
             reason: '$b');
       }
+    });
+  });
+
+  group('the saved choice', () {
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    test('nothing saved: the fallback', () async {
+      expect(await loadBaseMap(), BaseMap.auto);
+      expect(await loadBaseMap(key: 'other', fallback: BaseMap.topo),
+          BaseMap.topo);
+    });
+
+    test('each key keeps its own choice', () async {
+      await saveBaseMap(BaseMap.dark);
+      await saveBaseMap(BaseMap.light, key: 'other');
+      expect(await loadBaseMap(), BaseMap.dark);
+      expect(await loadBaseMap(key: 'other', fallback: BaseMap.topo),
+          BaseMap.light);
     });
   });
 

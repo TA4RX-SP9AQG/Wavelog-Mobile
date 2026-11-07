@@ -58,19 +58,21 @@ BaseTiles tilesFor(BaseMap base, bool isDark) => switch (base) {
 /// The saved background choice, shared by every map in the app.
 const kBaseMapPrefKey = 'wl_map_base';
 
-Future<BaseMap> loadBaseMap() async {
+Future<BaseMap> loadBaseMap(
+    {String key = kBaseMapPrefKey, BaseMap fallback = BaseMap.auto}) async {
   try {
     final p = await SharedPreferences.getInstance();
-    return BaseMap.fromName(p.getString(kBaseMapPrefKey));
+    final name = p.getString(key);
+    return name == null ? fallback : BaseMap.fromName(name);
   } catch (_) {
-    return BaseMap.auto;
+    return fallback;
   }
 }
 
-Future<void> saveBaseMap(BaseMap base) async {
+Future<void> saveBaseMap(BaseMap base, {String key = kBaseMapPrefKey}) async {
   try {
     final p = await SharedPreferences.getInstance();
-    await p.setString(kBaseMapPrefKey, base.name);
+    await p.setString(key, base.name);
   } catch (_) {}
 }
 

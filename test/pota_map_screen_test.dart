@@ -146,8 +146,9 @@ Future<void> settle(WidgetTester tester) async {
   }
 }
 
+/// The dots (the layer above the rings that set them off from the map).
 List<CircleMarker> circles(WidgetTester tester) =>
-    tester.widget<CircleLayer>(find.byType(CircleLayer)).circles;
+    tester.widget<CircleLayer>(find.byType(CircleLayer).last).circles;
 
 Future<void> tapMapCentre(WidgetTester tester) async {
   await tester.tapAt(tester.getCenter(find.byType(FlutterMap)));
@@ -172,14 +173,18 @@ void main() {
     final drawn = circles(tester);
     expect(drawn, hasLength(4));
     // Four statuses, four looks
-    expect(drawn.map((c) => c.radius).toSet(), {7.0, 6.0, 4.5});
-    expect(drawn.where((c) => c.color == const Color(0xFF0072B2)), hasLength(1));
-    expect(drawn.where((c) => c.color == const Color(0xFF009E73)), hasLength(1));
-    // The never-activated one is a ring: a pale fill, the colour in the border
+    expect(drawn.map((c) => c.radius).toSet(), {9.0, 8.0, 7.0});
+    expect(drawn.where((c) => c.color == const Color(0xFF1E6BFF)), hasLength(1));
+    expect(drawn.where((c) => c.color == const Color(0xFF00C853)), hasLength(1));
+    // The never-activated one is a ring: colour in the border, an empty middle
     final ring = drawn.singleWhere(
-        (c) => c.borderColor == const Color(0xFFD55E00));
-    expect(ring.color.a, lessThan(0.5));
-    expect(ring.borderStrokeWidth, greaterThan(2));
+        (c) => c.borderColor == const Color(0xFFFF3D00));
+    expect(ring.borderStrokeWidth, greaterThan(3));
+    expect(ring.color, isNot(const Color(0xFFFF3D00)));
+    // Every dot has a ring of its own beneath it
+    final rings =
+        tester.widget<CircleLayer>(find.byType(CircleLayer).first).circles;
+    expect(rings, hasLength(4));
   });
 
   testWidgets('a filter chip hides a status and brings it back',
@@ -199,6 +204,23 @@ void main() {
     await tester.tap(find.text('Hunted'));
     await tester.pump();
     expect(circles(tester), hasLength(2));
+  });
+
+  testWidgets('the park map opens on the terrain map, with a choice of its own',
+      (tester) async {
+    await open(tester, FakeApi());
+    final layer =
+        tester.widget<TileLayer>(find.byType(TileLayer));
+    expect(layer.urlTemplate, contains('opentopomap.org'));
+
+    await tester.tap(find.byTooltip('Map layers'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Light'));
+    await tester.pumpAndSettle();
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('wl_pota_map_base'), 'light');
+    // The QSO map's own choice is left alone
+    expect(prefs.getString('wl_map_base'), isNull);
   });
 
   testWidgets('the choice of statuses is remembered', (tester) async {

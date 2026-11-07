@@ -39,6 +39,10 @@ const _kStackedWithin = 8.0;
 
 const _kHiddenKey = 'wl_pota_map_hidden';
 
+/// The park map has its own background choice, and opens on the terrain map:
+/// the plain street map shows shops and airports that only get in the way.
+const kPotaMapBaseKey = 'wl_pota_map_base';
+
 /// Where the active station is, to open the map there when no position is
 /// known. Null without a grid.
 final potaMapHomeProvider = Provider<LatLng?>((ref) {
@@ -84,7 +88,7 @@ class _PotaMapScreenState extends ConsumerState<PotaMapScreen> {
   Timer? _retryTimer;
   StreamSubscription<PotaLocationFix>? _openingSub;
 
-  BaseMap _base = BaseMap.auto;
+  BaseMap _base = BaseMap.topo;
   Set<PotaParkStatus> _hidden = const {};
 
   /// The squares in view and whether too many are.
@@ -127,7 +131,8 @@ class _PotaMapScreenState extends ConsumerState<PotaMapScreen> {
   }
 
   Future<void> _loadPrefs() async {
-    final base = await loadBaseMap();
+    final base =
+        await loadBaseMap(key: kPotaMapBaseKey, fallback: BaseMap.topo);
     Set<PotaParkStatus> hidden = const {};
     try {
       final p = await SharedPreferences.getInstance();
@@ -438,7 +443,7 @@ class _PotaMapScreenState extends ConsumerState<PotaMapScreen> {
                 current: _base,
                 onChanged: (b) {
                   setState(() => _base = b);
-                  saveBaseMap(b);
+                  saveBaseMap(b, key: kPotaMapBaseKey);
                 },
               ),
             ),
@@ -476,25 +481,33 @@ class _PotaMapScreenState extends ConsumerState<PotaMapScreen> {
   }
 
   Widget _buildMap(BaseTiles tiles, PotaParkPoint? selected, ColorScheme cs) {
-    final edge = tiles.darkened || cs.brightness == Brightness.dark
-        ? Colors.white
-        : const Color(0xFF263238);
+    // What the map beneath looks like, whatever the app's theme
+    final dark = tiles.darkened;
+    // A ring around each dot sets it apart from the busy map beneath it
+    final ring = dark ? Colors.white : const Color(0xFF263238);
+    final paper = dark ? const Color(0xFF1B2230) : Colors.white;
     // Least interesting first, so that the best ones are not covered
-    final byStatus = {for (final s in PotaParkStatus.values) s: <CircleMarker>[]};
+    final byStatus = {for (final s in PotaParkStatus.values) s: <PotaParkPoint>[]};
     for (final (p, status) in _visibleParks()) {
-      byStatus[status]!.add(_dot(p, status, edge));
+      byStatus[status]!.add(p);
     }
-    final circles = [
-      for (final s in PotaParkStatus.values.reversed) ...byStatus[s]!,
-      if (selected != null)
-        CircleMarker(
-          point: LatLng(selected.lat, selected.lon),
-          radius: 13,
-          color: Colors.transparent,
-          borderColor: edge,
-          borderStrokeWidth: 3,
-        ),
-    ];
+    final halos = <CircleMarker>[];
+    final dots = <CircleMarker>[];
+    for (final s in PotaParkStatus.values.reversed) {
+      for (final p in byStatus[s]!) {
+        halos.add(_halo(p, s, dark));
+        dots.add(_dot(p, s, dark, paper));
+      }
+    }
+    if (selected != null) {
+      dots.add(CircleMarker(
+        point: LatLng(selected.lat, selected.lon),
+        radius: 17,
+        color: Colors.transparent,
+        borderColor: ring,
+        borderStrokeWidth: 3.5,
+      ));
+    }
 
     return FlutterMap(
       mapController: _map,
@@ -519,7 +532,16 @@ class _PotaMapScreenState extends ConsumerState<PotaMapScreen> {
       ),
       children: [
         BaseMapTileLayer(tiles: tiles, tileProvider: widget.tileProvider),
-        CircleLayer(circles: circles),
+        // Dims the map's own detail so that the parks stand out
+        IgnorePointer(
+          child: ColoredBox(
+            color: dark
+                ? Colors.black.withValues(alpha: 0.38)
+                : Colors.white.withValues(alpha: 0.5),
+          ),
+        ),
+        CircleLayer(circles: halos),
+        CircleLayer(circles: dots),
         if (_me != null)
           MarkerLayer(markers: [
             Marker(
@@ -527,8 +549,8 @@ class _PotaMapScreenState extends ConsumerState<PotaMapScreen> {
               width: 28,
               height: 28,
               child: const Icon(Icons.my_location,
-                  size: 22,
-                  color: Color(0xFFCC79A7),
+                  size: 26,
+                  color: Color(0xFF00B8D4),
                   shadows: [Shadow(color: Colors.black54, blurRadius: 4)]),
             ),
           ]),
@@ -536,39 +558,39 @@ class _PotaMapScreenState extends ConsumerState<PotaMapScreen> {
     );
   }
 
-  CircleMarker _dot(PotaParkPoint p, PotaParkStatus status, Color edge) {
-    final color = potaStatusColor(status);
+  /// Dot radius by status: the ones that matter to the operator are larger.
+  double _radius(PotaParkStatus status) => switch (status) {
+        PotaParkStatus.activated => 9,
+        PotaParkStatus.hunted || PotaParkStatus.neverActivated => 8,
+        PotaParkStatus.other => 7,
+      };
+
+  /// A white ring, with a thin dark line on a light map, so that the dot
+  /// is told apart from the map whatever lies beneath.
+  CircleMarker _halo(PotaParkPoint p, PotaParkStatus status, bool dark) =>
+      CircleMarker(
+        point: LatLng(p.lat, p.lon),
+        radius: _radius(status) + 3.5,
+        color: Colors.white.withValues(alpha: 0.96),
+        borderColor:
+            dark ? Colors.transparent : const Color(0xFF263238).withValues(alpha: 0.85),
+        borderStrokeWidth: dark ? 0 : 1.2,
+      );
+
+  CircleMarker _dot(
+      PotaParkPoint p, PotaParkStatus status, bool dark, Color paper) {
     final point = LatLng(p.lat, p.lon);
+    final r = _radius(status);
     return switch (status) {
-      // Hollow ring: not told by its colour alone
+      // A ring with an empty middle: not told by its colour alone
       PotaParkStatus.neverActivated => CircleMarker(
           point: point,
-          radius: 6,
-          color: color.withValues(alpha: 0.2),
-          borderColor: color,
-          borderStrokeWidth: 2.5,
+          radius: r,
+          color: paper,
+          borderColor: potaStatusColor(status),
+          borderStrokeWidth: 3.5,
         ),
-      PotaParkStatus.activated => CircleMarker(
-          point: point,
-          radius: 7,
-          color: color,
-          borderColor: edge,
-          borderStrokeWidth: 1.5,
-        ),
-      PotaParkStatus.hunted => CircleMarker(
-          point: point,
-          radius: 6,
-          color: color,
-          borderColor: edge,
-          borderStrokeWidth: 1.2,
-        ),
-      PotaParkStatus.other => CircleMarker(
-          point: point,
-          radius: 4.5,
-          color: color.withValues(alpha: 0.9),
-          borderColor: edge.withValues(alpha: 0.7),
-          borderStrokeWidth: 0.8,
-        ),
+      _ => CircleMarker(point: point, radius: r, color: potaStatusColor(status)),
     };
   }
 

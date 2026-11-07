@@ -111,6 +111,11 @@ class PotaParkSheet extends ConsumerWidget {
                 ),
               ),
               IconButton(
+                icon: const Icon(Icons.copy, size: 20),
+                tooltip: l10n.potaParkCopyRef,
+                onPressed: () => _copy(context, park.reference),
+              ),
+              IconButton(
                 icon: const Icon(Icons.close),
                 tooltip: l10n.close,
                 onPressed: onClose,
@@ -157,11 +162,6 @@ class PotaParkSheet extends ConsumerWidget {
                 icon: const Icon(Icons.share_outlined),
                 tooltip: l10n.potaParkShare,
                 onPressed: () => share(_shareMessage()),
-              ),
-              IconButton.outlined(
-                icon: const Icon(Icons.copy),
-                tooltip: l10n.potaParkCopyRef,
-                onPressed: () => _copy(context, park.reference),
               ),
             ],
           ),

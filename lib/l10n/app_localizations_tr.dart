@@ -2458,6 +2458,112 @@ class AppLocalizationsTr extends AppLocalizations {
   String get spotNewPark => 'Yeni park';
 
   @override
+  String get potaMapTitle => 'POTA parkları';
+
+  @override
+  String get potaMapZoomIn => 'Parkları görmek için yakınlaştırın';
+
+  @override
+  String get potaMapLoading => 'Parklar yükleniyor';
+
+  @override
+  String get potaMapLoadFailed => 'Bazı parklar yüklenemedi';
+
+  @override
+  String get potaMapStatusActivated => 'Aktive ettiklerim';
+
+  @override
+  String get potaMapStatusHunted => 'Avladıklarım';
+
+  @override
+  String get potaMapStatusNever => 'Hiç aktive edilmemiş';
+
+  @override
+  String get potaMapStatusOther => 'Diğer parklar';
+
+  @override
+  String get potaMapMyLocation => 'Konumum';
+
+  @override
+  String get potaMapLocationDenied =>
+      'Yakınınızdaki parkları bulmak için konum izni gerekir';
+
+  @override
+  String get potaMapLocationDeniedForever =>
+      'Bu uygulama için konum engellenmiş. Ayarlardan izin verin.';
+
+  @override
+  String get potaMapLocationOff => 'Cihazda konum kapalı';
+
+  @override
+  String get potaMapLocationFailed => 'Konumunuz alınamadı';
+
+  @override
+  String get potaMapOpenSettings => 'Ayarlar';
+
+  @override
+  String get potaMapAttribution => 'Park verisi: pota.app';
+
+  @override
+  String get potaMapSearchHint => 'Park ara';
+
+  @override
+  String get potaMapParkNotFound => 'Park bulunamadı';
+
+  @override
+  String get potaMapSeveralParks => 'Burada birden çok park var';
+
+  @override
+  String get potaParkLog => 'QSO logla';
+
+  @override
+  String get potaParkDirections => 'Yol tarifi';
+
+  @override
+  String get potaParkOpenWeb => 'pota.app\'te aç';
+
+  @override
+  String get potaParkShare => 'Paylaş';
+
+  @override
+  String get potaParkCopyRef => 'Referansı kopyala';
+
+  @override
+  String get potaParkCopied => 'Kopyalandı';
+
+  @override
+  String potaParkFromYou(String distance, String direction) {
+    return 'Size $distance $direction';
+  }
+
+  @override
+  String get potaParkNoMapApp =>
+      'Harita uygulaması bulunamadı. Koordinatlar kopyalandı.';
+
+  @override
+  String get potaParkActivations => 'Aktivasyon';
+
+  @override
+  String get potaParkQsosLabel => 'QSO';
+
+  @override
+  String get potaParkRecent => 'Son aktivasyonlar';
+
+  @override
+  String get potaParkNoActivations => 'Henüz aktivasyon yok';
+
+  @override
+  String potaParkFirstActivation(String callsign, String date) {
+    return 'İlk aktivasyon: $callsign, $date';
+  }
+
+  @override
+  String get potaParkDetailFailed => 'Park ayrıntıları yüklenemedi';
+
+  @override
+  String get potaParkUnknown => 'pota.app bu park için ayrıntı vermiyor';
+
+  @override
   String potaActivationProgress(String park, int count, int needed) {
     return '$park: bugün $count/$needed QSO (UTC)';
   }

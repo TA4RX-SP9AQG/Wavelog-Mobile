@@ -1650,6 +1650,8 @@
   "@spotNewPark": {"description": "Badge on a POTA spot whose park is not in the log yet"},
   "potaMapTitle": "POTA parks",
   "@potaMapTitle": {"description": "Title of the POTA park map screen and its menu entry"},
+  "drawerFieldActivity": "Field Activity",
+  "@drawerFieldActivity": {"description": "Drawer group for the park and summit tools used out in the field"},
   "potaMapZoomIn": "Zoom in to see parks",
   "@potaMapZoomIn": {"description": "Chip on the park map when too much is in view"},
   "potaMapLoading": "Loading parks",

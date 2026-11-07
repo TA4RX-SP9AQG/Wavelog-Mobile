@@ -2461,6 +2461,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get potaMapTitle => 'POTA parkları';
 
   @override
+  String get drawerFieldActivity => 'Saha Faaliyeti';
+
+  @override
   String get potaMapZoomIn => 'Parkları görmek için yakınlaştırın';
 
   @override

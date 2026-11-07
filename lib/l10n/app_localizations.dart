@@ -4723,6 +4723,12 @@ abstract class AppLocalizations {
   /// **'POTA parks'**
   String get potaMapTitle;
 
+  /// Drawer group for the park and summit tools used out in the field
+  ///
+  /// In en, this message translates to:
+  /// **'Field Activity'**
+  String get drawerFieldActivity;
+
   /// Chip on the park map when too much is in view
   ///
   /// In en, this message translates to:

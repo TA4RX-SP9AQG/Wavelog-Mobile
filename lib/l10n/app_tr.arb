@@ -879,6 +879,8 @@
     },
     "potaMapTitle": "POTA parkları",
     "@potaMapTitle": {},
+    "drawerFieldActivity": "Saha Faaliyeti",
+    "@drawerFieldActivity": {},
     "potaMapZoomIn": "Parkları görmek için yakınlaştırın",
     "@potaMapZoomIn": {},
     "potaMapLoading": "Parklar yükleniyor",

@@ -2474,6 +2474,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get potaMapTitle => 'POTA parks';
 
   @override
+  String get drawerFieldActivity => 'Field Activity';
+
+  @override
   String get potaMapZoomIn => 'Zoom in to see parks';
 
   @override

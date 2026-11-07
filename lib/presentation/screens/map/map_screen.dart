@@ -23,6 +23,7 @@ import '../../../providers/qso_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/station_provider.dart';
 import '../../../providers/worked_before_provider.dart';
+import '../../widgets/map/base_map.dart';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -154,58 +155,6 @@ final _mapMarkersProvider = FutureProvider<List<_QsoMarker>>((ref) async {
   return compute(_processQsoData, raw);
 });
 
-// ── Base maps ─────────────────────────────────────────────────────────────────
-
-/// The map backgrounds to choose from. [auto] is light or dark with the
-/// app's theme. All may be used by an app without an API key, with the
-/// attribution shown under the map.
-enum _BaseMap {
-  auto,
-  light,
-  dark,
-  topo;
-
-  static _BaseMap fromName(String? name) =>
-      values.firstWhere((b) => b.name == name, orElse: () => auto);
-}
-
-class _Tiles {
-  final String url;
-  final List<String> subdomains;
-  final int maxZoom;
-  final String attribution;
-  /// Shown through [_kDarkTiles]: OpenStreetMap has no dark style.
-  final bool darkened;
-  const _Tiles(this.url, this.attribution,
-      {this.subdomains = const [], this.maxZoom = 19, this.darkened = false});
-}
-
-const _osmUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const _osmAttribution = '© OpenStreetMap contributors';
-
-/// Inverts the tiles and turns the hues back by 180°, as CSS
-/// `invert(1) hue-rotate(180deg)`: dark land and sea, with water still
-/// blue and parks still green.
-const _kDarkTiles = ColorFilter.matrix(<double>[
-  0.574, -1.430, -0.144, 0, 255, //
-  -0.426, -0.430, -0.144, 0, 255, //
-  -0.426, -1.430, 0.856, 0, 255, //
-  0, 0, 0, 1, 0,
-]);
-
-_Tiles _tilesFor(_BaseMap base, bool isDark) => switch (base) {
-      _BaseMap.auto => _tilesFor(isDark ? _BaseMap.dark : _BaseMap.light, isDark),
-      _BaseMap.light => const _Tiles(_osmUrl, _osmAttribution),
-      _BaseMap.dark => const _Tiles(_osmUrl, _osmAttribution, darkened: true),
-      // The credit OpenTopoMap asks for.
-      _BaseMap.topo => const _Tiles(
-          'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-          'Map data: © OpenStreetMap contributors, SRTM  '
-          'Map style: © OpenTopoMap (CC-BY-SA)',
-          subdomains: ['a', 'b', 'c'],
-          maxZoom: 17),
-    };
-
 /// Lines to more stations than this are left out: thousands of curves make
 /// the map slow and unreadable.
 const _kMaxGreatCircles = 300;
@@ -226,10 +175,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   _QsoMarker? _popup;
   Offset? _popupPos; // position within the map Stack
 
-  static const _kBaseKey = 'wl_map_base';
   static const _kLinesKey = 'wl_map_great_circles';
   static const _kGreylineKey = 'wl_map_greyline';
-  _BaseMap _base = _BaseMap.auto;
+  BaseMap _base = BaseMap.auto;
   bool _showLines = true;
   bool _showGreyline = true;
   // The greyline moves about a degree every four minutes.
@@ -249,7 +197,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       final p = await SharedPreferences.getInstance();
       if (!mounted) return;
       setState(() {
-        _base = _BaseMap.fromName(p.getString(_kBaseKey));
+        _base = BaseMap.fromName(p.getString(kBaseMapPrefKey));
         _showLines = p.getBool(_kLinesKey) ?? true;
         _showGreyline = p.getBool(_kGreylineKey) ?? true;
       });
@@ -259,7 +207,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _savePrefs() async {
     try {
       final p = await SharedPreferences.getInstance();
-      await p.setString(_kBaseKey, _base.name);
+      await p.setString(kBaseMapPrefKey, _base.name);
       await p.setBool(_kLinesKey, _showLines);
       await p.setBool(_kGreylineKey, _showGreyline);
     } catch (_) {}
@@ -291,10 +239,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           }
 
           final names = {
-            _BaseMap.auto: l10n.mapBaseAuto,
-            _BaseMap.light: l10n.mapBaseLight,
-            _BaseMap.dark: l10n.mapBaseDark,
-            _BaseMap.topo: l10n.mapBaseTopo,
+            BaseMap.auto: l10n.mapBaseAuto,
+            BaseMap.light: l10n.mapBaseLight,
+            BaseMap.dark: l10n.mapBaseDark,
+            BaseMap.topo: l10n.mapBaseTopo,
           };
           return SafeArea(
             child: SingleChildScrollView(
@@ -307,12 +255,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     child: Text(l10n.mapLayers,
                         style: Theme.of(ctx).textTheme.titleMedium),
                   ),
-                  RadioGroup<_BaseMap>(
+                  RadioGroup<BaseMap>(
                     groupValue: _base,
                     onChanged: (v) => update(() => _base = v ?? _base),
                     child: Column(children: [
-                      for (final b in _BaseMap.values)
-                        RadioListTile<_BaseMap>(
+                      for (final b in BaseMap.values)
+                        RadioListTile<BaseMap>(
                           dense: true,
                           title: Text(names[b]!),
                           value: b,
@@ -422,7 +370,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final tiles = _tilesFor(_base, isDark);
+    final tiles = tilesFor(_base, isDark);
     final station = _stationPoint();
 
     return Scaffold(
@@ -557,19 +505,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         ),
                       ),
                       children: [
-                        ColorFiltered(
-                          colorFilter: tiles.darkened
-                              ? _kDarkTiles
-                              : const ColorFilter.mode(
-                                  Colors.transparent, BlendMode.dst),
-                          child: TileLayer(
-                            urlTemplate: tiles.url,
-                            subdomains: tiles.subdomains,
-                            userAgentPackageName: 'com.wavelog_mobile',
-                            maxNativeZoom: tiles.maxZoom,
-                            maxZoom: 19,
-                          ),
-                        ),
+                        BaseMapTileLayer(tiles: tiles),
                         if (_showGreyline)
                           PolygonLayer(polygons: [
                             Polygon(
@@ -614,7 +550,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         children: [
                           // Shown while the map is turned: back to north up.
                           if (_rotation.abs() > 0.5) ...[
-                            _ZoomButton(
+                            MapRoundButton(
                               icon: Icons.navigation,
                               iconAngle: _rotation * pi / 180, // layers turn by +rotation
                               tooltip: l10n.mapNorthUp,
@@ -622,12 +558,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             ),
                             const SizedBox(height: 6),
                           ],
-                          _ZoomButton(
+                          MapRoundButton(
                             icon: Icons.add,
                             onTap: () => _zoom(1),
                           ),
                           const SizedBox(height: 6),
-                          _ZoomButton(
+                          MapRoundButton(
                             icon: Icons.remove,
                             onTap: () => _zoom(-1),
                           ),
@@ -941,44 +877,4 @@ class _MiniChip extends StatelessWidget {
           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
         ),
       );
-}
-
-// ── Zoom Buttons ──────────────────────────────────────────────────────────────
-
-class _ZoomButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  /// Turns the icon, so the compass needle points to north.
-  final double iconAngle;
-  /// Read out by screen readers.
-  final String? tooltip;
-  const _ZoomButton(
-      {required this.icon,
-      required this.onTap,
-      this.iconAngle = 0,
-      this.tooltip});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Material(
-      elevation: 3,
-      shadowColor: Colors.black38,
-      color: cs.surface,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: SizedBox(
-          width: 38,
-          height: 38,
-          child: Transform.rotate(
-            angle: iconAngle,
-            child: Icon(icon,
-                size: 20, color: cs.onSurface, semanticLabel: tooltip),
-          ),
-        ),
-      ),
-    );
-  }
 }

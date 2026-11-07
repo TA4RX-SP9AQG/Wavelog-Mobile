@@ -2591,6 +2591,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get potaParkUnknown => 'pota.app bu park için ayrıntı vermiyor';
 
   @override
+  String get potaParkBoundaryNote =>
+      'Yaklaşık sınır, OpenStreetMap’ten. Yayına çıkmadan önce parkın resmi haritasını kontrol edin.';
+
+  @override
+  String get potaParkBoundaryMissing => 'Bu park için sınır bulunamadı';
+
+  @override
+  String get potaParkBoundaryLooking => 'Park sınırı aranıyor';
+
+  @override
   String potaActivationProgress(String park, int count, int needed) {
     return '$park: bugün $count/$needed QSO (UTC)';
   }

@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/utils/geo_utils.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/pota_parks.dart';
+import '../../../data/models/park_boundary_model.dart';
 import '../../../data/models/pota_park_model.dart';
 import '../../../providers/pota_parks_provider.dart';
 import '../../../providers/pota_stats_provider.dart';
@@ -170,6 +171,8 @@ class PotaParkSheet extends ConsumerWidget {
           ),
           const Divider(height: 24),
           _Details(reference: park.reference),
+          const SizedBox(height: 8),
+          _BoundaryNote(park: park),
           const SizedBox(height: 12),
           _Activity(reference: park.reference),
         ],
@@ -408,6 +411,48 @@ class _Figure extends StatelessWidget {
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
       ],
+    );
+  }
+}
+
+/// Says whether the park's outline is on the map: being looked for, found
+/// (with the reminder that it is only approximate) or not found.
+class _BoundaryNote extends ConsumerWidget {
+  final PotaParkPoint park;
+  const _BoundaryNote({required this.park});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall
+        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final outline = ref.watch(potaParkBoundaryProvider(parkBoundaryKey(park)));
+    return outline.when(
+      loading: () => Row(children: [
+        const SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(strokeWidth: 2)),
+        const SizedBox(width: 8),
+        Expanded(child: Text(l10n.potaParkBoundaryLooking, style: muted)),
+      ]),
+      error: (_, __) => Text(l10n.potaParkBoundaryMissing, style: muted),
+      data: (ParkBoundary? b) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+              b == null ? Icons.layers_clear_outlined : Icons.info_outline,
+              size: 14,
+              color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+                b == null ? l10n.potaParkBoundaryMissing : l10n.potaParkBoundaryNote,
+                style: muted),
+          ),
+        ],
+      ),
     );
   }
 }

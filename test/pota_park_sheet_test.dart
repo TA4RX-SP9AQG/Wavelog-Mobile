@@ -7,10 +7,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wavelog_mobile/core/utils/pota_parks.dart';
 import 'package:wavelog_mobile/data/datasources/remote/pota_parks_datasource.dart';
 import 'package:wavelog_mobile/data/models/pota_park_model.dart';
+import 'helpers/fake_boundaries.dart';
 import 'package:wavelog_mobile/l10n/app_localizations.dart';
 import 'package:wavelog_mobile/presentation/widgets/pota/pota_park_sheet.dart';
 import 'package:wavelog_mobile/providers/pota_parks_provider.dart';
 import 'package:wavelog_mobile/providers/pota_stats_provider.dart';
+
 
 const park = PotaParkPoint(
     reference: 'PL-0363', name: 'Dąbrowy Seroczyńskie', lat: 52.0088, lon: 21.9843);
@@ -67,6 +69,7 @@ Future<void> show(
   ShareText? share,
   Locale locale = const Locale('en'),
   double width = 400,
+  FakeBoundaries? boundaries,
 }) async {
   tester.view.physicalSize = Size(width * 3, 2400);
   tester.view.devicePixelRatio = 3;
@@ -74,6 +77,8 @@ Future<void> show(
   await tester.pumpWidget(ProviderScope(
     overrides: [
       potaParksDatasourceProvider.overrideWithValue(fake),
+      parkBoundaryDatasourceProvider
+          .overrideWithValue(boundaries ?? FakeBoundaries()),
       activatedParksProvider.overrideWithValue(activated),
       huntedParksProvider.overrideWithValue(hunted),
     ],
@@ -309,6 +314,46 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: '$locale');
     }
+  });
+
+  group('the outline note', () {
+    testWidgets('says it is looking, then that the outline is approximate',
+        (tester) async {
+      final b = FakeBoundaries(result: squareOutline(52.0088, 21.9843))
+        ..gate = Completer<void>();
+      await show(tester, FakeCard(), boundaries: b);
+      await tester.pump(kParkBoundaryDwell + const Duration(milliseconds: 50));
+      expect(find.text('Looking for the park outline'), findsOneWidget);
+
+      b.gate!.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('Looking for the park outline'), findsNothing);
+      expect(find.textContaining('Approximate outline from OpenStreetMap'),
+          findsOneWidget);
+      expect(b.asked, ['PL-0363']);
+    });
+
+    testWidgets('says so when there is none', (tester) async {
+      await show(tester, FakeCard(), boundaries: FakeBoundaries());
+      await tester.pumpAndSettle();
+      expect(find.text('No outline found for this park'), findsOneWidget);
+      expect(find.textContaining('Approximate outline'), findsNothing);
+    });
+
+    testWidgets('and when Nominatim could not be reached', (tester) async {
+      final b = FakeBoundaries()..error = Exception('offline');
+      await show(tester, FakeCard(), boundaries: b);
+      await tester.pumpAndSettle();
+      expect(find.text('No outline found for this park'), findsOneWidget);
+    });
+
+    testWidgets('in the app language', (tester) async {
+      await show(tester, FakeCard(),
+          boundaries: FakeBoundaries(result: squareOutline(52.0088, 21.9843)),
+          locale: const Locale('tr'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Yaklaşık sınır'), findsOneWidget);
+    });
   });
 
   group('links', () {

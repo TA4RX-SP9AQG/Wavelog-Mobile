@@ -14,6 +14,7 @@ import '../../../core/utils/geo_utils.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/map_geo.dart';
 import '../../../core/utils/pota_parks.dart';
+import '../../../data/models/park_boundary_model.dart';
 import '../../../data/models/pota_park_model.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/connectivity_provider.dart';
@@ -458,6 +459,17 @@ class _PotaMapScreenState extends ConsumerState<PotaMapScreen> {
     final selected = _selected == null
         ? null
         : (parksState.find(_selected!.reference) ?? _selected);
+    // The selected park's outline, once it has been found
+    ParkBoundary? outline;
+    if (selected != null) {
+      final key = parkBoundaryKey(selected);
+      outline = ref.watch(potaParkBoundaryProvider(key)).valueOrNull;
+      ref.listen<AsyncValue<ParkBoundary?>>(potaParkBoundaryProvider(key),
+          (_, next) {
+        final b = next.valueOrNull;
+        if (b != null) _fitOutline(b);
+      });
+    }
     final failed = parksState.failedIn(_squares).isNotEmpty;
     final loading = parksState.isLoadingAny(_squares);
 
@@ -489,7 +501,7 @@ class _PotaMapScreenState extends ConsumerState<PotaMapScreen> {
             Expanded(
               child: Stack(
                 children: [
-                  _buildMap(tiles, selected, cs),
+                  _buildMap(tiles, selected, outline, cs),
                   _buildTop(l10n, failed, loading),
                   _buildButtons(l10n),
                   if (selected != null) _buildSheet(selected),
@@ -515,7 +527,8 @@ class _PotaMapScreenState extends ConsumerState<PotaMapScreen> {
     );
   }
 
-  Widget _buildMap(BaseTiles tiles, PotaParkPoint? selected, ColorScheme cs) {
+  Widget _buildMap(BaseTiles tiles, PotaParkPoint? selected,
+      ParkBoundary? outline, ColorScheme cs) {
     if (_tiles == null) return ColoredBox(color: cs.surfaceContainerLow);
     // What the map beneath looks like, whatever the app's theme
     final ring = tiles.darkened ? Colors.white : const Color(0xFF263238);
@@ -565,6 +578,8 @@ class _PotaMapScreenState extends ConsumerState<PotaMapScreen> {
                 : Colors.white.withValues(alpha: 0.25),
           ),
         ),
+        if (selected != null && outline != null)
+          PolygonLayer(polygons: _outlinePolygons(selected, outline)),
         ParkIconLayer(parks: parks, icons: _icons),
         if (selected != null)
           CircleLayer(circles: [
@@ -589,6 +604,43 @@ class _PotaMapScreenState extends ConsumerState<PotaMapScreen> {
           ]),
       ],
     );
+  }
+
+  /// The park's outline as areas on the map, in the colour of its status.
+  List<Polygon> _outlinePolygons(PotaParkPoint park, ParkBoundary outline) {
+    final color = potaStatusColor(_statusOf(
+        park, ref.read(activatedParksProvider), ref.read(huntedParksProvider)));
+    LatLng at(GeoPoint p) => LatLng(p.lat, p.lon);
+    return [
+      for (final area in outline.areas)
+        Polygon(
+          points: [for (final p in area.outer) at(p)],
+          holePointsList: [
+            for (final hole in area.holes) [for (final p in hole) at(p)],
+          ],
+          color: color.withValues(alpha: 0.2),
+          borderColor: color,
+          borderStrokeWidth: 3,
+        ),
+    ];
+  }
+
+  /// Shows the whole outline in the part of the map the card leaves free: the
+  /// card covers the lower part, the search and filters the top.
+  void _fitOutline(ParkBoundary outline) {
+    if (!_mapReady || !mounted) return;
+    final box = outline.bounds;
+    final height = _map.camera.nonRotatedSize.y;
+    _userMoved = true;
+    _map.fitCamera(CameraFit.bounds(
+      bounds: LatLngBounds(
+          LatLng(box.south, box.west), LatLng(box.north, box.east)),
+      padding: EdgeInsets.fromLTRB(
+          28, min(150, height * 0.25), 28, min(height * 0.46 + 16, height * 0.6)),
+      // Not so far out that the parks stop being drawn
+      minZoom: kMinParkZoom,
+      maxZoom: 17,
+    ));
   }
 
   Widget _buildTop(AppLocalizations l10n, bool failed, bool loading) {

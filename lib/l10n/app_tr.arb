@@ -961,6 +961,12 @@
     "@potaParkDetailFailed": {},
     "potaParkUnknown": "pota.app bu park için ayrıntı vermiyor",
     "@potaParkUnknown": {},
+    "potaParkBoundaryNote": "Yaklaşık sınır, OpenStreetMap’ten. Yayına çıkmadan önce parkın resmi haritasını kontrol edin.",
+    "@potaParkBoundaryNote": {},
+    "potaParkBoundaryMissing": "Bu park için sınır bulunamadı",
+    "@potaParkBoundaryMissing": {},
+    "potaParkBoundaryLooking": "Park sınırı aranıyor",
+    "@potaParkBoundaryLooking": {},
     "potaActivationProgress": "{park}: bugün {count}/{needed} QSO (UTC)",
     "@potaActivationProgress": {
         "placeholders": {

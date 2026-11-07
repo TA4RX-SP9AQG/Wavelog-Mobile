@@ -12,6 +12,7 @@ import 'package:wavelog_mobile/core/utils/pota_parks.dart';
 import 'package:wavelog_mobile/presentation/widgets/pota/park_icon.dart';
 import 'package:wavelog_mobile/data/datasources/remote/pota_parks_datasource.dart';
 import 'package:wavelog_mobile/data/models/pota_park_model.dart';
+import 'helpers/fake_boundaries.dart';
 import 'package:wavelog_mobile/l10n/app_localizations.dart';
 import 'package:wavelog_mobile/presentation/screens/pota/pota_map_screen.dart';
 import 'package:wavelog_mobile/providers/connectivity_provider.dart';
@@ -27,6 +28,7 @@ class _BlankTiles extends TileProvider {
   ImageProvider getImage(TileCoordinates coordinates, TileLayer options) =>
       MemoryImage(_png);
 }
+
 
 PotaParkPoint park(String ref, double lat, double lon,
         {String? name, bool atno = false}) =>
@@ -103,6 +105,7 @@ Future<ProviderContainer> open(
   Set<String>? activated = const {},
   Set<String>? hunted = const {},
   String? goTo,
+  FakeBoundaries? boundaries,
 }) async {
   SharedPreferences.setMockInitialValues({});
   tester.view.physicalSize = const Size(1200, 2400);
@@ -119,23 +122,27 @@ Future<ProviderContainer> open(
           body: Text('QSO form for ${s.uri.queryParameters['pota']}')),
     ),
   ]);
-  final container = ProviderContainer(overrides: [
-    potaParksDatasourceProvider.overrideWithValue(api),
-    potaLocationServiceProvider.overrideWithValue(location ?? FakeLocation()),
-    potaMapHomeProvider.overrideWithValue(home),
-    activatedParksProvider.overrideWithValue(activated),
-    huntedParksProvider.overrideWithValue(hunted),
-    isOnlineProvider.overrideWith((ref) => ref.watch(online)),
-  ]);
-  addTearDown(container.dispose);
-  await tester.pumpWidget(UncontrolledProviderScope(
-    container: container,
+  // The scope belongs to the widget tree, as in the app, so that what the
+  // providers have scheduled is cancelled when the tree goes
+  await tester.pumpWidget(ProviderScope(
+    overrides: [
+      potaParksDatasourceProvider.overrideWithValue(api),
+      parkBoundaryDatasourceProvider
+          .overrideWithValue(boundaries ?? FakeBoundaries()),
+      potaLocationServiceProvider.overrideWithValue(location ?? FakeLocation()),
+      potaMapHomeProvider.overrideWithValue(home),
+      activatedParksProvider.overrideWithValue(activated),
+      huntedParksProvider.overrideWithValue(hunted),
+      isOnlineProvider.overrideWith((ref) => ref.watch(online)),
+    ],
     child: MaterialApp.router(
       routerConfig: router,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     ),
   ));
+  final container =
+      ProviderScope.containerOf(tester.element(find.byType(MaterialApp)));
   await settle(tester);
   return container;
 }
@@ -254,6 +261,83 @@ void main() {
     expect(find.text('Log QSO'), findsNothing);
     expect(hasSelectionRing(tester), isFalse);
     expect(circles(tester), hasLength(1));
+  });
+
+  group('the park outline', () {
+    PolygonLayer outlineLayer(WidgetTester t) =>
+        t.widget<PolygonLayer>(find.byType(PolygonLayer));
+
+    testWidgets('drawn when a park is selected and its outline is found',
+        (tester) async {
+      final api = FakeApi()..squares['KO02'] = [park('PL-0001', 52.5, 21.0)];
+      final b = FakeBoundaries(result: squareOutline(52.5, 21.0));
+      await open(tester, api, boundaries: b);
+      expect(find.byType(PolygonLayer), findsNothing);
+
+      await tapMapCentre(tester);
+      await settle(tester);
+      expect(b.asked, ['PL-0001']);
+      expect(outlineLayer(tester).polygons, hasLength(1));
+      expect(outlineLayer(tester).polygons.single.borderStrokeWidth,
+          greaterThan(2));
+    });
+
+    testWidgets('shown whole, in the part of the map the card leaves free',
+        (tester) async {
+      final api = FakeApi()..squares['KO02'] = [park('PL-0001', 52.5, 21.0)];
+      final outline = squareOutline(52.5, 21.0, half: 0.03);
+      await open(tester, api, boundaries: FakeBoundaries(result: outline));
+      await tapMapCentre(tester);
+      await settle(tester);
+
+      final camera = MapCamera.of(tester.element(find.byType(PolygonLayer)));
+      final box = outline.bounds;
+      // The whole outline is in view
+      expect(camera.visibleBounds.contains(LatLng(box.south, box.west)), isTrue);
+      expect(camera.visibleBounds.contains(LatLng(box.north, box.east)), isTrue);
+      // and the map is zoomed to it, not left at the starting zoom
+      expect(camera.zoom, greaterThan(10));
+      // its middle is above the middle of the map, clear of the card
+      final middle = camera.latLngToScreenPoint(const LatLng(52.5, 21.0));
+      expect(middle.y, lessThan(camera.nonRotatedSize.y * 0.5));
+      // and the whole of it is above the card (which starts ~58% down)
+      final bottom = camera.latLngToScreenPoint(LatLng(box.south, box.west)).y;
+      expect(bottom, lessThan(camera.nonRotatedSize.y * 0.6));
+    });
+
+    testWidgets('nothing is drawn without an outline', (tester) async {
+      final api = FakeApi()..squares['KO02'] = [park('PL-0001', 52.5, 21.0)];
+      await open(tester, api, boundaries: FakeBoundaries());
+      await tapMapCentre(tester);
+      await settle(tester);
+      expect(find.byType(PolygonLayer), findsNothing);
+      expect(find.text('No outline found for this park'), findsOneWidget);
+    });
+
+    testWidgets('gone when the card is closed', (tester) async {
+      final api = FakeApi()..squares['KO02'] = [park('PL-0001', 52.5, 21.0)];
+      await open(tester, api,
+          boundaries: FakeBoundaries(result: squareOutline(52.5, 21.0)));
+      await tapMapCentre(tester);
+      await settle(tester);
+      expect(find.byType(PolygonLayer), findsOneWidget);
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pump();
+      expect(find.byType(PolygonLayer), findsNothing);
+    });
+
+    testWidgets('a park tapped in passing is not asked for', (tester) async {
+      final api = FakeApi()..squares['KO02'] = [park('PL-0001', 52.5, 21.0)];
+      final b = FakeBoundaries();
+      await open(tester, api, boundaries: b);
+      // Tapped, and let go well inside the dwell
+      await tester.tapAt(tester.getCenter(find.byType(FlutterMap)));
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(find.text('Log QSO'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close'));
+      await settle(tester);
+      expect(b.asked, isEmpty);
+    });
   });
 
   testWidgets('tapping empty map closes the card', (tester) async {
@@ -516,17 +600,16 @@ void main() {
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
       final api = FakeApi()..failWith = Exception('x');
-      final container = ProviderContainer(overrides: [
-        potaParksDatasourceProvider.overrideWithValue(api),
-        potaLocationServiceProvider.overrideWithValue(FakeLocation()),
-        potaMapHomeProvider.overrideWithValue(null),
-        activatedParksProvider.overrideWithValue(const {}),
-        huntedParksProvider.overrideWithValue(const {}),
-        isOnlineProvider.overrideWithValue(true),
-      ]);
-      addTearDown(container.dispose);
-      await tester.pumpWidget(UncontrolledProviderScope(
-        container: container,
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          potaParksDatasourceProvider.overrideWithValue(api),
+          parkBoundaryDatasourceProvider.overrideWithValue(FakeBoundaries()),
+          potaLocationServiceProvider.overrideWithValue(FakeLocation()),
+          potaMapHomeProvider.overrideWithValue(null),
+          activatedParksProvider.overrideWithValue(const {}),
+          huntedParksProvider.overrideWithValue(const {}),
+          isOnlineProvider.overrideWithValue(true),
+        ],
         child: MaterialApp(
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,

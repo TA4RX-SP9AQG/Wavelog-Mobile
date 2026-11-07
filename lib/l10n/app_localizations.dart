@@ -4969,6 +4969,24 @@ abstract class AppLocalizations {
   /// **'pota.app has no details for this park'**
   String get potaParkUnknown;
 
+  /// Note under the park outline drawn on the map: it is not an official boundary
+  ///
+  /// In en, this message translates to:
+  /// **'Approximate outline from OpenStreetMap. Check the park’s official map before you operate.'**
+  String get potaParkBoundaryNote;
+
+  /// Shown on the park card when OpenStreetMap has no outline for it
+  ///
+  /// In en, this message translates to:
+  /// **'No outline found for this park'**
+  String get potaParkBoundaryMissing;
+
+  /// Shown on the park card while the outline is being looked up
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for the park outline'**
+  String get potaParkBoundaryLooking;
+
   /// No description provided for @potaActivationProgress.
   ///
   /// In en, this message translates to:

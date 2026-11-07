@@ -4,7 +4,9 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/datasources/remote/park_boundary_datasource.dart';
 import '../data/datasources/remote/pota_parks_datasource.dart';
+import '../data/models/park_boundary_model.dart';
 import '../data/models/pota_park_model.dart';
 
 final potaParksDatasourceProvider =
@@ -222,3 +224,44 @@ final potaParkActivationsProvider =
     FutureProvider.autoDispose.family<List<PotaActivation>, String>(
         (ref, reference) =>
             ref.read(potaParksDatasourceProvider).getRecentActivations(reference));
+
+// ── The park's outline ────────────────────────────────────────────────────────
+
+final parkBoundaryDatasourceProvider =
+    Provider<ParkBoundaryDatasource>((_) => ParkBoundaryDatasource());
+
+/// How long a park stays selected before its outline is asked for, so that
+/// tapping through several parks does not ask for each.
+const kParkBoundaryDwell = Duration(milliseconds: 700);
+
+/// What is needed to look an outline up. A record, so equal parks are the
+/// same key.
+typedef ParkBoundaryKey = ({String reference, String name, double lat, double lon});
+
+ParkBoundaryKey parkBoundaryKey(PotaParkPoint p) =>
+    (reference: p.reference, name: p.name, lat: p.lat, lon: p.lon);
+
+/// The outline of a park, or null when OpenStreetMap has none that fits.
+/// Nothing is asked until the park has stayed selected for a moment, and
+/// nothing at all when it is deselected in that moment.
+final potaParkBoundaryProvider =
+    FutureProvider.autoDispose.family<ParkBoundary?, ParkBoundaryKey>(
+        (ref, key) async {
+  // The wait ends early, and its timer is cancelled, when the park is let go
+  var gone = false;
+  final waited = Completer<void>();
+  final timer = Timer(kParkBoundaryDwell, waited.complete);
+  ref.onDispose(() {
+    gone = true;
+    timer.cancel();
+    if (!waited.isCompleted) waited.complete();
+  });
+  await waited.future;
+  if (gone) return null;
+  return ref.read(parkBoundaryDatasourceProvider).find(
+        reference: key.reference,
+        name: key.name,
+        lat: key.lat,
+        lon: key.lon,
+      );
+});

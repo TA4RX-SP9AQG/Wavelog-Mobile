@@ -2588,6 +2588,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get potaParkUnknown => 'pota.app has no details for this park';
 
   @override
+  String get potaParkBoundaryNote =>
+      'Approximate outline from OpenStreetMap. Check the park’s official map before you operate.';
+
+  @override
+  String get potaParkBoundaryMissing => 'No outline found for this park';
+
+  @override
+  String get potaParkBoundaryLooking => 'Looking for the park outline';
+
+  @override
   String potaActivationProgress(String park, int count, int needed) {
     return '$park: $count/$needed QSOs today (UTC)';
   }

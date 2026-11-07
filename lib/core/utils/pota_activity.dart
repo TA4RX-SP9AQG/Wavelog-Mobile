@@ -3,6 +3,9 @@ import '../../data/models/qso_model.dart';
 /// QSOs needed from one park on one UTC day for a valid POTA activation.
 const kPotaActivationQsos = 10;
 
+/// A POTA park reference as typed or logged, e.g. "PL-0341" or "US-12345".
+final potaRefPattern = RegExp(r'^[A-Z0-9]{1,4}-\d{4,5}$');
+
 /// The park references in an ADIF POTA_REF / MY_POTA_REF value, which is
 /// comma-separated for a contact with several parks ("PL-0001,PL-0002").
 List<String> potaRefsOf(String? value) => [

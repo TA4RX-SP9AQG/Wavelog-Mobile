@@ -2464,6 +2464,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get drawerFieldActivity => 'Saha Faaliyeti';
 
   @override
+  String get compassN => 'K';
+
+  @override
+  String get compassNE => 'KD';
+
+  @override
+  String get compassE => 'D';
+
+  @override
+  String get compassSE => 'GD';
+
+  @override
+  String get compassS => 'G';
+
+  @override
+  String get compassSW => 'GB';
+
+  @override
+  String get compassW => 'B';
+
+  @override
+  String get compassNW => 'KB';
+
+  @override
   String get potaMapZoomIn => 'Parkları görmek için yakınlaştırın';
 
   @override

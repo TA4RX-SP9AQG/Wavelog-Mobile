@@ -4729,6 +4729,54 @@ abstract class AppLocalizations {
   /// **'Field Activity'**
   String get drawerFieldActivity;
 
+  /// Compass direction N, short form, shown after a distance (12 km N from you)
+  ///
+  /// In en, this message translates to:
+  /// **'N'**
+  String get compassN;
+
+  /// Compass direction NE, short form, shown after a distance (12 km NE from you)
+  ///
+  /// In en, this message translates to:
+  /// **'NE'**
+  String get compassNE;
+
+  /// Compass direction E, short form, shown after a distance (12 km E from you)
+  ///
+  /// In en, this message translates to:
+  /// **'E'**
+  String get compassE;
+
+  /// Compass direction SE, short form, shown after a distance (12 km SE from you)
+  ///
+  /// In en, this message translates to:
+  /// **'SE'**
+  String get compassSE;
+
+  /// Compass direction S, short form, shown after a distance (12 km S from you)
+  ///
+  /// In en, this message translates to:
+  /// **'S'**
+  String get compassS;
+
+  /// Compass direction SW, short form, shown after a distance (12 km SW from you)
+  ///
+  /// In en, this message translates to:
+  /// **'SW'**
+  String get compassSW;
+
+  /// Compass direction W, short form, shown after a distance (12 km W from you)
+  ///
+  /// In en, this message translates to:
+  /// **'W'**
+  String get compassW;
+
+  /// Compass direction NW, short form, shown after a distance (12 km NW from you)
+  ///
+  /// In en, this message translates to:
+  /// **'NW'**
+  String get compassNW;
+
   /// Chip on the park map when too much is in view
   ///
   /// In en, this message translates to:

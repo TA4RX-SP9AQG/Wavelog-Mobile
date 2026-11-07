@@ -2477,6 +2477,30 @@ class AppLocalizationsRu extends AppLocalizations {
   String get drawerFieldActivity => 'Field Activity';
 
   @override
+  String get compassN => 'N';
+
+  @override
+  String get compassNE => 'NE';
+
+  @override
+  String get compassE => 'E';
+
+  @override
+  String get compassSE => 'SE';
+
+  @override
+  String get compassS => 'S';
+
+  @override
+  String get compassSW => 'SW';
+
+  @override
+  String get compassW => 'W';
+
+  @override
+  String get compassNW => 'NW';
+
+  @override
   String get potaMapZoomIn => 'Zoom in to see parks';
 
   @override

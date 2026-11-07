@@ -20,3 +20,16 @@ String potaStatusLabel(AppLocalizations l10n, PotaParkStatus status) =>
       PotaParkStatus.neverActivated => l10n.potaMapStatusNever,
       PotaParkStatus.other => l10n.potaMapStatusOther,
     };
+
+/// The short, translated name of a compass point ("NE", "KD").
+String compassLabel(AppLocalizations l10n, CompassPoint point) =>
+    switch (point) {
+      CompassPoint.n => l10n.compassN,
+      CompassPoint.ne => l10n.compassNE,
+      CompassPoint.e => l10n.compassE,
+      CompassPoint.se => l10n.compassSE,
+      CompassPoint.s => l10n.compassS,
+      CompassPoint.sw => l10n.compassSW,
+      CompassPoint.w => l10n.compassW,
+      CompassPoint.nw => l10n.compassNW,
+    };

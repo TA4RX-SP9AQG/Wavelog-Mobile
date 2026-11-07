@@ -163,11 +163,13 @@ PotaParkStatus parkStatus({
       hunted: hunted,
     ).first;
 
-/// The compass point of a bearing in degrees (0 = north), as "N", "NE"...
-String compassPoint(double azimuth) {
-  const points = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+/// The eight compass points, as a bearing falls among them.
+enum CompassPoint { n, ne, e, se, s, sw, w, nw }
+
+/// The compass point of a bearing in degrees (0 = north).
+CompassPoint compassPoint(double azimuth) {
   final a = ((azimuth % 360) + 360) % 360;
-  return points[((a + 22.5) ~/ 45) % 8];
+  return CompassPoint.values[((a + 22.5) ~/ 45) % 8];
 }
 
 // ── Links ─────────────────────────────────────────────────────────────────────

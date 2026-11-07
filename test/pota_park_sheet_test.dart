@@ -196,6 +196,14 @@ void main() {
     expect(find.textContaining(' NE from you'), findsOneWidget);
   });
 
+  testWidgets('the direction is in the app language', (tester) async {
+    await show(tester, FakeCard(),
+        me: (lat: 51.6, lon: 21.4), locale: const Locale('tr'));
+    // North-east is "KD" in Turkish
+    expect(find.textContaining(' KD'), findsOneWidget);
+    expect(find.textContaining(' NE'), findsNothing);
+  });
+
   testWidgets('Log starts a QSO for this park', (tester) async {
     String? logged;
     await show(tester, FakeCard(), onLog: (r) => logged = r);

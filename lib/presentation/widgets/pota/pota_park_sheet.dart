@@ -69,7 +69,10 @@ class PotaParkSheet extends ConsumerWidget {
         : l10n.potaParkFromYou(
             formatDistance(
                 calculateDistance(me.lat, me.lon, park.lat, park.lon)),
-            compassPoint(calculateAzimuth(me.lat, me.lon, park.lat, park.lon)),
+            compassLabel(
+                l10n,
+                compassPoint(
+                    calculateAzimuth(me.lat, me.lon, park.lat, park.lon))),
           );
 
     return Material(

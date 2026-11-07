@@ -171,14 +171,18 @@ void main() {
   });
 
   test('compass points', () {
-    expect(compassPoint(0), 'N');
-    expect(compassPoint(22.4), 'N');
-    expect(compassPoint(22.5), 'NE');
-    expect(compassPoint(90), 'E');
-    expect(compassPoint(225), 'SW');
-    expect(compassPoint(337.5), 'N');
-    expect(compassPoint(359.9), 'N');
-    expect(compassPoint(-90), 'W');
-    expect(compassPoint(720), 'N');
+    expect(compassPoint(0), CompassPoint.n);
+    expect(compassPoint(22.4), CompassPoint.n);
+    expect(compassPoint(22.5), CompassPoint.ne);
+    expect(compassPoint(90), CompassPoint.e);
+    expect(compassPoint(135), CompassPoint.se);
+    expect(compassPoint(180), CompassPoint.s);
+    expect(compassPoint(225), CompassPoint.sw);
+    expect(compassPoint(270), CompassPoint.w);
+    expect(compassPoint(315), CompassPoint.nw);
+    expect(compassPoint(337.5), CompassPoint.n);
+    expect(compassPoint(359.9), CompassPoint.n);
+    expect(compassPoint(-90), CompassPoint.w);
+    expect(compassPoint(720), CompassPoint.n);
   });
 }

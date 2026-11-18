@@ -2,15 +2,20 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../../data/models/pota_spot_model.dart';
 
-class PotaDatasource {
-  static const _baseUrl = 'https://api.pota.app';
+/// The client every pota.app call goes through: one base address, one set of
+/// time limits, one user agent.
+Dio createPotaDio() => Dio(BaseOptions(
+      baseUrl: 'https://api.pota.app',
+      connectTimeout: const Duration(seconds: 12),
+      receiveTimeout: const Duration(seconds: 12),
+      headers: {'User-Agent': 'WavelogMobile/1.0'},
+    ));
 
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: _baseUrl,
-    connectTimeout: const Duration(seconds: 12),
-    receiveTimeout: const Duration(seconds: 12),
-    headers: {'User-Agent': 'WavelogMobile/1.0'},
-  ));
+class PotaDatasource {
+  /// [dio] is for tests, which must not reach pota.app.
+  PotaDatasource({Dio? dio}) : _dio = dio ?? createPotaDio();
+
+  final Dio _dio;
 
   /// Park bilgisi döner. `null` = park bulunamadı (404).
   /// Ağ/sunucu hatalarında fırlatır — çağıran "bulunamadı" ile karıştırmasın.

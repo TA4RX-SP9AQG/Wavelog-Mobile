@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/utils/pota_activity.dart';
 import '../data/datasources/remote/pota_datasource.dart';
 import '../data/models/pota_stats_model.dart';
+import '../data/models/station_model.dart';
 import 'qso_provider.dart';
 import 'remote_datasource_provider.dart';
 import 'station_provider.dart';
@@ -11,6 +12,22 @@ import 'station_provider.dart';
 final huntedParksProvider = Provider<Set<String>?>((ref) {
   final log = ref.watch(qsoProvider).valueOrNull;
   return log == null ? null : huntedParks(log);
+});
+
+/// Parks any QSO was logged from (MY_POTA_REF, or the park of the QSO's
+/// station location). Unlike [PotaParkInfo.isActivated] this needs no 10
+/// contacts: it says where this operator has been on the air. Null until
+/// the log and the stations have loaded.
+final activatedParksProvider = Provider<Set<String>?>((ref) {
+  final log = ref.watch(qsoProvider).valueOrNull;
+  final stations = ref.watch(stationProvider);
+  // A station list that failed to load only costs the location parks.
+  if (log == null || (stations.isLoading && !stations.hasValue)) return null;
+  final stationPotaRefs = {
+    for (final s in stations.valueOrNull ?? <StationModel>[])
+      if (s.pota != null && s.pota!.isNotEmpty) s.id: s.pota!,
+  };
+  return {for (final q in log) ...activatedParksOf(q, stationPotaRefs)};
 });
 
 final _potaDatasourceProvider = Provider<PotaDatasource>((_) => PotaDatasource());

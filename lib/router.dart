@@ -38,6 +38,7 @@ import 'presentation/screens/station/station_logbook_detail_screen.dart';
 import 'presentation/screens/statistics/statistics_screen.dart';
 import 'presentation/screens/spot/spot_screen.dart';
 import 'presentation/screens/map/map_screen.dart';
+import 'presentation/screens/pota/pota_map_screen.dart';
 import 'presentation/screens/sync/sync_screen.dart';
 import 'presentation/screens/community/community_screen.dart';
 import 'presentation/screens/community/plan_activation_screen.dart';
@@ -214,6 +215,11 @@ final appRouter = GoRouter(
       path: '/map',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (c, s) => const MapScreen(),
+    ),
+    GoRoute(
+      path: '/pota-map',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (c, s) => const PotaMapScreen(),
     ),
     GoRoute(
       path: '/sync',
@@ -571,6 +577,18 @@ class _AppDrawer extends ConsumerWidget {
                   label: l10n.drawerMap,
                   onTap: () => go('/map'),
                 ),
+                _DrawerGroup(
+                  icon: Icons.terrain_outlined,
+                  label: l10n.drawerFieldActivity,
+                  children: [
+                    _DrawerItem(
+                      icon: Icons.park_outlined,
+                      label: l10n.potaMapTitle,
+                      indent: 16,
+                      onTap: () => go('/pota-map'),
+                    ),
+                  ],
+                ),
                 _DrawerItem(
                   icon: Icons.sync,
                   label: l10n.syncTitle,
@@ -708,11 +726,15 @@ class _DrawerItem extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final int badgeCount;
+
+  /// Extra space on the left, for an item inside a [_DrawerGroup].
+  final double indent;
   const _DrawerItem({
     required this.icon,
     required this.label,
     required this.onTap,
     this.badgeCount = 0,
+    this.indent = 0,
   });
 
   @override
@@ -727,8 +749,33 @@ class _DrawerItem extends StatelessWidget {
       title: Text(label),
       dense: true,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+      contentPadding: EdgeInsets.fromLTRB(20 + indent, 0, 20, 0),
       onTap: onTap,
+    );
+  }
+}
+
+/// A drawer entry that opens to show the items of one kind of use.
+class _DrawerGroup extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final List<Widget> children;
+  const _DrawerGroup(
+      {required this.icon, required this.label, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return ExpansionTile(
+      leading: Icon(icon, color: cs.onSurfaceVariant, size: 22),
+      title: Text(label, style: Theme.of(context).textTheme.bodyMedium),
+      dense: true,
+      // No lines above and below the opened group
+      shape: const Border(),
+      collapsedShape: const Border(),
+      tilePadding: const EdgeInsets.symmetric(horizontal: 20),
+      childrenPadding: EdgeInsets.zero,
+      children: children,
     );
   }
 }

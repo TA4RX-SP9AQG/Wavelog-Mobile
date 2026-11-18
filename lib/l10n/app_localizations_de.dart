@@ -110,6 +110,30 @@ class AppLocalizationsDe extends AppLocalizations {
   String get scopeTestSomeFailed => 'Einige Berechtigungen fehlen';
 
   @override
+  String get scopeTestSomeUnverified =>
+      'Some scopes could not be checked (no answer from the server)';
+
+  @override
+  String get connectionDiagnosticsBtn => 'Connection diagnostics';
+
+  @override
+  String get connectionDiagnosticsTitle => 'Connection diagnostics';
+
+  @override
+  String get connectionDiagnosticsRunning =>
+      'Checking the connection to the server…';
+
+  @override
+  String get connectionDiagnosticsHint =>
+      'The report contains no API token, and the server name and addresses are partly hidden. Copy it and paste it into the GitHub issue.';
+
+  @override
+  String get connectionDiagnosticsCopy => 'Copy report';
+
+  @override
+  String get connectionDiagnosticsCopied => 'Copied';
+
+  @override
   String get scopeTestAddHint =>
       'Fügen Sie diese Berechtigung beim Erstellen Ihres API-Tokens hinzu';
 
@@ -1388,6 +1412,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get spotLoadError => 'Spots konnten nicht geladen werden';
 
   @override
+  String spotOfflineSince(String time) {
+    return 'No connection — spots from $time';
+  }
+
+  @override
   String get spotActivator => 'Aktivator-Rufzeichen';
 
   @override
@@ -1454,6 +1483,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get spotRefreshHint =>
       'Aktualisiert die Spot-Liste automatisch in diesem Intervall';
+
+  @override
+  String spotNextRefresh(int seconds) {
+    return 'Refresh in $seconds s';
+  }
 
   @override
   String autoSpotSent(String ref) {
@@ -2431,6 +2465,157 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get spotNewPark => 'New park';
+
+  @override
+  String get potaMapTitle => 'POTA parks';
+
+  @override
+  String get drawerFieldActivity => 'Field Activity';
+
+  @override
+  String get compassN => 'N';
+
+  @override
+  String get compassNE => 'NE';
+
+  @override
+  String get compassE => 'E';
+
+  @override
+  String get compassSE => 'SE';
+
+  @override
+  String get compassS => 'S';
+
+  @override
+  String get compassSW => 'SW';
+
+  @override
+  String get compassW => 'W';
+
+  @override
+  String get compassNW => 'NW';
+
+  @override
+  String get potaMapZoomIn => 'Zoom in to see parks';
+
+  @override
+  String get potaMapLoading => 'Loading parks';
+
+  @override
+  String get potaMapLoadFailed => 'Some parks could not be loaded';
+
+  @override
+  String get potaMapStatusActivated => 'Activated by me';
+
+  @override
+  String get potaMapStatusHunted => 'Hunted';
+
+  @override
+  String get potaMapStatusNever => 'Never activated';
+
+  @override
+  String get potaMapStatusOther => 'Other parks';
+
+  @override
+  String get potaMapMyLocation => 'My location';
+
+  @override
+  String get potaMapLocationDenied =>
+      'Location permission is needed to find parks near you';
+
+  @override
+  String get potaMapLocationDeniedForever =>
+      'Location is blocked for this app. Allow it in Settings.';
+
+  @override
+  String get potaMapLocationOff => 'Location is turned off on this device';
+
+  @override
+  String get potaMapLocationFailed => 'Could not get your position';
+
+  @override
+  String get potaMapOpenSettings => 'Settings';
+
+  @override
+  String get potaMapAttribution => 'Park data: pota.app';
+
+  @override
+  String get potaMapSearchHint => 'Search a park';
+
+  @override
+  String get potaMapParkNotFound => 'Park not found';
+
+  @override
+  String get potaMapSeveralParks => 'Several parks here';
+
+  @override
+  String get potaParkLog => 'Log QSO';
+
+  @override
+  String get potaParkDirections => 'Directions';
+
+  @override
+  String get potaParkOpenWeb => 'Open on pota.app';
+
+  @override
+  String get potaParkShare => 'Share';
+
+  @override
+  String get potaParkCopyRef => 'Copy reference';
+
+  @override
+  String get potaParkCopied => 'Copied';
+
+  @override
+  String potaParkFromYou(String distance, String direction) {
+    return '$distance $direction from you';
+  }
+
+  @override
+  String get potaParkNoMapApp => 'No maps app found. Coordinates copied.';
+
+  @override
+  String get potaParkActivations => 'Activations';
+
+  @override
+  String get potaParkQsosLabel => 'QSOs';
+
+  @override
+  String get potaParkRecent => 'Recent activations';
+
+  @override
+  String get potaParkNoActivations => 'No activations yet';
+
+  @override
+  String potaParkFirstActivation(String callsign, String date) {
+    return 'First activated by $callsign on $date';
+  }
+
+  @override
+  String get potaParkDetailFailed => 'Could not load park details';
+
+  @override
+  String get potaParkUnknown => 'pota.app has no details for this park';
+
+  @override
+  String get potaParkBoundaryNote =>
+      'Approximate outline from OpenStreetMap. Check the park’s official map before you operate.';
+
+  @override
+  String get potaParkBoundaryNotePadus =>
+      'Outline from USGS PAD-US, the official US protected lands data. It is not POTA’s own boundary: check the park’s rules and map before you operate.';
+
+  @override
+  String potaParkBoundaryNoteWdpa(String name, String designation) {
+    return 'Outline of “$name” ($designation) from Protected Planet (UNEP-WCMC and IUCN). It may not be the same area as the POTA park: check its rules and map before you operate.';
+  }
+
+  @override
+  String get potaParkBoundaryMissing => 'No outline found for this park';
+
+  @override
+  String get potaParkBoundaryLooking => 'Looking for the park outline';
 
   @override
   String potaActivationProgress(String park, int count, int needed) {

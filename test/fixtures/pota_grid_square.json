@@ -1,0 +1,50 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "reference": "PL-0363",
+    "name": "Dąbrowy Seroczyńskie Nature Reserve",
+    "atno": false
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     21.9843,
+     52.0088
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "reference": "PL-0365",
+    "name": "Ostoja Nadliwiecka Natura 2000",
+    "atno": false
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     21.984,
+     52.4152
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "reference": "PL-0373",
+    "name": "Turzyniec Nature Reserve",
+    "atno": false
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     21.9391,
+     52.5019
+    ]
+   }
+  }
+ ]
+}

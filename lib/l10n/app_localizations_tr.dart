@@ -109,6 +109,29 @@ class AppLocalizationsTr extends AppLocalizations {
   String get scopeTestSomeFailed => 'Bazı yetkiler eksik';
 
   @override
+  String get scopeTestSomeUnverified =>
+      'Bazı yetkiler denetlenemedi (sunucudan yanıt gelmedi)';
+
+  @override
+  String get connectionDiagnosticsBtn => 'Bağlantı tanılama';
+
+  @override
+  String get connectionDiagnosticsTitle => 'Bağlantı tanılama';
+
+  @override
+  String get connectionDiagnosticsRunning => 'Sunucuya bağlantı denetleniyor…';
+
+  @override
+  String get connectionDiagnosticsHint =>
+      'Rapor API anahtarını içermez, sunucu adı ve adresler kısmen gizlenir. Kopyalayıp GitHub sorununa yapıştırın.';
+
+  @override
+  String get connectionDiagnosticsCopy => 'Raporu kopyala';
+
+  @override
+  String get connectionDiagnosticsCopied => 'Kopyalandı';
+
+  @override
   String get scopeTestAddHint =>
       'API token oluştururken bu yetkiyi de işaretleyin';
 
@@ -1384,6 +1407,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get spotLoadError => 'Spotlar yüklenemedi';
 
   @override
+  String spotOfflineSince(String time) {
+    return 'No connection — spots from $time';
+  }
+
+  @override
   String get spotActivator => 'Aktivatör Çağrısı';
 
   @override
@@ -1449,6 +1477,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get spotRefreshHint => 'Spot listesini bu aralıkla otomatik yeniler';
+
+  @override
+  String spotNextRefresh(int seconds) {
+    return 'Refresh in $seconds s';
+  }
 
   @override
   String autoSpotSent(String ref) {
@@ -2423,6 +2456,158 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get spotNewPark => 'Yeni park';
+
+  @override
+  String get potaMapTitle => 'POTA parkları';
+
+  @override
+  String get drawerFieldActivity => 'Saha Faaliyeti';
+
+  @override
+  String get compassN => 'K';
+
+  @override
+  String get compassNE => 'KD';
+
+  @override
+  String get compassE => 'D';
+
+  @override
+  String get compassSE => 'GD';
+
+  @override
+  String get compassS => 'G';
+
+  @override
+  String get compassSW => 'GB';
+
+  @override
+  String get compassW => 'B';
+
+  @override
+  String get compassNW => 'KB';
+
+  @override
+  String get potaMapZoomIn => 'Parkları görmek için yakınlaştırın';
+
+  @override
+  String get potaMapLoading => 'Parklar yükleniyor';
+
+  @override
+  String get potaMapLoadFailed => 'Bazı parklar yüklenemedi';
+
+  @override
+  String get potaMapStatusActivated => 'Aktive ettiklerim';
+
+  @override
+  String get potaMapStatusHunted => 'Avladıklarım';
+
+  @override
+  String get potaMapStatusNever => 'Hiç aktive edilmemiş';
+
+  @override
+  String get potaMapStatusOther => 'Diğer parklar';
+
+  @override
+  String get potaMapMyLocation => 'Konumum';
+
+  @override
+  String get potaMapLocationDenied =>
+      'Yakınınızdaki parkları bulmak için konum izni gerekir';
+
+  @override
+  String get potaMapLocationDeniedForever =>
+      'Bu uygulama için konum engellenmiş. Ayarlardan izin verin.';
+
+  @override
+  String get potaMapLocationOff => 'Cihazda konum kapalı';
+
+  @override
+  String get potaMapLocationFailed => 'Konumunuz alınamadı';
+
+  @override
+  String get potaMapOpenSettings => 'Ayarlar';
+
+  @override
+  String get potaMapAttribution => 'Park verisi: pota.app';
+
+  @override
+  String get potaMapSearchHint => 'Park ara';
+
+  @override
+  String get potaMapParkNotFound => 'Park bulunamadı';
+
+  @override
+  String get potaMapSeveralParks => 'Burada birden çok park var';
+
+  @override
+  String get potaParkLog => 'QSO logla';
+
+  @override
+  String get potaParkDirections => 'Yol tarifi';
+
+  @override
+  String get potaParkOpenWeb => 'pota.app\'te aç';
+
+  @override
+  String get potaParkShare => 'Paylaş';
+
+  @override
+  String get potaParkCopyRef => 'Referansı kopyala';
+
+  @override
+  String get potaParkCopied => 'Kopyalandı';
+
+  @override
+  String potaParkFromYou(String distance, String direction) {
+    return 'Size $distance $direction';
+  }
+
+  @override
+  String get potaParkNoMapApp =>
+      'Harita uygulaması bulunamadı. Koordinatlar kopyalandı.';
+
+  @override
+  String get potaParkActivations => 'Aktivasyon';
+
+  @override
+  String get potaParkQsosLabel => 'QSO';
+
+  @override
+  String get potaParkRecent => 'Son aktivasyonlar';
+
+  @override
+  String get potaParkNoActivations => 'Henüz aktivasyon yok';
+
+  @override
+  String potaParkFirstActivation(String callsign, String date) {
+    return 'İlk aktivasyon: $callsign, $date';
+  }
+
+  @override
+  String get potaParkDetailFailed => 'Park ayrıntıları yüklenemedi';
+
+  @override
+  String get potaParkUnknown => 'pota.app bu park için ayrıntı vermiyor';
+
+  @override
+  String get potaParkBoundaryNote =>
+      'Yaklaşık sınır, OpenStreetMap’ten. Yayına çıkmadan önce parkın resmi haritasını kontrol edin.';
+
+  @override
+  String get potaParkBoundaryNotePadus =>
+      'USGS PAD-US’tan sınır (ABD’nin resmi korunan alan verisi). POTA’nın kendi sınırı değildir: yayına çıkmadan önce parkın kurallarını ve haritasını kontrol edin.';
+
+  @override
+  String potaParkBoundaryNoteWdpa(String name, String designation) {
+    return 'Protected Planet (UNEP-WCMC ve IUCN) verisinden “$name” ($designation) sınırı. POTA parkıyla aynı alan olmayabilir: yayına çıkmadan önce kurallarını ve haritasını kontrol edin.';
+  }
+
+  @override
+  String get potaParkBoundaryMissing => 'Bu park için sınır bulunamadı';
+
+  @override
+  String get potaParkBoundaryLooking => 'Park sınırı aranıyor';
 
   @override
   String potaActivationProgress(String park, int count, int needed) {

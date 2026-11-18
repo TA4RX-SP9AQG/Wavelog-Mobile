@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../data/datasources/remote/pota_datasource.dart';
 
-typedef PotaPark = ({String reference, String name});
+export '../../../core/utils/pota_activity.dart' show potaRefPattern;
 
-/// A POTA park reference as typed or logged, e.g. "PL-0341" or "US-12345".
-final potaRefPattern = RegExp(r'^[A-Z0-9]{1,4}-\d{4,5}$');
+typedef PotaPark = ({String reference, String name});
 
 /// Wraps a POTA reference field with pota.app park suggestions while
 /// typing, by reference ("PL-034") or by name ("biebrz"). Without network

@@ -313,6 +313,48 @@ abstract class AppLocalizations {
   /// **'Some scopes are missing'**
   String get scopeTestSomeFailed;
 
+  /// No description provided for @scopeTestSomeUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'Some scopes could not be checked (no answer from the server)'**
+  String get scopeTestSomeUnverified;
+
+  /// No description provided for @connectionDiagnosticsBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection diagnostics'**
+  String get connectionDiagnosticsBtn;
+
+  /// No description provided for @connectionDiagnosticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection diagnostics'**
+  String get connectionDiagnosticsTitle;
+
+  /// No description provided for @connectionDiagnosticsRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the connection to the server…'**
+  String get connectionDiagnosticsRunning;
+
+  /// No description provided for @connectionDiagnosticsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The report contains no API token, and the server name and addresses are partly hidden. Copy it and paste it into the GitHub issue.'**
+  String get connectionDiagnosticsHint;
+
+  /// No description provided for @connectionDiagnosticsCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy report'**
+  String get connectionDiagnosticsCopy;
+
+  /// No description provided for @connectionDiagnosticsCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get connectionDiagnosticsCopied;
+
   /// No description provided for @scopeTestAddHint.
   ///
   /// In en, this message translates to:
@@ -2725,6 +2767,12 @@ abstract class AppLocalizations {
   /// **'Could not load spots'**
   String get spotLoadError;
 
+  /// Banner over DX spots kept from the last successful refresh
+  ///
+  /// In en, this message translates to:
+  /// **'No connection — spots from {time}'**
+  String spotOfflineSince(String time);
+
   /// No description provided for @spotActivator.
   ///
   /// In en, this message translates to:
@@ -2856,6 +2904,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Automatically reload the spot list at this interval'**
   String get spotRefreshHint;
+
+  /// Countdown to the next automatic spot refresh, next to the refresh button
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh in {seconds} s'**
+  String spotNextRefresh(int seconds);
 
   /// No description provided for @autoSpotSent.
   ///
@@ -4662,6 +4716,288 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New park'**
   String get spotNewPark;
+
+  /// Title of the POTA park map screen and its menu entry
+  ///
+  /// In en, this message translates to:
+  /// **'POTA parks'**
+  String get potaMapTitle;
+
+  /// Drawer group for the park and summit tools used out in the field
+  ///
+  /// In en, this message translates to:
+  /// **'Field Activity'**
+  String get drawerFieldActivity;
+
+  /// Compass direction N, short form, shown after a distance (12 km N from you)
+  ///
+  /// In en, this message translates to:
+  /// **'N'**
+  String get compassN;
+
+  /// Compass direction NE, short form, shown after a distance (12 km NE from you)
+  ///
+  /// In en, this message translates to:
+  /// **'NE'**
+  String get compassNE;
+
+  /// Compass direction E, short form, shown after a distance (12 km E from you)
+  ///
+  /// In en, this message translates to:
+  /// **'E'**
+  String get compassE;
+
+  /// Compass direction SE, short form, shown after a distance (12 km SE from you)
+  ///
+  /// In en, this message translates to:
+  /// **'SE'**
+  String get compassSE;
+
+  /// Compass direction S, short form, shown after a distance (12 km S from you)
+  ///
+  /// In en, this message translates to:
+  /// **'S'**
+  String get compassS;
+
+  /// Compass direction SW, short form, shown after a distance (12 km SW from you)
+  ///
+  /// In en, this message translates to:
+  /// **'SW'**
+  String get compassSW;
+
+  /// Compass direction W, short form, shown after a distance (12 km W from you)
+  ///
+  /// In en, this message translates to:
+  /// **'W'**
+  String get compassW;
+
+  /// Compass direction NW, short form, shown after a distance (12 km NW from you)
+  ///
+  /// In en, this message translates to:
+  /// **'NW'**
+  String get compassNW;
+
+  /// Chip on the park map when too much is in view
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in to see parks'**
+  String get potaMapZoomIn;
+
+  /// Screen reader label of the park map progress indicator
+  ///
+  /// In en, this message translates to:
+  /// **'Loading parks'**
+  String get potaMapLoading;
+
+  /// Banner on the park map when pota.app did not answer
+  ///
+  /// In en, this message translates to:
+  /// **'Some parks could not be loaded'**
+  String get potaMapLoadFailed;
+
+  /// Park map filter: parks the user logged QSOs from
+  ///
+  /// In en, this message translates to:
+  /// **'Activated by me'**
+  String get potaMapStatusActivated;
+
+  /// Park map filter: parks the user worked from elsewhere
+  ///
+  /// In en, this message translates to:
+  /// **'Hunted'**
+  String get potaMapStatusHunted;
+
+  /// Park map filter: parks nobody has activated yet
+  ///
+  /// In en, this message translates to:
+  /// **'Never activated'**
+  String get potaMapStatusNever;
+
+  /// Park map filter: all other parks
+  ///
+  /// In en, this message translates to:
+  /// **'Other parks'**
+  String get potaMapStatusOther;
+
+  /// Tooltip of the button that centres the park map on the device
+  ///
+  /// In en, this message translates to:
+  /// **'My location'**
+  String get potaMapMyLocation;
+
+  /// No description provided for @potaMapLocationDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission is needed to find parks near you'**
+  String get potaMapLocationDenied;
+
+  /// No description provided for @potaMapLocationDeniedForever.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is blocked for this app. Allow it in Settings.'**
+  String get potaMapLocationDeniedForever;
+
+  /// No description provided for @potaMapLocationOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is turned off on this device'**
+  String get potaMapLocationOff;
+
+  /// No description provided for @potaMapLocationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not get your position'**
+  String get potaMapLocationFailed;
+
+  /// Snackbar action that opens the system settings
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get potaMapOpenSettings;
+
+  /// Credit under the park map
+  ///
+  /// In en, this message translates to:
+  /// **'Park data: pota.app'**
+  String get potaMapAttribution;
+
+  /// Hint of the park search field on the park map
+  ///
+  /// In en, this message translates to:
+  /// **'Search a park'**
+  String get potaMapSearchHint;
+
+  /// No description provided for @potaMapParkNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Park not found'**
+  String get potaMapParkNotFound;
+
+  /// Title of the list shown when a tap hits more than one park
+  ///
+  /// In en, this message translates to:
+  /// **'Several parks here'**
+  String get potaMapSeveralParks;
+
+  /// Button on a park card: start a QSO form with this park
+  ///
+  /// In en, this message translates to:
+  /// **'Log QSO'**
+  String get potaParkLog;
+
+  /// Button on a park card: open a maps app
+  ///
+  /// In en, this message translates to:
+  /// **'Directions'**
+  String get potaParkDirections;
+
+  /// No description provided for @potaParkOpenWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'Open on pota.app'**
+  String get potaParkOpenWeb;
+
+  /// No description provided for @potaParkShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get potaParkShare;
+
+  /// No description provided for @potaParkCopyRef.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy reference'**
+  String get potaParkCopyRef;
+
+  /// No description provided for @potaParkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get potaParkCopied;
+
+  /// Distance and compass direction of a park from the device, e.g. 12 km NE from you
+  ///
+  /// In en, this message translates to:
+  /// **'{distance} {direction} from you'**
+  String potaParkFromYou(String distance, String direction);
+
+  /// No description provided for @potaParkNoMapApp.
+  ///
+  /// In en, this message translates to:
+  /// **'No maps app found. Coordinates copied.'**
+  String get potaParkNoMapApp;
+
+  /// Label of the number of times a park was activated
+  ///
+  /// In en, this message translates to:
+  /// **'Activations'**
+  String get potaParkActivations;
+
+  /// Label of the number of contacts made from a park
+  ///
+  /// In en, this message translates to:
+  /// **'QSOs'**
+  String get potaParkQsosLabel;
+
+  /// No description provided for @potaParkRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent activations'**
+  String get potaParkRecent;
+
+  /// No description provided for @potaParkNoActivations.
+  ///
+  /// In en, this message translates to:
+  /// **'No activations yet'**
+  String get potaParkNoActivations;
+
+  /// No description provided for @potaParkFirstActivation.
+  ///
+  /// In en, this message translates to:
+  /// **'First activated by {callsign} on {date}'**
+  String potaParkFirstActivation(String callsign, String date);
+
+  /// No description provided for @potaParkDetailFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load park details'**
+  String get potaParkDetailFailed;
+
+  /// No description provided for @potaParkUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'pota.app has no details for this park'**
+  String get potaParkUnknown;
+
+  /// Note under the park outline drawn on the map: it is not an official boundary
+  ///
+  /// In en, this message translates to:
+  /// **'Approximate outline from OpenStreetMap. Check the park’s official map before you operate.'**
+  String get potaParkBoundaryNote;
+
+  /// Note under a US park outline drawn on the map, taken from the USGS PAD-US data
+  ///
+  /// In en, this message translates to:
+  /// **'Outline from USGS PAD-US, the official US protected lands data. It is not POTA’s own boundary: check the park’s rules and map before you operate.'**
+  String get potaParkBoundaryNotePadus;
+
+  /// Note under a park outline drawn on the map, taken from the World Database on Protected Areas; {designation} is the kind of protected area
+  ///
+  /// In en, this message translates to:
+  /// **'Outline of “{name}” ({designation}) from Protected Planet (UNEP-WCMC and IUCN). It may not be the same area as the POTA park: check its rules and map before you operate.'**
+  String potaParkBoundaryNoteWdpa(String name, String designation);
+
+  /// Shown on the park card when OpenStreetMap has no outline for it
+  ///
+  /// In en, this message translates to:
+  /// **'No outline found for this park'**
+  String get potaParkBoundaryMissing;
+
+  /// Shown on the park card while the outline is being looked up
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for the park outline'**
+  String get potaParkBoundaryLooking;
 
   /// No description provided for @potaActivationProgress.
   ///

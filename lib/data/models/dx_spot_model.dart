@@ -19,8 +19,8 @@ class DxSpotModel {
     required this.time,
   });
 
-  // Parses a single spot from DXClusterAPI v2 (jo30.de)
-  // Fields: spotted, spotter, frequency (kHz int), when (ISO UTC),
+  // Parses a single spot from Wavelog DXCache (dxc.wavelog.org)
+  // Fields: spotted, spotter, frequency (kHz number), when (ISO UTC),
   //         message, band, mode (category), submode (specific, e.g. "FT8")
   factory DxSpotModel.fromJson(Map<String, dynamic> j) {
     final rawFreq = j['frequency'];
